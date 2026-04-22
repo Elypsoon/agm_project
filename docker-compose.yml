@@ -1,0 +1,12 @@
+# =============================================================================
+# AGM – Academic Grade Management
+# Docker Compose: Orquestación de todos los microservicios y bases de datos
+# =============================================================================
+# Uso:
+#   docker-compose up --build        # Levantar todo el sistema
+#   docker-compose down              # Detener todo
+#   docker-compose logs ms-auth      # Ver logs de un servicio específico
+# =============================================================================
+
+# TODO: Agregar los servicios de los microservicios
+# Este archivo debe ser capaz de levantar el sistema completo con un solo comando
