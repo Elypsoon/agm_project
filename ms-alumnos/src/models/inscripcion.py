@@ -1,41 +1,27 @@
-"""
-Modelo: Inscripcion (relación alumno ↔ materia)
-"""
+"""Modelo: Inscripcion (relación alumno ↔ materia)"""
 
 import uuid
-from datetime import datetime
-
-from sqlalchemy import Boolean, DateTime, ForeignKey, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from src.models import Base
+from django.db import models
 
 
-class Inscripcion(Base):
-    __tablename__ = "inscripciones"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+class Inscripcion(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    alumno = models.ForeignKey(
+        "models.Alumno",
+        on_delete=models.CASCADE,
+        related_name="inscripciones",
     )
-    alumno_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("alumnos.id", ondelete="CASCADE"), nullable=False
+    materia_id = models.UUIDField(
+        help_text="Referencia lógica al MS-2 Periodos",
     )
-    materia_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False,
-        comment="Referencia lógica al MS-2 Periodos (no FK real, por implementar)"
-    )
-    activo: Mapped[bool] = mapped_column(Boolean, default=True)
-    fecha_baja: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    activo = models.BooleanField(default=True)
+    fecha_baja = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    # Relación inversa con Alumno
-    alumno = relationship("Alumno", back_populates="inscripciones")
+    class Meta:
+        db_table = "inscripciones"
+        verbose_name_plural = "Inscripciones"
 
-    def __repr__(self) -> str:
+    def __str__(self):
         estado = "activa" if self.activo else "baja"
-        return f"<Inscripcion alumno={self.alumno_id} materia={self.materia_id} ({estado})>"
+        return f"Inscripción alumno={self.alumno_id} materia={self.materia_id} ({estado})"

@@ -1,44 +1,42 @@
 """
-Servidor gRPC — MS-3: Docentes & Alumnos
+Servidor gRPC — MS-3: Docentes & Alumnos (Django ORM)
 
-Expone los servicios definidos en alumnos.proto para que otros
-microservicios puedan consultar datos de docentes y alumnos.
+NOTA: Las importaciones de modelos Django se hacen dentro de los métodos
+para evitar AppRegistryNotReady al importar este módulo antes de django.setup().
 """
 
+import os
 import logging
 from uuid import UUID
 from concurrent import futures
 
 import grpc
 
-from src.grpc import alumnos_pb2
-from src.grpc import alumnos_pb2_grpc
-from src.config.database import SessionLocal
-from src.models.docente import Docente
-from src.models.alumno import Alumno
-from src.models.inscripcion import Inscripcion
-
 logger = logging.getLogger(__name__)
 
 
-class AlumnosServiceServicer(alumnos_pb2_grpc.AlumnosServiceServicer):
-    """Implementacion del servicio gRPC de MS-3."""
+def _ensure_django():
+    """Asegurar que Django esté configurado."""
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "src.config.settings")
+    import django
+    django.setup()
+
+
+class AlumnosServiceServicer:
+    """Implementacion del servicio gRPC de MS-3 con Django ORM."""
 
     def GetAlumnosByMateria(self, request, context):
         """Obtener lista de alumnos inscritos activos en una materia."""
-        db = SessionLocal()
+        from src.models.alumno import Alumno
+
         try:
             materia_id = UUID(request.materia_id)
-            alumnos = (
-                db.query(Alumno)
-                .join(Inscripcion, Inscripcion.alumno_id == Alumno.id)
-                .filter(
-                    Inscripcion.materia_id == materia_id,
-                    Inscripcion.activo == True,
-                )
-                .all()
-            )
+            alumnos = list(Alumno.objects.filter(
+                inscripciones__materia_id=materia_id,
+                inscripciones__activo=True,
+            ).distinct())
 
+            from src.grpc import alumnos_pb2
             response = alumnos_pb2.GetAlumnosByMateriaResponse(total=len(alumnos))
             for a in alumnos:
                 response.alumnos.append(alumnos_pb2.AlumnoInfo(
@@ -53,21 +51,23 @@ class AlumnosServiceServicer(alumnos_pb2_grpc.AlumnosServiceServicer):
         except ValueError:
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             context.set_details("materia_id no es un UUID valido")
+            from src.grpc import alumnos_pb2
             return alumnos_pb2.GetAlumnosByMateriaResponse()
         except Exception as e:
             logger.error(f"gRPC GetAlumnosByMateria error: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
+            from src.grpc import alumnos_pb2
             return alumnos_pb2.GetAlumnosByMateriaResponse()
-        finally:
-            db.close()
 
     def GetAlumnoById(self, request, context):
         """Obtener informacion completa de un alumno por su ID."""
-        db = SessionLocal()
+        from src.models.alumno import Alumno
+        from src.grpc import alumnos_pb2
+
         try:
             alumno_id = UUID(request.alumno_id)
-            alumno = db.query(Alumno).filter(Alumno.id == alumno_id).first()
+            alumno = Alumno.objects.filter(id=alumno_id).first()
 
             if not alumno:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -91,24 +91,19 @@ class AlumnosServiceServicer(alumnos_pb2_grpc.AlumnosServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return alumnos_pb2.AlumnoInfo()
-        finally:
-            db.close()
 
     def IsAlumnoEnMateria(self, request, context):
         """Verificar si un alumno esta inscrito y activo en una materia."""
-        db = SessionLocal()
+        from src.models.inscripcion import Inscripcion
+        from src.grpc import alumnos_pb2
+
         try:
             alumno_id = UUID(request.alumno_id)
             materia_id = UUID(request.materia_id)
 
-            inscripcion = (
-                db.query(Inscripcion)
-                .filter(
-                    Inscripcion.alumno_id == alumno_id,
-                    Inscripcion.materia_id == materia_id,
-                )
-                .first()
-            )
+            inscripcion = Inscripcion.objects.filter(
+                alumno_id=alumno_id, materia_id=materia_id,
+            ).first()
 
             if not inscripcion:
                 return alumnos_pb2.IsAlumnoEnMateriaResponse(
@@ -128,15 +123,15 @@ class AlumnosServiceServicer(alumnos_pb2_grpc.AlumnosServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return alumnos_pb2.IsAlumnoEnMateriaResponse()
-        finally:
-            db.close()
 
     def GetDocenteById(self, request, context):
         """Obtener informacion de un docente por su ID."""
-        db = SessionLocal()
+        from src.models.docente import Docente
+        from src.grpc import alumnos_pb2
+
         try:
             docente_id = UUID(request.docente_id)
-            docente = db.query(Docente).filter(Docente.id == docente_id).first()
+            docente = Docente.objects.filter(id=docente_id).first()
 
             if not docente:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -159,12 +154,12 @@ class AlumnosServiceServicer(alumnos_pb2_grpc.AlumnosServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return alumnos_pb2.DocenteInfo()
-        finally:
-            db.close()
 
 
 def crear_servidor_grpc(port: int) -> grpc.Server:
     """Crea y retorna un servidor gRPC (sin iniciar)."""
+    from src.grpc import alumnos_pb2_grpc
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     alumnos_pb2_grpc.add_AlumnosServiceServicer_to_server(
         AlumnosServiceServicer(), server

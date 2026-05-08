@@ -1,39 +1,29 @@
-"""
-Modelo: Alumno
-"""
+"""Modelo: Alumno"""
 
 import uuid
-from datetime import datetime
-
-from sqlalchemy import String, DateTime, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from src.models import Base
+from django.db import models
 
 
-class Alumno(Base):
-    __tablename__ = "alumnos"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+class Alumno(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    matricula = models.CharField(max_length=20, unique=True)
+    nombre_completo = models.CharField(max_length=255)
+    correo = models.EmailField(max_length=255, unique=True, blank=True, null=True)
+    tipo_formacion = models.CharField(max_length=50, blank=True, null=True)
+    clave_acceso = models.CharField(
+        max_length=255, blank=True, null=True,
+        help_text="Clave generada al registrarse",
     )
-    matricula: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-    nombre_completo: Mapped[str] = mapped_column(String(255), nullable=False)
-    correo: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
-    tipo_formacion: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    clave_acceso: Mapped[str | None] = mapped_column(
-        String(255), nullable=True, comment="Clave generada al registrarse"
+    user_id = models.UUIDField(
+        blank=True, null=True,
+        help_text="Referencia lógica al MS-1 Auth",
     )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True, comment="Referencia lógica al MS-1 Auth"
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    # Relación con inscripciones
-    inscripciones = relationship("Inscripcion", back_populates="alumno", lazy="selectin")
+    class Meta:
+        db_table = "alumnos"
+        ordering = ["nombre_completo"]
+        verbose_name_plural = "Alumnos"
 
-    def __repr__(self) -> str:
-        return f"<Alumno {self.matricula} — {self.nombre_completo}>"
+    def __str__(self):
+        return f"{self.matricula} — {self.nombre_completo}"

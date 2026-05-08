@@ -2,28 +2,24 @@
 # MS-3: Docentes & Alumnos — Dependencias
 # ===========================================
 
-# --- Framework REST ---
-fastapi==0.115.12
-uvicorn[standard]==0.34.3
+# --- Framework ---
+django==5.2.1
+djangorestframework==3.16.0
+django-cors-headers==4.7.0
+drf-yasg==1.21.10
 
 # --- Base de datos ---
-sqlalchemy==2.0.40
 psycopg2-binary==2.9.10
-alembic==1.15.2
+
+# --- PDF parsing ---
+pdfplumber==0.11.6
 
 # --- gRPC ---
 grpcio==1.80.0
-protobuf==6.31.1        # Debe coincidir con la version usada por grpcio-tools al generar stubs
-# grpcio-tools==1.80.0  # Solo en desarrollo para regenerar stubs desde .proto
+protobuf==6.31.1
 
-# --- Parseo de archivos ---
-pdfplumber==0.11.6
-python-multipart==0.0.20
+# --- HTTP client (comunicacion REST con MS-1 Auth) ---
+httpx==0.28.1
 
-# --- Configuración ---
-pydantic==2.11.3
-pydantic-settings==2.9.1
+# --- Entorno ---
 python-dotenv==1.1.0
-
-# --- Utilidades ---
-httpx==0.28.1          # Cliente HTTP para comunicacion con MS-1 Auth

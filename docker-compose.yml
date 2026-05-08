@@ -42,7 +42,7 @@ services:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
-  # MS-3: Docentes & Alumnos (FastAPI + PostgreSQL)
+  # MS-3: Docentes & Alumnos (Django + PostgreSQL)
   # ---------------------------------------------------------------------------
 
   # Base de datos independiente para MS-3

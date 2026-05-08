@@ -1,5 +1,5 @@
 """
-Parser de PDF — Extrae el directorio de docentes desde PDF institucional (FCC BUAP).
+Parser de PDF — Extrae el directorio de docentes desde PDF institucional.
 
 Formato esperado del PDF:
 - Múltiples páginas, cada una con tabla de 4 columnas:
