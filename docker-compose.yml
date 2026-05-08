@@ -23,7 +23,7 @@ services:
     volumes:
       - db_auth_data:/var/lib/postgresql/data
 
-  # Microservicio de Autenticación (MS-1) - AHORA CON DJANGO
+  # Microservicio de Autenticación (MS-1) - Django + gRPC
   ms-auth:
     build: 
       context: ./ms-auth
@@ -40,6 +40,10 @@ services:
     depends_on:
       db-auth:
         condition: service_healthy
+    # --- COMANDO PARA CORRER AMBOS SERVIDORES ---
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:3001 & 
+             python grpc_server.py"
 
   # ---------------------------------------------------------------------------
   # MS-3: Docentes & Alumnos (Django + PostgreSQL)

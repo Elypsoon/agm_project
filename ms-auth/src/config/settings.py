@@ -5,10 +5,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# El directorio base del proyecto
+# Raíz del proyecto; se usa como base para construir rutas absolutas.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# SEGURIDAD
+# Configuración de seguridad básica.
+# SECRET_KEY debe sobreescribirse con un valor fuerte en producción.
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-clave-temporal")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOWED_HOSTS = ["*"]
@@ -21,15 +22,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Librerías de Terceros
+
+    # Paquetes de terceros
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'drf_yasg', # <--- Agregado para el Swagger
-    
-    # Tu App de modelos (Usando el camino a la clase ModelsConfig)
-    'src.models.apps.ModelsConfig', # <--- CAMBIO CLAVE
+    'drf_yasg',  # Generador de documentación OpenAPI / Swagger
+
+    # App que contiene el modelo User personalizado.
+    'src.models.apps.ModelsConfig',
+
+    'rest_framework_simplejwt.token_blacklist',
+    'src',
+
 ]
 TEMPLATES = [
     {
@@ -71,9 +76,8 @@ DATABASES = {
     }
 }
 
-# CONFIGURACIÓN DEL MODELO DE USUARIO
-# 'models' es el label que definimos en src/models/apps.py
-AUTH_USER_MODEL = 'models.User' 
+# Modelo de usuario personalizado; 'models' corresponde al label definido en apps.py.
+AUTH_USER_MODEL = 'models.User'
 
 # DJANGO REST FRAMEWORK
 REST_FRAMEWORK = {
@@ -82,13 +86,14 @@ REST_FRAMEWORK = {
     ),
 }
 
-# JWT SETTINGS
+# Configuración de tokens JWT.
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # El acceso dura 1 hora
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),    # El refresh dura una semana
-    'ROTATE_REFRESH_TOKENS': True,                  # <--- IMPORTANTE
-    'BLACKLIST_AFTER_ROTATION': False,              # Ponlo en True si instalas 'rest_framework_simplejwt.token_blacklist'
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),   # El token de acceso expira en 1 hora.
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),      # El refresh token es válido por 7 días.
+    'ROTATE_REFRESH_TOKENS': True,                    # Emite un nuevo refresh en cada uso.
+    'BLACKLIST_AFTER_ROTATION': False,                # Activar si se instala 'token_blacklist'.
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 # INTERNACIONALIZACIÓN
@@ -101,7 +106,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_URL = 'static/'
 
-# Configuración específica para Swagger
+# Configuración de Swagger para autenticación con Bearer token.
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {
@@ -110,5 +115,5 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     },
-    'USE_SESSION_AUTH': False, # Desactiva el login de sesión de Django en Swagger
+    'USE_SESSION_AUTH': False,  # Oculta el formulario de login por sesión en la UI de Swagger.
 }

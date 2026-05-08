@@ -1,30 +1,28 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenBlacklistView
 from rest_framework_simplejwt.views import TokenRefreshView
 from src.controllers.auth_controller import (
-    RegisterView, 
-    LoginView, 
-    MeView, 
-    UserListView # <--- No olvides importar la nueva vista de prueba
+    RegisterView,
+    LoginView,
+    MeView,
+    UserListView
 )
 
 urlpatterns = [
-    # 1. Registro de usuarios (Abierto al público)
-    # POST /auth/register/
+    # POST /auth/register/ — Registro público de nuevas cuentas.
     path('register/', RegisterView.as_view(), name='auth_register'),
-    
-    # 2. Inicio de sesión (Obtención de tokens)
-    # POST /auth/login/
+
+    # POST /auth/login/ — Autenticación y emisión de tokens.
     path('login/', LoginView.as_view(), name='auth_login'),
-    
-    # 3. Datos del usuario actual (Requiere cualquier token válido)
-    # GET /auth/me/
+
+    # GET /auth/me/ — Datos del usuario autenticado (cualquier rol).
     path('me/', MeView.as_view(), name='auth_me'),
-    
-    # 4. Refresco de tokens (Usa el refresh_token para dar un nuevo access)
-    # POST /auth/token/refresh/
+
+    # POST /auth/token/refresh/ — Renueva el access token usando el refresh token.
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # 5. Gestión de usuarios (SOLO ADMINS - Prueba de RBAC)
-    # GET /auth/users/
+
+    # GET /auth/users/ — Lista todos los usuarios (requiere rol admin).
     path('users/', UserListView.as_view(), name='user_list'),
+
+    path('logout/', TokenBlacklistView.as_view(), name='auth_logout'),
 ]

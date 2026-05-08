@@ -1,13 +1,12 @@
 from rest_framework import permissions
 
-# En Django, esto se reemplaza por el uso de 'IsAuthenticated' 
-# en los controladores. El "guardián" es el JWTAuthentication 
-# que configuramos en el settings.py.
-
+# JWTAuthentication (configurado en settings.py) se encarga de decodificar el token
+# y poblar request.user antes de que el request llegue a cualquier vista.
+# Este permiso actúa como una segunda capa de verificación explícita.
 class IsAuthenticatedMiddleware(permissions.BasePermission):
     """
-    Este es el equivalente al 'get_current_user'.
-    Django ya decodificó el token y puso al usuario en request.user
+    Verifica que request.user exista y esté autenticado.
+    Equivale al guard de sesión en frameworks como FastAPI o Express.
     """
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated)

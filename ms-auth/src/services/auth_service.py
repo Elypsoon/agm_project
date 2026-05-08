@@ -6,11 +6,11 @@ class AuthService:
     
     @staticmethod
     def register_user(user_data):
-        # 1. Verificar si el email existe
+        # Verificar unicidad del correo antes de intentar insertar.
         if User.objects.filter(email=user_data['email']).exists():
             raise exceptions.ValidationError("El correo electrónico ya está registrado.")
-        
-        # 2. Crear el usuario (create_user ya hace el hash internamente)
+
+        # create_user aplica el hash a la contraseña internamente.
         try:
             new_user = User.objects.create_user(
                 email=user_data['email'],
@@ -24,17 +24,18 @@ class AuthService:
 
     @staticmethod
     def login_user(email, password):
-        # 1. Buscar al usuario
+        # Buscar el registro por correo; el mensaje de error es intencional
+        # para no revelar si el correo existe o no.
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             raise exceptions.AuthenticationFailed("Correo o contraseña incorrectos")
 
-        # 2. Validar contraseña
+        # Verificar la contraseña usando el método nativo de Django.
         if not user.check_password(password):
             raise exceptions.AuthenticationFailed("Correo o contraseña incorrectos")
 
-        # 3. Generar Token
+        # Emitir el token con los claims necesarios para los demás microservicios.
         from src.utils.security import create_access_token
         return {
             "access_token": create_access_token(user),
