@@ -11,7 +11,8 @@ class PonderacionConfig(models.Model):
         db_table = 'ponderacion_config'
 
     def __str__(self):
-        return f'Config materia {self.materia_id} ({'bloqueada' if self.bloqueada else 'activa'})'
+        estado = 'bloqueada' if self.bloqueada else 'activa'
+        return f'Config materia {self.materia_id} ({estado})'
 
 class CategoriaPonderacion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
