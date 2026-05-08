@@ -31,6 +31,10 @@ INSTALLED_APPS = [
 
     # App que contiene el modelo User personalizado.
     'src.models.apps.ModelsConfig',
+
+    'rest_framework_simplejwt.token_blacklist',
+    'src',
+
 ]
 TEMPLATES = [
     {
@@ -89,6 +93,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,                    # Emite un nuevo refresh en cada uso.
     'BLACKLIST_AFTER_ROTATION': False,                # Activar si se instala 'token_blacklist'.
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 # INTERNACIONALIZACIÓN

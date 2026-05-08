@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenBlacklistView
 from rest_framework_simplejwt.views import TokenRefreshView
 from src.controllers.auth_controller import (
     RegisterView,
@@ -22,4 +23,6 @@ urlpatterns = [
 
     # GET /auth/users/ — Lista todos los usuarios (requiere rol admin).
     path('users/', UserListView.as_view(), name='user_list'),
+
+    path('logout/', TokenBlacklistView.as_view(), name='auth_logout'),
 ]

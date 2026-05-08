@@ -8,8 +8,7 @@ from src.utils.permissions import IsAdminRole, IsDocenteRole
 class RegisterView(generics.CreateAPIView):
     """
     Endpoint público para crear una cuenta nueva.
-    La validación del cuerpo de la solicitud y el hash de la contraseña
-    se delegan al RegisterSerializer.
+    Cualquier persona puede registrarse inicialmente.
     """
     permission_classes = [permissions.AllowAny]
     serializer_class = RegisterSerializer
@@ -17,14 +16,12 @@ class RegisterView(generics.CreateAPIView):
 # --- Inicio de sesión ---
 class LoginView(TokenObtainPairView):
     """
-    Extiende TokenObtainPairView para enriquecer la respuesta con los datos
-    del usuario, además del par de tokens que SimpleJWT ya devuelve.
+    Autentica al usuario y devuelve tokens + información básica del perfil.
     """
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == status.HTTP_200_OK:
             from src.models.models import User
-            # Recuperamos el usuario para incluir su información en la respuesta.
             user = User.objects.get(email=request.data['email'])
             user_data = UserSerializer(user).data
 
@@ -37,23 +34,35 @@ class LoginView(TokenObtainPairView):
             return Response(custom_data)
         return response
 
-# --- Perfil del usuario autenticado ---
-class MeView(generics.RetrieveAPIView):
+# --- Perfil del usuario autenticado (Gestión de Perfil) ---
+class MeView(generics.RetrieveUpdateAPIView):
     """
-    Devuelve los datos del usuario propietario del token.
-    Cualquier rol puede acceder siempre que el token sea válido.
+    GET: Devuelve los datos del usuario logueado.
+    PATCH / PUT: Permite al usuario actualizar su propio nombre, email, etc.
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
 
     def get_object(self):
+        # Retorna el usuario asociado al token actual
         return self.request.user
 
-# --- Listado de usuarios (solo admins) ---
+    def patch(self, request, *args, **kwargs):
+        """
+        Validación extra: Evitar que un usuario se cambie el rol a sí mismo
+        para escalar privilegios (ej. de Alumno a Admin).
+        """
+        if 'role' in request.data and not request.user.role == 'admin':
+            return Response(
+                {"error": "No tienes permisos para cambiar tu propio rol."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().partial_update(request, *args, **kwargs)
+
+# --- Listado de usuarios (Solo admins) ---
 class UserListView(generics.ListAPIView):
     """
-    Devuelve todos los usuarios registrados en el sistema.
-    Requiere rol 'admin'; cualquier otro rol recibirá un 403.
+    Devuelve todos los usuarios. Protegido por RBAC (IsAdminRole).
     """
     from src.models.models import User
     queryset = User.objects.all()

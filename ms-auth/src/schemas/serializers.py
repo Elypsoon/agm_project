@@ -6,10 +6,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'nombre', 'email', 'role', 'activo']
+        # Protegemos campos para que no se puedan editar por accidente
+        read_only_fields = ['id', 'role', 'activo']
 
 # Valida y deserializa el cuerpo de una solicitud de registro.
 class RegisterSerializer(serializers.ModelSerializer):
-    # write_only garantiza que la contraseña nunca aparezca en ninguna respuesta.
     password = serializers.CharField(
         write_only=True,
         min_length=6,
@@ -22,11 +23,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ['nombre', 'email', 'password', 'role']
 
     def create(self, validated_data):
-        # Delegamos la creación a create_user para que el hash se aplique correctamente.
         return User.objects.create_user(**validated_data)
 
-# Serializer auxiliar que representa la respuesta completa del login:
-# combina los tokens de SimpleJWT con los datos del usuario.
+# Serializer para la respuesta del login
 class CustomTokenSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
