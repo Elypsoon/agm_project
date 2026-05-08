@@ -15,13 +15,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p grpc/grpc_generated && \
+RUN mkdir -p grpc_server/grpc_generated && \
     python -m grpc_tools.protoc \
         -I./proto \
-        --python_out=./grpc/grpc_generated \
-        --grpc_python_out=./grpc/grpc_generated \
+        --python_out=./grpc_server/grpc_generated \
+        --grpc_python_out=./grpc_server/grpc_generated \
         ./proto/asistencias.proto && \
-    touch grpc/grpc_generated/__init__.py
+    touch grpc_server/grpc_generated/__init__.py && \
+    sed -i 's/import asistencias_pb2/from grpc_generated import asistencias_pb2/g' \
+        grpc_server/grpc_generated/asistencias_pb2_grpc.py
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
