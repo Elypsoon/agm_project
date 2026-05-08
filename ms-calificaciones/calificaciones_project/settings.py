@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.ponderaciones',
     'apps.actividades',
     'apps.calificaciones',
+    'apps.concentrado',
 ]
 
 MIDDLEWARE = [
@@ -138,3 +139,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     os.getenv('CORS_ORIGIN', 'http://localhost:4200')
 ]
+
+GRPC_MOCK_MODE = os.getenv('GRPC_MOCK_MODE', 'true').lower() == 'true'
