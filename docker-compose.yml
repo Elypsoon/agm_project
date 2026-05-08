@@ -33,16 +33,56 @@ services:
     ports:
       - "3001:3001"   # API REST
       - "50051:50051" # gRPC
-    # --- ESTA ES LA PARTE CLAVE QUE FALTABA ---
     volumes:
       - ./ms-auth:/app
-    # ------------------------------------------
     env_file:
       - ./ms-auth/.env
     depends_on:
       db-auth:
         condition: service_healthy
 
-# Volumen persistente para los datos de PostgreSQL
+  # ---------------------------------------------------------------------------
+  # MS-3: Docentes & Alumnos (FastAPI + PostgreSQL)
+  # ---------------------------------------------------------------------------
+
+  # Base de datos independiente para MS-3
+  db-alumnos:
+    image: postgres:15
+    container_name: db-alumnos
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: alumnos_dev_2026
+      POSTGRES_DB: agm_alumnos_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_alumnos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"   # Puerto 5433 en host para no colisionar con db-auth
+    volumes:
+      - db_alumnos_data:/var/lib/postgresql/data
+
+  # Microservicio de Docentes & Alumnos (MS-3)
+  ms-alumnos:
+    build:
+      context: ./ms-alumnos
+      dockerfile: Dockerfile
+    container_name: ms-alumnos
+    restart: on-failure
+    ports:
+      - "3003:3003"   # API REST
+      - "50053:50053" # gRPC
+    volumes:
+      - ./ms-alumnos:/app    # Hot-reload en desarrollo
+    env_file:
+      - ./ms-alumnos/.env
+    depends_on:
+      db-alumnos:
+        condition: service_healthy
+
+# Volúmenes persistentes
 volumes:
   db_auth_data:
+  db_alumnos_data:

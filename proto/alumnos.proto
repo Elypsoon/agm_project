@@ -1,0 +1,71 @@
+// =============================================================================
+// MS-3: Docentes & Alumnos — Definición del servicio gRPC
+// =============================================================================
+
+syntax = "proto3";
+package alumnos;
+
+// ---------------------------------------------------------------------------
+// Servicio gRPC expuesto por MS-3 para consumo de otros microservicios
+// ---------------------------------------------------------------------------
+service AlumnosService {
+  // Obtener lista de alumnos inscritos (activos) en una materia
+  rpc GetAlumnosByMateria (GetAlumnosByMateriaRequest) returns (GetAlumnosByMateriaResponse);
+
+  // Obtener información completa de un alumno por su ID
+  rpc GetAlumnoById (GetAlumnoByIdRequest) returns (AlumnoInfo);
+
+  // Verificar si un alumno está inscrito y activo en una materia
+  rpc IsAlumnoEnMateria (IsAlumnoEnMateriaRequest) returns (IsAlumnoEnMateriaResponse);
+
+  // Obtener información de un docente por su ID
+  rpc GetDocenteById (GetDocenteByIdRequest) returns (DocenteInfo);
+}
+
+// ---------------------------------------------------------------------------
+// Mensajes
+// ---------------------------------------------------------------------------
+
+// --- Alumno ---
+message AlumnoInfo {
+  string id = 1;
+  string matricula = 2;
+  string nombre_completo = 3;
+  string correo = 4;
+  string tipo_formacion = 5;
+}
+
+message GetAlumnosByMateriaRequest {
+  string materia_id = 1;
+}
+
+message GetAlumnosByMateriaResponse {
+  repeated AlumnoInfo alumnos = 1;
+  int32 total = 2;
+}
+
+message GetAlumnoByIdRequest {
+  string alumno_id = 1;
+}
+
+message IsAlumnoEnMateriaRequest {
+  string alumno_id = 1;
+  string materia_id = 2;
+}
+
+message IsAlumnoEnMateriaResponse {
+  bool inscrito = 1;
+  bool activo = 2;
+}
+
+// --- Docente ---
+message DocenteInfo {
+  string id = 1;
+  string nombre_completo = 2;
+  string correo_institucional = 3;
+  string cubiculo = 4;
+}
+
+message GetDocenteByIdRequest {
+  string docente_id = 1;
+}

@@ -13,7 +13,7 @@ Gestiona la información de **docentes** y **alumnos** del sistema AGM:
 - **Importación masiva del directorio de docentes desde PDF** institucional
   - Extrae: nombre completo, correo institucional y cubículo
 - CRUD de docentes: visualización, búsqueda, paginación, restablecimiento de contraseñas
-- **Importación masiva de alumnos por materia desde Excel/CSV** con vista previa
+- **Importación masiva de alumnos por materia desde PDF** con vista previa
 - Gestión del concentrado de alumnos por materia
 - **Baja de materia** por parte del alumno (irreversible, con notificación al docente)
 - Envío automático de clave de acceso al alumno al ser registrado por primera vez
@@ -27,7 +27,7 @@ Gestiona la información de **docentes** y **alumnos** del sistema AGM:
 | `POST`   | `/docentes/importar`             | Importar docentes desde PDF institucional |
 | `GET`    | `/docentes`                      | Listar docentes con búsqueda y paginación |
 | `GET`    | `/docentes/:id`                  | Detalle de un docente |
-| `POST`   | `/alumnos/importar/:materiaId`   | Importar alumnos desde Excel/CSV a una materia |
+| `POST`   | `/alumnos/importar/:materiaId`   | Importar alumnos desde PDF a una materia |
 | `GET`    | `/alumnos/materia/:materiaId`    | Listar alumnos inscritos en una materia |
 | `GET`    | `/alumnos/:id`                   | Detalle de un alumno |
 | `DELETE` | `/alumnos/:id/baja`              | Baja irreversible de un alumno de una materia |
