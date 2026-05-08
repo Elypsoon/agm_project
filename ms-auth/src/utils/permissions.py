@@ -1,16 +1,25 @@
 from rest_framework import permissions
 
 class IsAdminRole(permissions.BasePermission):
-    """Permite el acceso solo a usuarios con rol 'admin'."""
+    """
+    Restringe el acceso a usuarios autenticados con rol 'admin'.
+    Usado en endpoints de administración del sistema.
+    """
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.role == 'admin')
 
 class IsDocenteRole(permissions.BasePermission):
-    """Permite el acceso solo a usuarios con rol 'docente'."""
+    """
+    Restringe el acceso a usuarios autenticados con rol 'docente'.
+    Usado en endpoints exclusivos del cuerpo académico.
+    """
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.role == 'docente')
 
 class IsAlumnoRole(permissions.BasePermission):
-    """Permite el acceso solo a usuarios con rol 'alumno'."""
+    """
+    Restringe el acceso a usuarios autenticados con rol 'alumno'.
+    Usado en endpoints del portal estudiantil.
+    """
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.role == 'alumno')

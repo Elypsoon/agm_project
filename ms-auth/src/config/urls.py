@@ -4,7 +4,7 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-# Configuración del Generador de Documentación
+# Configuración del esquema OpenAPI expuesto por drf_yasg.
 schema_view = get_schema_view(
    openapi.Info(
       title="AGM - Auth Service",
@@ -15,21 +15,19 @@ schema_view = get_schema_view(
    ),
    public=True,
    permission_classes=(permissions.AllowAny,),
-   # Esto permite que la documentación cargue sin necesidad de token previo
-   authentication_classes=[], 
+   authentication_classes=[],  # Sin autenticación previa para acceder a los docs.
 )
 
 urlpatterns = [
-    # Panel de Administración de Django
+    # Panel de administración de Django.
     path('admin/', admin.site.urls),
-    
-    # Rutas del Microservicio de Autenticación
-    # Django buscará los endpoints definidos en src/routes/auth_routes.py
-    path('auth/', include('src.routes.auth_routes')), 
-    
-    # Documentación Interactiva (Swagger UI)
+
+    # Endpoints del microservicio de autenticación (definidos en src/routes/auth_routes.py).
+    path('auth/', include('src.routes.auth_routes')),
+
+    # Documentación interactiva Swagger UI.
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    
-    # Documentación Alternativa (ReDoc) - Similar a la que usa FastAPI
+
+    # Documentación alternativa en formato ReDoc.
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]

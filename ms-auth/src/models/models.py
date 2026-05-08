@@ -8,9 +8,8 @@ class UserManager(BaseUserManager):
             raise ValueError("El email es obligatorio")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
-        # set_password se encarga de convertir el texto plano en el hash
-        # Reemplaza tu lógica manual de password_hash
-        user.set_password(password) 
+        # set_password convierte la contraseña en su hash antes de persistirla.
+        user.set_password(password)
         user.save(using=self._db)
         return user
 
@@ -21,14 +20,14 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 class User(AbstractBaseUser, PermissionsMixin):
-    # Identificador único UUID
+    # Clave primaria UUID para evitar IDs secuenciales predecibles.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     # Datos básicos
     email = models.EmailField(unique=True, db_index=True)
     nombre = models.CharField(max_length=255)
     
-    # Roles (Usamos CharField con choices para simular tu Enum)
+    # Roles disponibles en el sistema; se usa choices para validación a nivel ORM.
     ROLES = [
         ('admin', 'Administrador'),
         ('docente', 'Docente'),
@@ -36,23 +35,23 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
     role = models.CharField(max_length=10, choices=ROLES, default='alumno')
     
-    # Estado del usuario
+    # Estado de la cuenta; permite deshabilitar accesos sin eliminar el registro.
     activo = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False) # Requerido para el panel de administración
+    is_staff = models.BooleanField(default=False)  # Necesario para acceder al panel de administración.
     
     # Recuperación de contraseña
     reset_token = models.CharField(max_length=255, null=True, blank=True)
     reset_token_expiry = models.DateTimeField(null=True, blank=True)
     
-    # Auditoría (auto_now_add se pone solo al crear, auto_now cada que guardas)
+    # Campos de auditoría; auto_now_add se escribe solo al crear, auto_now en cada guardado.
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     objects = UserManager()
 
-    # Configuramos el email como el campo para login
+    # El campo utilizado como identificador en el proceso de autenticación.
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['nombre']
 
     class Meta:
-        db_table = 'users' # Mantenemos el nombre de la tabla de tu README
+        db_table = 'users'
