@@ -62,3 +62,49 @@ def registrar_usuario_en_auth(
     except Exception as e:
         logger.error(f"Error al comunicarse con MS-1 Auth: {e}")
         return None
+
+
+def validar_token_en_auth(token: str) -> dict:
+    """
+    Valida un JWT token contra el MS-1 (Auth) usando gRPC.
+    
+    Args:
+        token: El token JWT (sin el prefijo Bearer).
+        
+    Returns:
+        Diccionario con { 'valid': bool, 'user_id': str, 'email': str, 'role': str }
+        Si hay un error o es inválido, retorna {'valid': False, 'error': ...}
+    """
+    import grpc
+    from src.grpc.auth_pb2 import ValidateTokenRequest
+    from src.grpc.auth_pb2_grpc import AuthServiceStub
+
+    try:
+        from django.conf import settings
+        host = settings.AUTH_GRPC_HOST
+    except Exception:
+        host = os.getenv("AUTH_GRPC_HOST", "ms-auth")
+
+    target = f"{host}:50051"
+    
+    try:
+        with grpc.insecure_channel(target) as channel:
+            stub = AuthServiceStub(channel)
+            request = ValidateTokenRequest(access_token=token)
+            
+            # Timeout corto para no bloquear la petición REST si MS-1 está caído
+            response = stub.ValidateToken(request, timeout=3.0)
+            
+            return {
+                "valid": response.valid,
+                "user_id": response.user_id,
+                "email": response.email,
+                "role": response.role,
+                "error": response.error
+            }
+    except grpc.RpcError as e:
+        logger.error(f"Error gRPC al validar token en MS-1: {e.code()} - {e.details()}")
+        return {"valid": False, "error": "Error de comunicación con Auth"}
+    except Exception as e:
+        logger.exception("Error inesperado validando token")
+        return {"valid": False, "error": str(e)}

@@ -36,6 +36,18 @@ class TestDocentes(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer test_token')
+        
+        self.patcher = patch("src.utils.auth_backend.validar_token_en_auth", return_value={
+            "valid": True,
+            "user_id": "test-user-id",
+            "email": "test@buap.mx",
+            "role": "admin"
+        })
+        self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_listar_vacio(self):
         resp = self.client.get("/docentes/")
@@ -119,6 +131,18 @@ class TestAlumnos(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer test_token')
+        
+        self.patcher = patch("src.utils.auth_backend.validar_token_en_auth", return_value={
+            "valid": True,
+            "user_id": "test-user-id",
+            "email": "test@buap.mx",
+            "role": "admin"
+        })
+        self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def _crear_alumno(self):
         return Alumno.objects.create(

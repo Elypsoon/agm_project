@@ -86,6 +86,12 @@ DATABASES = {
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "src.utils.auth_backend.GrpcAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
 }
 
 # ---------------------------------------------------------------------------
@@ -129,6 +135,13 @@ PERIODOS_GRPC_PORT = int(os.getenv("PERIODOS_GRPC_PORT", "50052"))
 # Swagger (drf-yasg)
 # ---------------------------------------------------------------------------
 SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {},
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "Introduce tu token JWT en el formato: Bearer <token>"
+        }
+    },
     "USE_SESSION_AUTH": False,
 }
