@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+
+# Entorno virtual
+venv/
+env/
+.env
+
+# gRPC generado (se genera en CI/CD con generate_grpc.sh)
+grpc/grpc_generated/*
+!grpc/grpc_generated/__init__.py
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
