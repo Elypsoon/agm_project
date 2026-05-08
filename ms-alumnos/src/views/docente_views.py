@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from django.db.models import Q
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from src.models.docente import Docente
 from src.serializers.docente_serializer import DocenteSerializer
@@ -63,9 +65,6 @@ class DocenteDetailView(APIView):
             "message": "",
         })
 
-
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 class DocenteImportView(APIView):
     """POST /docentes/importar/ — Importar desde PDF."""

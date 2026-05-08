@@ -6,7 +6,7 @@ Usa unittest.TestCase.
 import os
 import unittest
 
-from src.parsers.pdf_alumnos_parser import parsear_pdf_alumnos, AlumnoExtraido, InfoCurso
+from src.parsers.pdf_alumnos_parser import parsear_pdf_alumnos
 
 PDF_PATH = os.path.join(os.path.dirname(__file__), "ListaAlumnos_Servicios_Web.pdf")
 

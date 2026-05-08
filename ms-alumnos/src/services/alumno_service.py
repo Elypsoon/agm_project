@@ -3,7 +3,6 @@ Servicio de negocio — Alumnos (Django ORM)
 """
 
 import logging
-from uuid import UUID
 from datetime import datetime, timezone
 
 from django.db import transaction, IntegrityError

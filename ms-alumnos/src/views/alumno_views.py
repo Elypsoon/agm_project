@@ -1,14 +1,14 @@
 """Vistas — Alumnos."""
 
 import logging
-from datetime import timezone
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from src.models.alumno import Alumno
-from src.models.inscripcion import Inscripcion
 from src.serializers.alumno_serializer import AlumnoSerializer, AlumnoDetalleSerializer
 from src.services.alumno_service import AlumnoService
 
@@ -60,9 +60,6 @@ class AlumnoDetailView(APIView):
             "message": "",
         })
 
-
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 class AlumnoImportView(APIView):
     """POST /alumnos/importar/<uuid>/ — Importar desde PDF."""
