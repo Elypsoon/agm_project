@@ -39,36 +39,50 @@ async def import_materias_from_pdf(
         skipped_count = 0
 
         for item in extracted_data:
-            existing = db.query(Materia).filter(
+            materia = db.query(Materia).filter(
                 Materia.nrc == item["nrc"], 
                 Materia.periodo_id == periodo_id
             ).first()
             
-            if existing:
-                skipped_count += 1
-                continue
+            if not materia:
+                raw_profesor = None
+                if item["horarios"]:
+                    raw_profesor = item["horarios"][0].get("profesor")
 
-            new_materia = Materia(
-                nrc=item["nrc"],
-                clave=item["clave"],
-                nombre=item["materia"],
-                seccion=item["seccion"],
-                periodo_id=periodo_id,
-            )
-            db.add(new_materia)
-            db.flush() 
+                materia = Materia(
+                    nrc=item["nrc"],
+                    clave=item["clave"],
+                    nombre=item["materia"],
+                    seccion=item["seccion"],
+                    docente_nombre=raw_profesor if (raw_profesor and raw_profesor != "-") else "POR ASIGNAR",
+                    periodo_id=periodo_id,
+                    estado="ABIERTA"
+                )
+                db.add(materia)
+                db.flush() 
+                created_count += 1
+            else:
+                skipped_count += 1 
 
             for h in item["horarios"]:
                 times = h["hora"].split("-") if "-" in h["hora"] else [None, None]
-                new_horario = Horario(
-                    materia_id=new_materia.id,
-                    dia=h["dia"],
-                    hora_inicio=times[0],
-                    hora_fin=times[1],
-                    salon=h["salon"],
-                    es_virtual=h.get("es_virtual", False)
-                )
-                db.add(new_horario)
+                
+                exists_horario = db.query(Horario).filter(
+                    Horario.materia_id == materia.id,
+                    Horario.dia == h["dia"],
+                    Horario.hora_inicio == times[0]
+                ).first()
+
+                if not exists_horario:
+                    new_horario = Horario(
+                        materia_id=materia.id,
+                        dia=h["dia"],
+                        hora_inicio=times[0],
+                        hora_fin=times[1],
+                        salon=h["salon"],
+                        es_virtual=h.get("es_virtual", False)
+                    )
+                    db.add(new_horario)
             
             created_count += 1
 
