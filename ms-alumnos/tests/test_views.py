@@ -144,6 +144,28 @@ class TestAlumnos(TestCase):
     def tearDown(self):
         self.patcher.stop()
 
+    def test_listar_alumnos_vacio(self):
+        resp = self.client.get("/alumnos/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["data"]["total"], 0)
+
+    def test_buscar_alumno_por_nombre(self):
+        self._crear_alumno()  # Crea a "Angel G. Aguilar Saldivar"
+        resp = self.client.get("/alumnos/?search=aguilar")
+        self.assertEqual(resp.json()["data"]["total"], 1)
+
+    def test_paginacion_alumnos(self):
+        for i in range(3):
+            Alumno.objects.create(
+                matricula=f"20222442{i}",
+                nombre_completo=f"Alumno {i}",
+                correo=f"alumno{i}@buap.mx",
+                tipo_formacion="Licenciatura",
+            )
+        resp = self.client.get("/alumnos/?limit=2&page=1")
+        self.assertEqual(len(resp.json()["data"]["alumnos"]), 2)
+        self.assertEqual(resp.json()["data"]["total"], 3)
+
     def _crear_alumno(self):
         return Alumno.objects.create(
             matricula="202224429",

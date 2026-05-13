@@ -19,6 +19,15 @@ logger = logging.getLogger(__name__)
 class DocenteListView(APIView):
     """GET /docentes/ — Listar con búsqueda y paginación."""
 
+    @swagger_auto_schema(
+        operation_description="Lista los docentes registrados. Permite buscar por nombre, correo o cubículo.",
+        manual_parameters=[
+            openapi.Parameter("search", openapi.IN_QUERY, description="Término de búsqueda", type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, description="Número de página (default: 1)", type=openapi.TYPE_INTEGER),
+            openapi.Parameter("limit", openapi.IN_QUERY, description="Límite de resultados por página (default: 10)", type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: "Lista de docentes"}
+    )
     def get(self, request):
         page = int(request.query_params.get("page", 1))
         limit = int(request.query_params.get("limit", 10))
