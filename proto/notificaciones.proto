@@ -1,0 +1,26 @@
+syntax = "proto3";
+package agm.notificaciones;
+
+service NotificacionesService {
+  rpc SendBienvenida (BienvenidaRequest) returns (BoolResponse);
+  rpc SendBajaNotif (BajaRequest) returns (BoolResponse);
+  rpc SendCierreMateria (CierreRequest) returns (BoolResponse);
+}
+
+message BienvenidaRequest {
+  string alumno_id = 1;
+  string materia_id = 2;
+}
+
+message BajaRequest {
+  string alumno_id = 1;
+  string docente_id = 2;
+}
+
+message CierreRequest {
+  string materia_id = 1;
+}
+
+message BoolResponse {
+  bool success = 1;
+}
