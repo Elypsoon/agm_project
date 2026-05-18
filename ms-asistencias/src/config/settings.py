@@ -18,8 +18,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
 ]
 
-ROOT_URLCONF = 'config.urls'
-WSGI_APPLICATION = 'config.wsgi.application'
+ROOT_URLCONF = 'src.config.urls'
+WSGI_APPLICATION = 'src.config.wsgi.application'
 
 DATABASES = {
     'default': {
@@ -45,7 +45,7 @@ CACHES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'asistencias.authentication.GrpcJWTAuthentication',
+        'src.asistencias.authentication.GrpcJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',

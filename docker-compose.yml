@@ -86,6 +86,64 @@ services:
       db-alumnos:
         condition: service_healthy
 
+
+# ---------------------------------------------------------------------------
+  # MS-5: Asistencias QR (Django + PostgreSQL + Redis)
+  # ---------------------------------------------------------------------------
+
+  # Base de datos independiente para MS-5
+  db-asistencias:
+    image: postgres:15
+    container_name: db-asistencias
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: asistencias_dev_2026
+      POSTGRES_DB: agm_asistencias_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_asistencias_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5435:5432"
+    volumes:
+      - db_asistencias_data:/var/lib/postgresql/data
+
+  # Redis para sesiones activas del MS-5
+  redis-asistencias:
+    image: redis:7-alpine
+    container_name: redis-asistencias
+    restart: always
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Microservicio de Asistencias QR (MS-5)
+  ms-asistencias:
+    build:
+      context: ./ms-asistencias
+      dockerfile: Dockerfile
+    container_name: ms-asistencias
+    restart: on-failure
+    ports:
+      - "3005:3005"   # API REST
+      - "50055:50055" # gRPC
+    volumes:
+      - ./ms-asistencias:/app
+    env_file:
+      - ./ms-asistencias/.env
+    depends_on:
+      db-asistencias:
+        condition: service_healthy
+      redis-asistencias:
+        condition: service_healthy
+
+
   # ---------------------------------------------------------------------------
   # MS-6: Notificaciones (Django + PostgreSQL)
   # ---------------------------------------------------------------------------
@@ -131,4 +189,5 @@ services:
 volumes:
   db_auth_data:
   db_alumnos_data:
+  db_asistencias_data:
   db_notificaciones_data:

@@ -1,6 +1,5 @@
 """
 Servidor gRPC del MS-5 Asistencias QR.
-Puerto: 50055 (configurable via GRPC_PORT)
 
 Métodos expuestos:
     - GetAsistenciaAlumno   → historial de asistencias de un alumno en una materia
@@ -11,30 +10,15 @@ import os
 import sys
 from concurrent import futures
 
-# Agregar la raíz del proyecto al path ANTES de cualquier otro import
 sys.path.insert(0, '/app')
-
-# Forzar que 'grpc' se importe desde site-packages y no desde carpeta local
-import importlib
-import importlib.util
-
-# Configurar Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.config.settings')
 import django
 django.setup()
 
-# Importar grpc directamente desde site-packages
-spec = importlib.util.spec_from_file_location(
-    "grpc",
-    "/usr/local/lib/python3.11/site-packages/grpc/__init__.py"
-)
-grpc = importlib.util.module_from_spec(spec)
-sys.modules['grpc'] = grpc
-spec.loader.exec_module(grpc)
-
+import grpc
 from django.conf import settings
 from grpc_generated import asistencias_pb2, asistencias_pb2_grpc
-from asistencias.models import Sesion, Asistencia
+from src.asistencias.models import Sesion, Asistencia
 
 
 class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
