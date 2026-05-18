@@ -127,8 +127,50 @@ services:
       db-notificaciones:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # MS-7: Reportes (Django + PostgreSQL)
+  # ---------------------------------------------------------------------------
+
+  # Base de datos independiente para MS-7
+  db-reportes:
+    image: postgres:15
+    container_name: db-reportes
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: reportes_dev_2026
+      POSTGRES_DB: agm_reportes_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_reportes_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5437:5432"   # Puerto 5437 en host para no colisionar con otras DBs
+    volumes:
+      - db_reportes_data:/var/lib/postgresql/data
+      
+    # Microservicio de Reportes (MS-7)
+    ms-reportes:
+      build:
+        context: ./ms-reportes
+        dockerfile: Dockerfile
+      container_name: ms-reportes
+      restart: on-failure
+      ports:
+        - "3007:3007"   # API REST
+        - "50057:50057" # gRPC
+      volumes:
+        - ./ms-reportes:/app    # Hot-reload en desarrollo
+      env_file:
+        - ./ms-reportes/.env
+      depends_on:
+        db-reportes:
+          condition: service_healthy
+
 # Volúmenes persistentes
 volumes:
   db_auth_data:
   db_alumnos_data:
   db_notificaciones_data:
+  db_reportes_data:
