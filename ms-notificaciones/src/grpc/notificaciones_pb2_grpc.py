@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import notificaciones_pb2 as notificaciones__pb2
+from . import notificaciones_pb2 as notificaciones__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
