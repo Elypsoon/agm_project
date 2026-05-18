@@ -150,23 +150,23 @@ services:
     volumes:
       - db_reportes_data:/var/lib/postgresql/data
       
-    # Microservicio de Reportes (MS-7)
-    ms-reportes:
-      build:
-        context: ./ms-reportes
-        dockerfile: Dockerfile
-      container_name: ms-reportes
-      restart: on-failure
-      ports:
-        - "3007:3007"   # API REST
-        - "50057:50057" # gRPC
-      volumes:
-        - ./ms-reportes:/app    # Hot-reload en desarrollo
-      env_file:
-        - ./ms-reportes/.env
-      depends_on:
-        db-reportes:
-          condition: service_healthy
+  # Microservicio de Reportes (MS-7)
+  ms-reportes:
+    build:
+      context: ./ms-reportes
+      dockerfile: Dockerfile
+    container_name: ms-reportes
+    restart: on-failure
+    ports:
+      - "3007:3007"   # API REST
+      - "50057:50057" # gRPC
+    volumes:
+      - ./ms-reportes:/app    # Hot-reload en desarrollo
+    env_file:
+      - ./ms-reportes/.env
+    depends_on:
+      db-reportes:
+        condition: service_healthy
 
 # Volúmenes persistentes
 volumes:
