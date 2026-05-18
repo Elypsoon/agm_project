@@ -27,24 +27,27 @@ def send_academic_email(template_name, context, to_email, subject, tipo):
         NotificationLog.objects.create(
             tipo=tipo,
             destinatario_email=to_email,
+            destinatario_id=context.get('alumno_id'),
             asunto=subject,
-            contenido_html=html_content,
+            contenido=html_content,
             estado='enviado',
             metadata=context
         )
-        print(f"📧 Correo [{tipo}] enviado con éxito a {to_email}")
+        print(f"Correo [{tipo}] enviado con éxito a {to_email}")
         return True
 
     except Exception as e:
-        print(f"❌ Error en el servicio de email al enviar [{tipo}]: {str(e)}")
+        print(f"Error en el servicio de email al enviar [{tipo}]: {str(e)}")
         
         # 5. Registrar el fallo en el log para auditoría
         NotificationLog.objects.create(
             tipo=tipo,
             destinatario_email=to_email,
+            destinatario_id=context.get('alumno_id'),
             asunto=subject,
-            contenido_html="",
+            contenido="",
             estado='fallido',
+            error_detalle=str(e),
             metadata=context
         )
         return False
