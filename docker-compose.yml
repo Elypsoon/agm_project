@@ -126,15 +126,13 @@ services:
   # Microservicio de Asistencias QR (MS-5)
   ms-asistencias:
     build:
-      context: ./ms-asistencias
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ms-asistencias/Dockerfile
     container_name: ms-asistencias
     restart: on-failure
     ports:
       - "3005:3005"   # API REST
       - "50055:50055" # gRPC
-    volumes:
-      - ./ms-asistencias:/app
     env_file:
       - ./ms-asistencias/.env
     depends_on:

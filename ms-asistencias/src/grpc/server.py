@@ -11,13 +11,40 @@ import sys
 from concurrent import futures
 
 sys.path.insert(0, '/app')
+
+# Importar grpc_generated usando ruta absoluta
+import importlib.util
+
+def load_module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+asistencias_pb2 = load_module(
+    'asistencias_pb2',
+    '/app/src/grpc/grpc_generated/asistencias_pb2.py'
+)
+asistencias_pb2_grpc = load_module(
+    'asistencias_pb2_grpc',
+    '/app/src/grpc/grpc_generated/asistencias_pb2_grpc.py'
+)
+
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "grpc",
+    "/usr/local/lib/python3.11/site-packages/grpc/__init__.py"
+)
+grpc = importlib.util.module_from_spec(spec)
+sys.modules['grpc'] = grpc
+spec.loader.exec_module(grpc)
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.config.settings')
 import django
 django.setup()
 
-import grpc
 from django.conf import settings
-from grpc_generated import asistencias_pb2, asistencias_pb2_grpc
 from src.asistencias.models import Sesion, Asistencia
 
 

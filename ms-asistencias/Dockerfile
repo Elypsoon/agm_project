@@ -10,10 +10,11 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY ms-asistencias/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY ms-asistencias/ .
+COPY proto/ ./proto/
 
 RUN mkdir -p src/grpc/grpc_generated && \
     python -m grpc_tools.protoc \
@@ -30,7 +31,7 @@ RUN mkdir -p src/grpc/grpc_generated && \
     sed -i 's/import asistencias_pb2/from grpc_generated import asistencias_pb2/g' \
         src/grpc/grpc_generated/asistencias_pb2_grpc.py
 
-COPY entrypoint.sh /entrypoint.sh
+COPY ms-asistencias/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 3005
