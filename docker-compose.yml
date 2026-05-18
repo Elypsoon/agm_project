@@ -86,7 +86,49 @@ services:
       db-alumnos:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # MS-6: Notificaciones (Django + PostgreSQL)
+  # ---------------------------------------------------------------------------
+
+  # Base de datos independiente para MS-6
+  db-notificaciones:
+    image: postgres:15
+    container_name: db-notificaciones
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: notificaciones_dev_2026
+      POSTGRES_DB: agm_notificaciones_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_notificaciones_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5436:5432"   # Puerto 5436 en host para no colisionar con otras DBs
+    volumes:
+      - db_notificaciones_data:/var/lib/postgresql/data
+  
+  # Microservicio de Notificaciones (MS-6)
+  ms-notificaciones:
+    build:
+      context: ./ms-notificaciones
+      dockerfile: Dockerfile
+    container_name: ms-notificaciones
+    restart: on-failure
+    ports:
+      - "3006:3006"   # API REST
+      - "50056:50056" # gRPC
+    volumes:
+      - ./ms-notificaciones:/app    # Hot-reload en desarrollo
+    env_file:
+      - ./ms-notificaciones/.env
+    depends_on:
+      db-notificaciones:
+        condition: service_healthy
+
 # Volúmenes persistentes
 volumes:
   db_auth_data:
   db_alumnos_data:
+  db_notificaciones_data:
