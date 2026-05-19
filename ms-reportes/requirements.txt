@@ -1,0 +1,10 @@
+django==6.0.5
+djangorestframework
+django-cors-headers
+python-dotenv
+psycopg2-binary
+grpcio
+grpcio-tools
+openpyxl
+reportlab
+drf-yasg

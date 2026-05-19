@@ -1,0 +1,1 @@
+from .reportes_controller import descargar_calificaciones, descargar_asistencias
