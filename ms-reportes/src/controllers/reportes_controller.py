@@ -11,7 +11,7 @@ from src.generators.pdf_generator import generate_calificaciones_pdf, generate_a
 
 from src.grpc.alumnos_client import AlumnosGRPCClient
 from src.models.reportes import EstadisticasSnapshot, ReporteCache
-
+import random
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def descargar_calificaciones(request, materia_id):
