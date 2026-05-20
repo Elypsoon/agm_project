@@ -1,33 +1,45 @@
-// =============================================================================
-// MS-7: Reportes & Estadísticas — Definición del servicio gRPC
-// =============================================================================
-
 syntax = "proto3";
+
 package reportes;
 
 // ---------------------------------------------------------------------------
 // Servicio gRPC expuesto por MS-7 para consumo de otros microservicios
 // ---------------------------------------------------------------------------
 service ReportesService {
-  // Obtiene el último snapshot de estadísticas generado para una materia
-  rpc GetEstadisticasMateria (GetEstadisticasRequest) returns (EstadisticasSnapshotResponse);
+  // Genera archivos de reportes en bytes para consumo interno si se requiere
+  rpc GenerateReport (GenerateReportRequest) returns (GenerateReportResponse);
+
+  // Obtiene las estadísticas históricas de las materias impartidas por un docente
+  rpc GetHistorialDocente (HistorialDocenteRequest) returns (HistorialDocenteResponse);
 }
 
 // ---------------------------------------------------------------------------
 // Mensajes
 // ---------------------------------------------------------------------------
 
-message GetEstadisticasRequest {
+message GenerateReportRequest {
   string materia_id = 1;
+  string tipo_reporte = 2; // "calificaciones" o "asistencias"
+  string formato = 3;      // "pdf" o "xls"
 }
 
-message EstadisticasSnapshotResponse {
-  string snapshot_id = 1;
+message GenerateReportResponse {
+  bytes file_bytes = 1;
+}
+
+message HistorialDocenteRequest {
+  string docente_id = 1;
+}
+
+message StatsPeriodo {
+  string periodo_id = 1;
   string materia_id = 2;
-  string periodo_id = 3;
-  int32 total_alumnos = 4;
-  float promedio_grupo = 5;
-  float tasa_aprobacion = 6;
-  float tasa_asistencia = 7;
-  string fecha_generacion = 8;
+  float promedio_grupo = 3;
+  float tasa_asistencia = 4;
+  float tasa_aprobacion = 5;
+  int32 total_alumnos = 6;
+}
+
+message HistorialDocenteResponse {
+  repeated StatsPeriodo historial = 1;
 }

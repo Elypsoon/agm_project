@@ -3,7 +3,9 @@ from src.controllers import reportes_controller
 
 # Aquí definiremos los GET del README más adelante
 urlpatterns = [
-    path('calificaciones/<str:materia_id>/', reportes_controller.descargar_calificaciones, name='descargar_calificaciones'),
-    path('asistencias/<str:materia_id>/', reportes_controller.descargar_asistencias, name='descargar_asistencias'),
-    path('estadisticas/<str:materia_id>/', reportes_controller.obtener_estadisticas, name='obtener_estadisticas'),  
+    path('reportes/calificaciones/<str:materia_id>/', reportes_controller.descargar_calificaciones),
+    path('reportes/asistencias/<str:materia_id>/', reportes_controller.descargar_asistencias),
+    path('reportes/estadisticas/<str:materia_id>/', reportes_controller.obtener_estadisticas), # Global de la materia
+    path('reportes/estadisticas/docente/<str:id>/', reportes_controller.obtener_estadisticas_docente),
+    path('reportes/estadisticas/alumno/<str:id>/', reportes_controller.obtener_estadisticas_alumno),
 ]
