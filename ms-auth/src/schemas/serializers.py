@@ -30,3 +30,13 @@ class CustomTokenSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
     user = UserSerializer()
+
+# Serializer para pedir el correo
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+# Serializer para confirmar la nueva clave
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=6)
