@@ -10,22 +10,28 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY ms-asistencias/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY ms-asistencias/ .
+COPY proto/ ./proto/
 
-RUN mkdir -p grpc_server/grpc_generated && \
+RUN mkdir -p src/grpc/grpc_generated && \
     python -m grpc_tools.protoc \
         -I./proto \
-        --python_out=./grpc_server/grpc_generated \
-        --grpc_python_out=./grpc_server/grpc_generated \
+        --python_out=./src/grpc/grpc_generated \
+        --grpc_python_out=./src/grpc/grpc_generated \
         ./proto/asistencias.proto && \
-    touch grpc_server/grpc_generated/__init__.py && \
+    python -m grpc_tools.protoc \
+        -I./proto \
+        --python_out=./src/grpc/grpc_generated \
+        --grpc_python_out=./src/grpc/grpc_generated \
+        ./proto/auth.proto && \
+    touch src/grpc/grpc_generated/__init__.py && \
     sed -i 's/import asistencias_pb2/from grpc_generated import asistencias_pb2/g' \
-        grpc_server/grpc_generated/asistencias_pb2_grpc.py
+        src/grpc/grpc_generated/asistencias_pb2_grpc.py
 
-COPY entrypoint.sh /entrypoint.sh
+COPY ms-asistencias/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 3005
