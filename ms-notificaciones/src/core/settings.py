@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     # Terceros
     "rest_framework",
     "corsheaders",
-    "drf_yasg", # Si documentarás con Swagger
+    "drf_yasg",
     # App local
     "src",
 ]

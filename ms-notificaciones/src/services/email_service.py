@@ -14,7 +14,7 @@ def send_academic_email(template_name, context, to_email, subject, tipo):
         # 2. Configurar el correo transaccional
         email = EmailMultiAlternatives(
             subject=subject,
-            body="", # El cuerpo de texto plano se deja vacío porque usamos HTML
+            body="Mensaje de AGM", # El cuerpo de texto plano se deja vacío porque usamos HTML
             from_email=None, # Usa el DEFAULT_FROM_EMAIL configurado en settings
             to=[to_email]
         )
