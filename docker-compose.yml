@@ -118,6 +118,9 @@ services:
     ports:
       - "3004:3004"
       - "50054:50054"
+    environment:
+      - DB_HOST=db-calificaciones
+      - DB_PORT=5432
     env_file:
       - ./ms-calificaciones/.env
     depends_on:
