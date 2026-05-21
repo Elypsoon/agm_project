@@ -59,7 +59,7 @@ def build_concentrado(materia_id):
         alumnos_result.append(
             {
                 'alumno_id': alumno_id,
-                'alumno_nombre': alumno.get('nombre', ''),
+                'alumno_nombre': alumno.get('nombre_completo', ''),
                 'promedio_real': promedio_real,
                 'promedio_redondeado': promedio_redondeado,
             }

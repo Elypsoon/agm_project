@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from .serializers import CalificacionInputSerializer, CalificacionSerializer
-from .services import upsert_calificacion, ActividadNoEncontrada
+from .services import upsert_calificacion, ActividadNoEncontrada, importar_calificaciones
 
 class CalificacionView(APIView):
     def post(self, request):
@@ -28,3 +28,24 @@ class CalificacionView(APIView):
             },
             status=201 if created else 200,
         )
+
+class ImportarCalificacionesView(APIView):
+    def post(self, request):
+        archivo = request.FILES.get('archivo')
+        materia_id = request.data.get('materia_id')
+
+        if not archivo:
+            return Response({'detail': 'Se requere el campo archivo.'}, status=400)
+        if not materia_id:
+            return Response({'detail': 'Se requiere el campo "materia_id".'}, status=400)
+
+        try:
+            resultado = importar_calificaciones(
+                materia_id=materia_id,
+                nombre_archivo=archivo.name,
+                archivo_bytes=archivo.read(),
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=400)
+
+        return Response(resultado, status=201)
