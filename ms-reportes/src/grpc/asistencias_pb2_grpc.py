@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from proto import asistencias_pb2 as proto_dot_asistencias__pb2
+from . import asistencias_pb2 as asistencias__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
@@ -36,13 +36,13 @@ class AsistenciasServiceStub(object):
         """
         self.GetAsistenciaAlumno = channel.unary_unary(
                 '/asistencias.AsistenciasService/GetAsistenciaAlumno',
-                request_serializer=proto_dot_asistencias__pb2.GetAsistenciaAlumnoRequest.SerializeToString,
-                response_deserializer=proto_dot_asistencias__pb2.AsistenciaAlumnoResponse.FromString,
+                request_serializer=asistencias__pb2.GetAsistenciaAlumnoRequest.SerializeToString,
+                response_deserializer=asistencias__pb2.AsistenciaAlumnoResponse.FromString,
                 _registered_method=True)
         self.GetEstadisticasAsistencia = channel.unary_unary(
                 '/asistencias.AsistenciasService/GetEstadisticasAsistencia',
-                request_serializer=proto_dot_asistencias__pb2.GetEstadisticasRequest.SerializeToString,
-                response_deserializer=proto_dot_asistencias__pb2.EstadisticasResponse.FromString,
+                request_serializer=asistencias__pb2.GetEstadisticasRequest.SerializeToString,
+                response_deserializer=asistencias__pb2.EstadisticasResponse.FromString,
                 _registered_method=True)
 
 
@@ -66,13 +66,13 @@ def add_AsistenciasServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetAsistenciaAlumno': grpc.unary_unary_rpc_method_handler(
                     servicer.GetAsistenciaAlumno,
-                    request_deserializer=proto_dot_asistencias__pb2.GetAsistenciaAlumnoRequest.FromString,
-                    response_serializer=proto_dot_asistencias__pb2.AsistenciaAlumnoResponse.SerializeToString,
+                    request_deserializer=asistencias__pb2.GetAsistenciaAlumnoRequest.FromString,
+                    response_serializer=asistencias__pb2.AsistenciaAlumnoResponse.SerializeToString,
             ),
             'GetEstadisticasAsistencia': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEstadisticasAsistencia,
-                    request_deserializer=proto_dot_asistencias__pb2.GetEstadisticasRequest.FromString,
-                    response_serializer=proto_dot_asistencias__pb2.EstadisticasResponse.SerializeToString,
+                    request_deserializer=asistencias__pb2.GetEstadisticasRequest.FromString,
+                    response_serializer=asistencias__pb2.EstadisticasResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -100,8 +100,8 @@ class AsistenciasService(object):
             request,
             target,
             '/asistencias.AsistenciasService/GetAsistenciaAlumno',
-            proto_dot_asistencias__pb2.GetAsistenciaAlumnoRequest.SerializeToString,
-            proto_dot_asistencias__pb2.AsistenciaAlumnoResponse.FromString,
+            asistencias__pb2.GetAsistenciaAlumnoRequest.SerializeToString,
+            asistencias__pb2.AsistenciaAlumnoResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -127,8 +127,8 @@ class AsistenciasService(object):
             request,
             target,
             '/asistencias.AsistenciasService/GetEstadisticasAsistencia',
-            proto_dot_asistencias__pb2.GetEstadisticasRequest.SerializeToString,
-            proto_dot_asistencias__pb2.EstadisticasResponse.FromString,
+            asistencias__pb2.GetEstadisticasRequest.SerializeToString,
+            asistencias__pb2.EstadisticasResponse.FromString,
             options,
             channel_credentials,
             insecure,

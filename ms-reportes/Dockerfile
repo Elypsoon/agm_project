@@ -23,6 +23,7 @@ COPY . /app/
 
 # Exponemos el puerto REST
 EXPOSE 3007
+EXPOSE 50057
 
-# Comando por defecto para levantar el servidor de Django
-CMD ["python", "manage.py", "runserver", "0.0.0.0:3007"]
+RUN chmod +x entrypoint.sh
+CMD ["./entrypoint.sh"]
