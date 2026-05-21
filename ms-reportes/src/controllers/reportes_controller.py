@@ -10,6 +10,7 @@ from src.generators.excel_generator import generate_calificaciones_excel, genera
 from src.generators.pdf_generator import generate_calificaciones_pdf, generate_asistencias_pdf
 
 from src.grpc.alumnos_client import AlumnosGRPCClient
+from src.grpc.asistencias_client import AsistenciasGRPCClient
 from src.models.reportes import EstadisticasSnapshot, ReporteCache
 import random
 @api_view(['GET'])
@@ -69,36 +70,40 @@ def descargar_calificaciones(request, materia_id):
 @permission_classes([AllowAny])
 def descargar_asistencias(request, materia_id):
     formato = request.GET.get('formato', 'pdf').lower()
+    ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
+    content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
 
-    alumnos_base = AlumnosGRPCClient.get_calificaciones(materia_id) 
+    # 1. Estrategia de Orquestación gRPC Sincrónica
+    alumnos = AlumnosGRPCClient.obtener_alumnos_materia(materia_id)
+    asistencias_map = AsistenciasGRPCClient.obtener_estadisticas_asistencia(materia_id)
 
-    if not alumnos_base:
-        return Response({"error": "No hay alumnos inscritos en esta materia."}, status=404)
+    # 2. Tolerancia a Fallos: Si los servicios caen, intentamos recuperar el último Caché histórico
+    if alumnos is None or asistencias_map is None:
+        last_cache = ReporteCache.objects.filter(materia_id=materia_id, tipo='asistencias', formato=formato).order_by('-valido_hasta').first()
+        if last_cache and os.path.exists(last_cache.archivo_path):
+            with open(last_cache.archivo_path, 'rb') as f:
+                return HttpResponse(f.read(), content_type=content_type)
+        return Response({"error": "Servicios académicos temporalmente no disponibles y no hay caché previo."}, status=503)
 
-    datos_asistencias = []
-    for alumno in alumnos_base:
-        datos_asistencias.append({
+    # 3. Agregación de Datos en memoria sin tocar bases de datos ajenas
+    datos_agregados = []
+    for alumno in alumnos:
+        stats = asistencias_map.get(alumno['id'], {"presentes": 0, "retardos": 0, "faltas": 0})
+        datos_agregados.append({
             "matricula": alumno['matricula'],
             "nombre": alumno['nombre'],
-            "presentes": random.randint(20, 30),
-            "retardos": random.randint(0, 5),
-            "faltas": random.randint(0, 3)
+            "presentes": stats['presentes'],
+            "retardos": stats['retardos'],
+            "faltas": stats['faltas']
         })
 
-    # 3. Generar archivo
-    if formato in ['xls', 'xlsx']:
-        excel_bytes = generate_asistencias_excel(materia_id, datos_asistencias)
-        response = HttpResponse(excel_bytes, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="asistencias_{materia_id}.xlsx"'
-        return response
+    # 4. Renderizado del reporte
+    if ext == 'xlsx':
+        archivo_bytes = generate_asistencias_excel(materia_id, datos_agregados)
+    else:
+        archivo_bytes = generate_asistencias_pdf(materia_id, datos_agregados)
 
-    elif formato == 'pdf':
-        pdf_bytes = generate_asistencias_pdf(materia_id, datos_asistencias)
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="asistencias_{materia_id}.pdf"'
-        return response
-
-    return Response({"error": "Formato no soportado"}, status=400)
+    return HttpResponse(archivo_bytes, content_type=content_type)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
