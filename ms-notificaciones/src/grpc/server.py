@@ -71,7 +71,7 @@ def serve():
     # Puerto asignado para MS-6 Notificaciones
     port = os.environ.get('GRPC_PORT', '50056')
     server.add_insecure_port(f'[::]:{port}')
-    print(f"🚀 Servidor gRPC de Notificaciones (MS-6) escuchando en puerto {port}")
+    print(f"Servidor gRPC de Notificaciones (MS-6) escuchando en puerto {port}")
     
     server.start()
     server.wait_for_termination()
