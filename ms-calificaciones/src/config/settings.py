@@ -54,16 +54,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'src.config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'agm_calificaciones_db'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+import sys
+TESTING = 'test' in sys.argv
+
+if TESTING:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'agm_calificaciones_db'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -115,3 +126,6 @@ ALUMNOS_GRPC_PORT = os.getenv('ALUMNOS_GRPC_PORT', '50053')
 
 PERIODOS_GRPC_HOST = os.getenv('PERIODOS_GRPC_HOST', 'ms-periodos')
 PERIODOS_GRPC_PORT = os.getenv('PERIODOS_GRPC_PORT', '50052')
+
+TEST_RUNNER = 'src.utils.test_runner.PostgresTestRunner'
+

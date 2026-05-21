@@ -1,7 +1,6 @@
 import logging
 from src.services.concentrado_service import build_concentrado
-from src.models.calificacion import Calificacion
-from src.models.ponderacion import PonderacionConfig
+from src.models.models import Calificacion, PonderacionConfig
 from src.utils.rounding import redondeo
 from decimal import Decimal
 
