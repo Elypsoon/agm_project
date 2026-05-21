@@ -4,6 +4,9 @@ set -e
 echo "Aplicando migraciones"
 python manage.py migrate --noinput
 
+echo "Iniciando servidor gRPC en :50054"
+python -m apps.grpc_server.server &
+
 echo "Iniciando servidor REST (Gunicorn) en :3004"
 exec gunicorn calificaciones_project.wsgi:application \
     --bind 0.0.0.0:3004 \

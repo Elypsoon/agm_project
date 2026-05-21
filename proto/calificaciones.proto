@@ -1,0 +1,42 @@
+syntax = "proto3";
+package calificaciones;
+
+service CalificacionesService {
+  rpc GetConcentrado (MateriaIdRequest) returns (ConcentradoResponse);
+  rpc GetPromedioAlumno (AlumnoMateriaRequest) returns (PromedioResponse);
+  rpc GetEstadisticasMateria (MateriaIdRequest) returns (StatsResponse);
+}
+
+message MateriaIdRequest {
+  string materia_id = 1;
+}
+
+message AlumnoMateriaRequest {
+  string alumno_id = 1;
+  string materia_id = 2;
+}
+
+message AlumnoCalif {
+  string alumno_id = 1;
+  string alumno_nombre = 2;
+  double promedio_real = 3;
+  int32 promedio_redondeado = 4;
+}
+
+message ConcentradoResponse {
+  string materia_id = 1;
+  string materia_nombre = 2;
+  repeated AlumnoCalif alumnos = 3;
+}
+
+message PromedioResponse {
+  double promedio_real = 1;
+  int32 promedio_redondeado = 2;
+}
+
+message StatsResponse {
+  double promedio_grupo = 1;
+  double calificacion_max = 2;
+  double calificacion_min = 3;
+  int32 total_alumnos = 4;
+}
