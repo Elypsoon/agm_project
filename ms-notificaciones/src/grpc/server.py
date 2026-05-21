@@ -21,7 +21,7 @@ from src.services.email_service import send_academic_email
 class NotificacionesServicer(pb2_grpc.NotificacionesServiceServicer):
     
     def SendBienvenida(self, request, context):
-        print(f"📥 [gRPC] Petición de Bienvenida recibida para alumno ID: {request.alumno_id}")
+        print(f"[gRPC] Petición de Bienvenida recibida para alumno ID: {request.alumno_id}")
         
         # En el flujo real, aquí harías otra llamada gRPC al MS-3 para obtener el correo del alumno.
         # Por ahora usaremos un correo de prueba de tu configuración SMTP.
@@ -38,7 +38,7 @@ class NotificacionesServicer(pb2_grpc.NotificacionesServiceServicer):
         return pb2.BoolResponse(success=success)
 
     def SendBajaNotif(self, request, context):
-        print(f"📥 [gRPC] Petición de Baja recibida para alumno ID: {request.alumno_id}")
+        print(f"[gRPC] Petición de Baja recibida para alumno ID: {request.alumno_id}")
         to_email = "docente_prueba@buap.mx"
         
         success = send_academic_email(
@@ -51,7 +51,7 @@ class NotificacionesServicer(pb2_grpc.NotificacionesServiceServicer):
         return pb2.BoolResponse(success=success)
 
     def SendCierreMateria(self, request, context):
-        print(f"📥 [gRPC] Petición de Cierre recibida para materia ID: {request.materia_id}")
+        print(f"[gRPC] Petición de Cierre recibida para materia ID: {request.materia_id}")
         to_email = "grupo_prueba@buap.mx"
         
         success = send_academic_email(
