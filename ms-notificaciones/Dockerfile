@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 # Exponemos los puertos que usará el microservicio
-EXPOSE 3006 50056
+EXPOSE 3006
+EXPOSE  50056
 
 # El CMD se define en el docker-compose.yml maestro para correr ambos servidores (REST y gRPC)
+RUN chmod +x entrypoint.sh
+CMD ["./entrypoint.sh"]

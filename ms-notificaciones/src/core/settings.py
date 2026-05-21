@@ -119,11 +119,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Configuración de Correo (SMTP - Mailtrap)
 # ---------------------------------------------------------------------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("SMTP_HOST", "sandbox.smtp.mailtrap.io")
+EMAIL_HOST = os.getenv("SMTP_HOST")
 EMAIL_PORT = int(os.getenv("SMTP_PORT", "587"))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv("SMTP_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASS", "")
+EMAIL_HOST_USER = os.getenv("SMTP_USER")
+EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASS")
 DEFAULT_FROM_EMAIL = f"{os.getenv('SMTP_FROM_NAME', 'AGM')} <{os.getenv('SMTP_FROM_EMAIL', 'noreply@agm.buap.mx')}>"
 
 # ---------------------------------------------------------------------------
