@@ -3,9 +3,8 @@ import sys
 import grpc
 from concurrent import futures
 import uuid
+import threading
 
-# 1. Configuración CRÍTICA: Inicializar Django antes de importar modelos
-# Esto permite que este script independiente use la BD y settings de Django
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.core.settings')
@@ -21,47 +20,84 @@ from src.services.email_service import send_academic_email
 class NotificacionesServicer(pb2_grpc.NotificacionesServiceServicer):
     
     def SendBienvenida(self, request, context):
-        print(f"[gRPC] Petición de Bienvenida recibida para alumno ID: {request.alumno_id}")
+        print(f"[gRPC] Solicitud de Bienvenida para alumno ID: {request.alumno_id}")
         
-        # En el flujo real, aquí harías otra llamada gRPC al MS-3 para obtener el correo del alumno.
-        # Por ahora usaremos un correo de prueba de tu configuración SMTP.
-        to_email = "alumno_prueba@buap.mx" 
+        perfil = AlumnosGRPCClient.obtener_datos_alumno(request.alumno_id)
+        if not perfil:
+            print(f"[-] Error: No se pudo obtener el correo del alumno {request.alumno_id} desde MS-3")
+            return pb2.BoolResponse(success=False)
+
         clave_temporal = str(uuid.uuid4())[:8].upper()
 
-        success = send_academic_email(
-            template_name='bienvenida',
-            context={'materia_id': request.materia_id, 'clave_acceso': clave_temporal},
-            to_email=to_email,
-            subject='¡Bienvenido al Sistema AGM!',
-            tipo='bienvenida'
-        )
-        return pb2.BoolResponse(success=success)
+        def procesar_bienvenida():
+            send_academic_email(
+                template_name='bienvenida',
+                context={
+                    'materia_id': request.materia_id, 
+                    'clave_acceso': clave_temporal,
+                    'alumno_id': request.alumno_id,
+                    'nombre_alumno': perfil['nombre']
+                },
+                to_email=perfil['email'],
+                subject='¡Bienvenido al Sistema AGM!',
+                tipo='bienvenida'
+            )
+        threading.Thread(target=procesar_bienvenida).start()
+        return pb2.BoolResponse(success=True)
 
     def SendBajaNotif(self, request, context):
-        print(f"[gRPC] Petición de Baja recibida para alumno ID: {request.alumno_id}")
-        to_email = "docente_prueba@buap.mx"
+        print(f"[gRPC] Solicitud de Baja: Alumno {request.alumno_id} con Docente {request.docente_id}")
         
-        success = send_academic_email(
-            template_name='baja',
-            context={'alumno_id': request.alumno_id},
-            to_email=to_email,
-            subject='Aviso de Baja de Alumno',
-            tipo='baja'
-        )
-        return pb2.BoolResponse(success=success)
+        alumno = AlumnosGRPCClient.obtener_datos_alumno(request.alumno_id)
+        docente = AlumnosGRPCClient.obtener_datos_docente(request.docente_id)
+        
+        if not alumno or not docente:
+            print("[-] Error: Datos incompletos desde MS-3 para procesar la baja.")
+            return pb2.BoolResponse(success=False)
+
+        def procesar_baja():
+            send_academic_email(
+                template_name='baja',
+                context={
+                    'alumno_id': request.alumno_id, 
+                    'nombre_alumno': alumno['nombre'],
+                    'nombre_docente': docente['nombre']
+                },
+                to_email=docente['email'],
+                subject='Aviso de Baja de Alumno',
+                tipo='baja'
+            )
+            
+        threading.Thread(target=procesar_baja).start()
+        return pb2.BoolResponse(success=True)
 
     def SendCierreMateria(self, request, context):
-        print(f"[gRPC] Petición de Cierre recibida para materia ID: {request.materia_id}")
-        to_email = "grupo_prueba@buap.mx"
+        print(f"[gRPC] Petición masiva de Cierre de Materia: {request.materia_id}")
         
-        success = send_academic_email(
-            template_name='cierre-materia',
-            context={'materia_id': request.materia_id},
-            to_email=to_email,
-            subject='Calificaciones Finales Publicadas',
-            tipo='cierre'
-        )
-        return pb2.BoolResponse(success=success)
+        alumnos_inscritos = AlumnosGRPCClient.obtener_lista_grupo(request.materia_id)
+        
+        if not alumnos_inscritos:
+            print(f"[-] Grupo vacío o MS-3 desconectado para la materia {request.materia_id}.")
+            return pb2.BoolResponse(success=False)
+
+        # Definimos el trabajo pesado en una función interna
+        def procesar_envio_masivo(lista_alumnos, id_materia):
+            for alumno in lista_alumnos:
+                send_academic_email(
+                    template_name='cierre-materia',
+                    context={'materia_id': id_materia, 'nombre_alumno': alumno['nombre']},
+                    to_email=alumno['email'],
+                    subject='Calificaciones Finales Publicadas',
+                    tipo='cierre'
+                )
+            print(f"[+] Envío masivo completado para {len(lista_alumnos)} alumnos.")
+
+        # Disparamos el hilo en segundo plano (Background Task)
+        hilo = threading.Thread(target=procesar_envio_masivo, args=(alumnos_inscritos, request.materia_id))
+        hilo.start()
+
+        # Retornamos éxito INMEDIATAMENTE para no bloquear la red gRPC
+        return pb2.BoolResponse(success=True)
 
 def serve():
     # Inicializamos el servidor multihilo
