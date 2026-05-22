@@ -3,7 +3,6 @@ import re
 
 class ScheduleParser:
     def __init__(self):
-        # NRCs are 5-digit anchors in BUAP programming documents[cite: 1, 2]
         self.nrc_pattern = re.compile(r'^(\d{5})')
 
     def is_virtual_room(self, salon_code: str) -> bool:
