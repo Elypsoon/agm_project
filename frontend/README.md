@@ -2,6 +2,29 @@
 
 ---
 
+## 🚀 Quick Start
+
+**Windows:**
+```bash
+start.bat
+```
+
+**Linux/Mac:**
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+**Manual:**
+```bash
+npm install
+npm start
+```
+
+Then open: **http://localhost:4200**
+
+---
+
 ## Descripción
 
 Single Page Application (SPA) desarrollada con **Angular 20** que consume los microservicios del backend vía REST/HTTP. Implementa los tres roles del sistema (Administrador, Docente, Alumno) con interfaces completas y profesionales.
