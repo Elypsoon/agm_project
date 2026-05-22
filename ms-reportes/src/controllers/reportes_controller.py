@@ -11,19 +11,14 @@ from src.generators.pdf_generator import generate_calificaciones_pdf, generate_a
 
 from src.grpc.alumnos_client import AlumnosGRPCClient
 from src.grpc.asistencias_client import AsistenciasGRPCClient
+from src.grpc.calificaciones_client import CalificacionesGRPCClient
 from src.models.reportes import EstadisticasSnapshot, ReporteCache
-import random
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def descargar_calificaciones(request, materia_id):
     formato = request.GET.get('formato', 'pdf').lower()
     ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
     content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
-    datos_dummy = [
-        {"matricula": "2022001", "nombre": "Gabo Aguilar", "asistencia": 95, "calificacion": 9.8},
-        {"matricula": "2022002", "nombre": "Ana López", "asistencia": 80, "calificacion": 7.5},
-        {"matricula": "2022003", "nombre": "Carlos Mtz", "asistencia": 100, "calificacion": 10.0},
-    ]
 
     cache_activo = ReporteCache.objects.filter(
         materia_id=materia_id, 
@@ -40,15 +35,17 @@ def descargar_calificaciones(request, materia_id):
         response['Content-Disposition'] = f'inline; filename="calificaciones_{materia_id}_cached.{ext}"'
         return response
 
-    datos_reales = AlumnosGRPCClient.get_calificaciones(materia_id)
+    datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
 
-    if not datos_reales:
-        return Response({"error": "No hay alumnos inscritos en esta materia."}, status=404)
+    if not datos_materia or not datos_materia.get('alumnos'):
+        return Response({"error": "No hay calificaciones registradas o el servicio no está disponible."}, status=404)
+
+    alumnos_calif = datos_materia['alumnos']
 
     if ext == 'xlsx':
-        archivo_bytes = generate_calificaciones_excel(materia_id, datos_reales)
+        archivo_bytes = generate_calificaciones_excel(materia_id, alumnos_calif)
     else:
-        archivo_bytes = generate_calificaciones_pdf(materia_id, datos_reales)
+        archivo_bytes = generate_calificaciones_pdf(materia_id, alumnos_calif)
 
     fd, filepath = tempfile.mkstemp(suffix=f".{ext}", prefix=f"agm_calif_{materia_id}_")
     with os.fdopen(fd, 'wb') as f:
@@ -108,25 +105,33 @@ def descargar_asistencias(request, materia_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def obtener_estadisticas(request, materia_id):
-    alumnos_base = AlumnosGRPCClient.get_calificaciones(materia_id)
+    datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+    asistencias_map = AsistenciasGRPCClient.obtener_estadisticas_asistencia(materia_id)
 
-    if not alumnos_base:
+    if not datos_materia or not datos_materia.get('alumnos'):
         return Response({"error": "No hay datos para generar estadísticas."}, status=404)
 
     # 1. Calcular matemáticas básicas
+    alumnos_base = datos_materia['alumnos']
     total_alumnos = len(alumnos_base)
-    promedio_grupo = sum(a['calificacion'] for a in alumnos_base) / total_alumnos
+
+    promedio_grupo = sum(a['promedio_real'] for a in alumnos_base) / total_alumnos
     
     # Suponiendo que la calificación mínima aprobatoria es 6.0
-    aprobados = sum(1 for a in alumnos_base if a['calificacion'] >= 6.0)
+    aprobados = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
     tasa_aprobacion = (aprobados / total_alumnos) * 100
     
-    tasa_asistencia = sum(a['asistencia'] for a in alumnos_base) / total_alumnos
+    tasa_asistencia = 0.0
+    if asistencias_map:
+        total_sesiones = sum(sum(s.values()) for s in asistencias_map.values())
+        if total_sesiones > 0:
+            total_presentes = sum(s['presentes'] for s in asistencias_map.values())
+            tasa_asistencia = (total_presentes / total_sesiones) * 100
 
     # 2. Guardar el Snapshot en PostgreSQL
     snapshot = EstadisticasSnapshot.objects.create(
         materia_id=materia_id,
-        periodo_id="Primavera-2026", # TODO: Conectar al MS-2 (Periodos) en el futuro
+        periodo_id="Primavera-2026", 
         promedio_grupo=promedio_grupo,
         tasa_aprobacion=tasa_aprobacion,
         tasa_asistencia=tasa_asistencia,
