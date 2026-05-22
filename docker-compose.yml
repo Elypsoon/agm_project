@@ -86,8 +86,49 @@ services:
       db-alumnos:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # MS-4: Calificaciones y Ponderaciones (Django + PostgreSQL)
+  # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
+  # Base de datos independiente para MS-4
+  db-calificaciones:
+    image: postgres:16-alpine
+    container_name: db-calificaciones
+    environment:
+      POSTGRES_DB: agm_calificaciones_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - db_calificaciones_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Microservicio de Calificaciones y Ponderaciones (MS-4)
+  ms-calificaciones:
+    build:
+      context: ./ms-calificaciones
+      dockerfile: Dockerfile
+    container_name: ms-calificaciones
+    ports:
+      - "3004:3004"
+      - "50054:50054"
+    environment:
+      - DB_HOST=db-calificaciones
+      - DB_PORT=5432
+    env_file:
+      - ./ms-calificaciones/.env
+    depends_on:
+      db-calificaciones:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
   # MS-5: Asistencias QR (Django + PostgreSQL + Redis)
   # ---------------------------------------------------------------------------
 
@@ -140,7 +181,6 @@ services:
         condition: service_healthy
       redis-asistencias:
         condition: service_healthy
-
 
   # ---------------------------------------------------------------------------
   # MS-6: Notificaciones (Django + PostgreSQL)
@@ -228,7 +268,7 @@ services:
 volumes:
   db_auth_data:
   db_alumnos_data:
+  db_calificaciones_data:
   db_asistencias_data:
   db_notificaciones_data:
   db_reportes_data:
-

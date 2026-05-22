@@ -117,3 +117,12 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,  # Oculta el formulario de login por sesión en la UI de Swagger.
 }
+
+# --- CONFIGURACIÓN DE CORREO (Mailtrap) ---
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_HOST_USER = '125f057cdc0623'
+EMAIL_HOST_PASSWORD = 'da8c30193d389a'
+EMAIL_PORT = '2525'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'admin@agm-buap.com'
