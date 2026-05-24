@@ -250,3 +250,81 @@ Las variables del .env pueden variar según las necesidades al momento de la imp
 | **Alumno**        | Consulta de calificaciones, generación de QR, baja de materia    |
 
 ---
+
+## 📐 Diagrama de Arquitectura de la Aplicación
+
+El sistema está diseñado bajo una arquitectura de microservicios. Los clientes se comunican con los microservicios a través de una API REST pública (HTTP/JSON), mientras que la comunicación de backend a backend (inter-servicio) se realiza de forma directa y síncrona mediante gRPC y Protocol Buffers (.proto), garantizando baja latencia y tipado estricto.
+
+```mermaid
+graph TD
+    %% Styling Definitions
+    classDef browser fill:#e2f1ff,stroke:#1976d2,stroke-width:2px,color:#0d47a1;
+    classDef ms fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c;
+    classDef db fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20;
+    classDef redis fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#b71c1c;
+    classDef bus fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100;
+    classDef net fill:#eceff1,stroke:#607d8b,stroke-width:2px,color:#263238;
+
+    %% Capa de Cliente (Host OS)
+    subgraph Host ["Entorno del Host / Navegador de Cliente"]
+        FE["Navegador Web<br>(Angular 20 SPA)<br>port: 4200"]:::browser
+    end
+
+    %% Capa Docker (Red Interna)
+    subgraph DockerNet ["Red Interna de Docker (docker-compose)"]
+        
+        %% Microservicios
+        subgraph MS ["Capa de Microservicios"]
+            MS1["ms-auth (MS-1)<br>REST :3001 | gRPC :50051"]:::ms
+            MS2["ms-periodos (MS-2)<br>REST :3002 | gRPC :50052"]:::ms
+            MS3["ms-alumnos (MS-3)<br>REST :3003 | gRPC :50053"]:::ms
+            MS4["ms-calificaciones (MS-4)<br>REST :3004 | gRPC :50054"]:::ms
+            MS5["ms-asistencias (MS-5)<br>REST :3005 | gRPC :50055"]:::ms
+            MS6["ms-notificaciones (MS-6)<br>REST :3006 | gRPC :50056"]:::ms
+            MS7["ms-reportes (MS-7)<br>REST :3007 | gRPC :50057"]:::ms
+        end
+
+        %% Bases de Datos
+        subgraph DB ["Capa de Almacenamiento"]
+            DB1[("db-auth<br>(PostgreSQL)")]:::db
+            DB2[("db-periodos<br>(PostgreSQL)")]:::db
+            DB3[("db-alumnos<br>(PostgreSQL)")]:::db
+            DB4[("db-calificaciones<br>(PostgreSQL)")]:::db
+            DB5[("db-asistencias<br>(PostgreSQL)")]:::db
+            DB5_R[("redis-asistencias<br>(Redis Cache)")]:::redis
+            DB6[("db-notificaciones<br>(PostgreSQL)")]:::db
+            DB7[("db-reportes<br>(PostgreSQL)")]:::db
+        end
+
+        %% Canal gRPC
+        BUS{{"Canal de Comunicación gRPC<br>(Servicio a Servicio / Proto)"}}:::bus
+    end
+
+    %% Flujos HTTP/REST (Host a Contenedores)
+    FE -.->|HTTP / REST JSON :3001| MS1
+    FE -.->|HTTP / REST JSON :3002| MS2
+    FE -.->|HTTP / REST JSON :3003| MS3
+    FE -.->|HTTP / REST JSON :3004| MS4
+    FE -.->|HTTP / REST JSON :3005| MS5
+    FE -.->|HTTP / REST JSON :3006| MS6
+    FE -.->|HTTP / REST JSON :3007| MS7
+
+    %% Flujos de Base de Datos (Internos)
+    MS1 === DB1
+    MS2 === DB2
+    MS3 === DB3
+    MS4 === DB4
+    MS5 === DB5
+    MS5 === DB5_R
+    MS6 === DB6
+    MS7 === DB7
+
+    %% Flujos gRPC (Internos en la red de Docker)
+    MS1 <-->|gRPC / TCP| BUS
+    MS2 <-->|gRPC / TCP| BUS
+    MS3 <-->|gRPC / TCP| BUS
+    MS4 <-->|gRPC / TCP| BUS
+    MS5 <-->|gRPC / TCP| BUS
+    MS6 <-->|gRPC / TCP| BUS
+    MS7 <-->|gRPC / TCP| BUS
+```

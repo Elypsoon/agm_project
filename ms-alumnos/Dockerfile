@@ -22,12 +22,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 6. Copiar código fuente
 COPY . .
 
-# 7. Dar permisos al entrypoint
-RUN chmod +x docker-entrypoint.sh
+# 7. Limpiar retornos de carro (CRLF -> LF), copiar fuera del volumen de la app y dar permisos al entrypoint
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 # 8. Exponer puertos (REST + gRPC)
 EXPOSE 3003
 EXPOSE 50053
 
 # 9. Entrypoint: migrate + superuser + runserver
-ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
