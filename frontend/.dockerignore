@@ -1,0 +1,10 @@
+# Evitar subir node_modules y archivos de compilación local al contexto de Docker
+node_modules
+.angular
+dist
+.vscode
+.git
+.gitignore
+*.md
+Dockerfile*
+nginx.conf

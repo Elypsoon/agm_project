@@ -25,9 +25,7 @@ def upsert_calificacion(actividad_id, alumno_id, valor):
             defaults={'valor': valor},
         )
 
-        if not config.bloqueada:
-            config.bloqueada = True
-            config.save(update_fields=['bloqueada'])
+
 
     return calificacion, created
 
@@ -98,9 +96,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
                 unique_fields=['actividad', 'alumno_id'],
                 update_fields=['valor'],
             )
-            # Bloquear la configuración de ponderación
-            config.bloqueada = True
-            config.save(update_fields=['bloqueada'])
+
 
     return {
         'importadas': importadas,

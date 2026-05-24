@@ -111,9 +111,9 @@ class TestCalificacionesViews(TestCase):
         self.assertEqual(resp.status_code, 201)
         self.assertEqual(Decimal(resp.data["data"]["valor"]), Decimal("95.50"))
 
-        # Validar que bloquee la ponderación
+        # Validar que NO bloquee la ponderación (comportamiento flexible)
         config.refresh_from_db()
-        self.assertTrue(config.bloqueada)
+        self.assertFalse(config.bloqueada)
 
     @patch("src.grpc.alumnos_client.AlumnosClient.get_alumnos_by_materia")
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")

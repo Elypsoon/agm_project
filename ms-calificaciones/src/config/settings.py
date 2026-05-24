@@ -126,6 +126,3 @@ ALUMNOS_GRPC_PORT = os.getenv('ALUMNOS_GRPC_PORT', '50053')
 
 PERIODOS_GRPC_HOST = os.getenv('PERIODOS_GRPC_HOST', 'ms-periodos')
 PERIODOS_GRPC_PORT = os.getenv('PERIODOS_GRPC_PORT', '50052')
-
-TEST_RUNNER = 'src.utils.test_runner.PostgresTestRunner'
-
