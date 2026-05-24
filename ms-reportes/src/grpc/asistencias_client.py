@@ -4,18 +4,56 @@ from src.grpc import asistencias_pb2, asistencias_pb2_grpc
 
 class AsistenciasGRPCClient:
     @staticmethod
+    def get_target():
+        host = settings.ASISTENCIAS_GRPC_HOST
+        port = settings.ASISTENCIAS_GRPC_PORT
+        return f"{host}:{port}"
+
+    @staticmethod
     def obtener_estadisticas_asistencia(materia_id):
-        target = f"{settings.ASISTENCIAS_GRPC_HOST}:{settings.ASISTENCIAS_GRPC_PORT}"
+        target = AsistenciasGRPCClient.get_target()
         with grpc.insecure_channel(target) as channel:
             stub = asistencias_pb2_grpc.AsistenciasServiceStub(channel)
-            request = asistencias_pb2.GetEstadisticasAsistenciaRequest(materia_id=materia_id)
+            request = asistencias_pb2.GetEstadisticasRequest(materia_id=_safe_int(materia_id))
             try:
                 response = stub.GetEstadisticasAsistencia(request, timeout=3)
-                # Mapeamos las métricas acumuladas por alumno
-                return {a.alumno_id: {
-                    "presentes": a.presentes,
-                    "retardos": a.retardos,
-                    "faltas": a.faltas
-                } for a in response.alumnos_stats}
+                return {
+                    "materia_id": response.materia_id,
+                    "total_sesiones": response.total_sesiones,
+                    "total_registros": response.total_registros,
+                    "total_presentes": response.total_presentes,
+                    "total_retardos": response.total_retardos,
+                    "porcentaje_global": response.porcentaje_global,
+                }
             except grpc.RpcError:
                 return None
+
+    @staticmethod
+    def obtener_asistencia_alumno(alumno_id, materia_id):
+        target = AsistenciasGRPCClient.get_target()
+        with grpc.insecure_channel(target) as channel:
+            stub = asistencias_pb2_grpc.AsistenciasServiceStub(channel)
+            request = asistencias_pb2.GetAsistenciaAlumnoRequest(
+                alumno_id=_safe_int(alumno_id),
+                materia_id=_safe_int(materia_id)
+            )
+            try:
+                response = stub.GetAsistenciaAlumno(request, timeout=3)
+                return {
+                    "alumno_id": response.alumno_id,
+                    "materia_id": response.materia_id,
+                    "total_clases": response.total_clases,
+                    "total_presentes": response.total_presentes,
+                    "total_retardos": response.total_retardos,
+                    "total_ausentes": response.total_ausentes,
+                    "porcentaje": response.porcentaje,
+                }
+            except grpc.RpcError:
+                return None
+
+
+def _safe_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default

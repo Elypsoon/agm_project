@@ -5,6 +5,7 @@ urlpatterns = [
     # Exportación de Archivos
     path('calificaciones/<str:materia_id>/', reportes_controller.descargar_calificaciones),
     path('asistencias/<str:materia_id>/', reportes_controller.descargar_asistencias),
+    path('rendimiento/<str:materia_id>/', reportes_controller.descargar_rendimiento),
     
     # Análisis Estadístico
     path('estadisticas/<str:materia_id>/', reportes_controller.obtener_estadisticas),

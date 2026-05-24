@@ -18,7 +18,6 @@ class CalificacionesGRPCClient:
             request = calificaciones_pb2.MateriaIdRequest(materia_id=materia_id)
             try:
                 response = stub.GetConcentrado(request, timeout=5)
-                # Formateamos la respuesta a un diccionario de Python limpio
                 return {
                     "materia_id": response.materia_id,
                     "materia_nombre": response.materia_nombre,
@@ -33,6 +32,24 @@ class CalificacionesGRPCClient:
                 }
             except grpc.RpcError as e:
                 print(f"[-] Error al contactar MS-4 (Concentrado): {e.details()}")
+                return None
+
+    @staticmethod
+    def obtener_promedio_alumno(alumno_id, materia_id):
+        with grpc.insecure_channel(CalificacionesGRPCClient.get_target()) as channel:
+            stub = calificaciones_pb2_grpc.CalificacionesServiceStub(channel)
+            request = calificaciones_pb2.AlumnoMateriaRequest(
+                alumno_id=alumno_id,
+                materia_id=materia_id
+            )
+            try:
+                response = stub.GetPromedioAlumno(request, timeout=3)
+                return {
+                    "promedio_real": response.promedio_real,
+                    "promedio_redondeado": response.promedio_redondeado
+                }
+            except grpc.RpcError as e:
+                print(f"[-] Error al contactar MS-4 (Promedio Alumno): {e.details()}")
                 return None
 
     @staticmethod
