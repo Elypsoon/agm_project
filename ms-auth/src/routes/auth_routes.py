@@ -5,15 +5,19 @@ from src.controllers.auth_controller import (
     RegisterView,
     LoginView,
     MeView,
-    UserListView
+    UserListView,
+    ChangePasswordView,
 )
 
 urlpatterns = [
-    # POST /auth/register/ — Registro público de nuevas cuentas.
+    # POST /auth/register/ — Registro interno; password opcional (genera temporal si se omite).
     path('register/', RegisterView.as_view(), name='auth_register'),
 
-    # POST /auth/login/ — Autenticación y emisión de tokens.
+    # POST /auth/login/ — Autenticación y emisión de tokens JWT.
     path('login/', LoginView.as_view(), name='auth_login'),
+
+    # POST /auth/change-password/ — Cambio de contraseña temporal (primer login).
+    path('change-password/', ChangePasswordView.as_view(), name='auth_change_password'),
 
     # GET /auth/me/ — Datos del usuario autenticado (cualquier rol).
     path('me/', MeView.as_view(), name='auth_me'),
@@ -24,5 +28,6 @@ urlpatterns = [
     # GET /auth/users/ — Lista todos los usuarios (requiere rol admin).
     path('users/', UserListView.as_view(), name='user_list'),
 
+    # POST /auth/logout/ — Invalida el refresh token (blacklist).
     path('logout/', TokenBlacklistView.as_view(), name='auth_logout'),
 ]
