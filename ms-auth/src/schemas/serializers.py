@@ -1,20 +1,40 @@
+import secrets
+import string
 from rest_framework import serializers
 from src.models.models import User
 
-# Representa los datos del usuario que se exponen al cliente.
+
+def generate_temp_password(length: int = 12) -> str:
+    """Genera una contraseña temporal segura con al menos una mayúscula, minúscula, dígito y símbolo."""
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    required = [
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.digits),
+        secrets.choice('!@#$%^&*'),
+    ]
+    rest = [secrets.choice(alphabet) for _ in range(length - len(required))]
+    combined = required + rest
+    secrets.SystemRandom().shuffle(combined)
+    return ''.join(combined)
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'nombre', 'email', 'role', 'activo']
-        # Protegemos campos para que no se puedan editar por accidente
-        read_only_fields = ['id', 'role', 'activo']
+        fields = ['id', 'nombre', 'email', 'role', 'activo', 'requires_password_change']
+        read_only_fields = ['id', 'role', 'activo', 'requires_password_change']
 
-# Valida y deserializa el cuerpo de una solicitud de registro.
+
 class RegisterSerializer(serializers.ModelSerializer):
+    # La contraseña es opcional; si se omite se genera una temporal automáticamente.
     password = serializers.CharField(
         write_only=True,
+        required=False,
         min_length=6,
-        style={'input_type': 'password'}
+        allow_blank=False,
+        style={'input_type': 'password'},
+        help_text="Opcional. Si se omite, se genera una contraseña temporal segura."
     )
     nombre = serializers.CharField(min_length=3, max_length=100)
 
@@ -23,19 +43,50 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ['nombre', 'email', 'password', 'role']
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        temp_password = None
+        if not validated_data.get('password'):
+            temp_password = generate_temp_password()
+            validated_data['password'] = temp_password
 
-# Serializer para la respuesta del login
+        user = User.objects.create_user(**validated_data)
+        user._temp_password = temp_password  # Solo en memoria, para el correo de bienvenida
+        return user
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Valida el cambio de contraseña temporal en el primer inicio de sesión."""
+    old_password = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'},
+        help_text="Contraseña temporal recibida por correo."
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        style={'input_type': 'password'},
+        help_text="Nueva contraseña definitiva (mínimo 8 caracteres)."
+    )
+    new_password_confirm = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'}
+    )
+
+    def validate(self, data):
+        if data['new_password'] != data['new_password_confirm']:
+            raise serializers.ValidationError("Las contraseñas nuevas no coinciden.")
+        return data
+
+
 class CustomTokenSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
     user = UserSerializer()
 
-# Serializer para pedir el correo
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
-# Serializer para confirmar la nueva clave
+
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()

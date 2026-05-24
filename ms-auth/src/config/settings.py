@@ -5,16 +5,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Raíz del proyecto; se usa como base para construir rutas absolutas.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Configuración de seguridad básica.
-# SECRET_KEY debe sobreescribirse con un valor fuerte en producción.
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-clave-temporal")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOWED_HOSTS = ["*"]
 
-# APLICACIONES
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -23,19 +19,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Paquetes de terceros
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'drf_yasg',  # Generador de documentación OpenAPI / Swagger
+    'drf_yasg',
 
-    # App que contiene el modelo User personalizado.
     'src.models.apps.ModelsConfig',
-
     'rest_framework_simplejwt.token_blacklist',
     'src',
-
 ]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -51,6 +44,7 @@ TEMPLATES = [
         },
     },
 ]
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -64,7 +58,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'src.config.urls'
 
-# BASE DE DATOS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -76,10 +69,8 @@ DATABASES = {
     }
 }
 
-# Modelo de usuario personalizado; 'models' corresponde al label definido en apps.py.
 AUTH_USER_MODEL = 'models.User'
 
-# DJANGO REST FRAMEWORK
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -87,26 +78,26 @@ REST_FRAMEWORK = {
 }
 
 # Configuración de tokens JWT.
+# ROTATE_REFRESH_TOKENS: emite un nuevo refresh token en cada uso.
+# BLACKLIST_AFTER_ROTATION: invalida el token anterior al rotar (requiere 'token_blacklist' en INSTALLED_APPS).
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),   # El token de acceso expira en 1 hora.
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),      # El refresh token es válido por 7 días.
-    'ROTATE_REFRESH_TOKENS': True,                    # Emite un nuevo refresh en cada uso.
-    'BLACKLIST_AFTER_ROTATION': False,                # Activar si se instala 'token_blacklist'.
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# INTERNACIONALIZACIÓN
 LANGUAGE_CODE = 'es-mx'
 TIME_ZONE = 'America/Mexico_City'
 USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 STATIC_URL = 'static/'
 
-# Configuración de Swagger para autenticación con Bearer token.
+# Swagger: define el esquema de seguridad Bearer para autenticar
+# las rutas protegidas directamente desde la interfaz de documentación.
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {
@@ -115,14 +106,16 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     },
-    'USE_SESSION_AUTH': False,  # Oculta el formulario de login por sesión en la UI de Swagger.
+    'USE_SESSION_AUTH': False,
 }
 
-# --- CONFIGURACIÓN DE CORREO (Mailtrap) ---
+# Correo saliente mediante SMTP — actualmente apuntado a Mailtrap (sandbox de desarrollo).
+# Para producción, reemplazar EMAIL_HOST, EMAIL_HOST_USER y EMAIL_HOST_PASSWORD
+# con las credenciales del proveedor real (SendGrid, SES, etc.).
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
 EMAIL_HOST_USER = '125f057cdc0623'
 EMAIL_HOST_PASSWORD = 'da8c30193d389a'
 EMAIL_PORT = '2525'
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = 'admin@agm-buap.com'
+DEFAULT_FROM_EMAIL = 'admin@agm.com'
