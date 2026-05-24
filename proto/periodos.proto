@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package periodos;
+
+service PeriodosService {
+  // MS-2 Periodos & Materias logic
+  rpc GetMateriaById (MateriaIdRequest) returns (MateriaInfo);
+  rpc GetMateriasByDocente (DocenteIdRequest) returns (MateriasListResponse);
+  rpc GetPeriodoActivo (Empty) returns (PeriodoInfo);
+}
+
+// --- Requests ---
+
+message MateriaIdRequest {
+  string materia_id = 1;
+}
+
+message DocenteIdRequest {
+  string docente_id = 1;
+}
+
+message Empty {}
+
+// --- Responses ---
+
+message HorarioInfo {
+  string dia = 1;         // L, A, M, J, V, S, D
+  string hora_inicio = 2; // e.g., "0800"
+  string hora_fin = 3;    // e.g., "1059"
+  string salon = 4;       // e.g., "12EMA4/208" or "POR ASIGNAR"
+  bool es_virtual = 5;
+  string profesor = 6;    // Raw string from PDF
+}
+
+message MateriaInfo {
+  string id = 1;
+  string nrc = 2;         // 5-digit anchor
+  string clave = 3;       // e.g., "FCCA 004"
+  string nombre = 4;      // e.g., "Introduccion a las Matematicas"
+  string seccion = 5;     // e.g., "001"
+  string docente_id = 6;
+  string periodo_id = 7;
+  string estado = 8;      // "abierta", "cerrada", "finalizada"
+  repeated HorarioInfo horarios = 9; // List of schedule slots
+}
+
+message MateriasListResponse {
+  repeated MateriaInfo materias = 1;
+}
+
+message PeriodoInfo {
+  string id = 1;
+  string nombre = 2;      // e.g., "Primavera 2026"
+  string fecha_inicio = 3;
+  string fecha_fin = 4;
+  string plan_estudios = 5; // e.g., "ITI"
+  bool activo = 6;
+}

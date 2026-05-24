@@ -1,0 +1,9 @@
+django==5.1                     # Framework web base
+djangorestframework==3.15       # Django para APIs REST
+psycopg2-binary==2.9.9          # Driver de PostgreSQL para Python
+python-dotenv==1.0.1            
+gunicorn==22.0.0                # Servidor WSGI para producción
+grpcio==1.64.1                  # runtime de gRPC para Python
+grpcio-tools==1.64.1            # Herramientas gRPC para compilar .proto
+openpyxl==3.1.4                 # Lectura y escritura de archivos Excel
+django-cors-headers==4.4.0      # Manejo de cabeceras CORS en Django
