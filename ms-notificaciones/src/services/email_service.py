@@ -1,53 +1,59 @@
+import logging
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
 from src.models.notification_log import NotificationLog
 
-def send_academic_email(template_name, context, to_email, subject, tipo):
+logger = logging.getLogger(__name__)
+
+def send_academic_email(tipo_notificacion, context, destinatario_email, asunto, template_name):
     """
-    Renderiza una plantilla HTML de Django, envía el correo vía SMTP
-    y persiste el resultado en la base de datos para auditoría.
+    Renderiza una plantilla HTML y envía un correo electrónico, 
+    registrando el resultado en la base de datos (NotificationLog).
+    
+    :param tipo_notificacion: str - 'bienvenida', 'baja', etc.
+    :param context: dict - Diccionario con los datos para la plantilla (ej. clave_temporal, nombre_alumno)
+    :param destinatario_email: str - Correo del destino
+    :param asunto: str - Asunto del correo
+    :param template_name: str - Nombre base de la plantilla (ej. 'bienvenida')
     """
+    html_content = ""
     try:
-        # 1. Renderizar el HTML usando el motor de Django
-        html_content = render_to_string(f'{template_name}.html', context)
-        
-        # 2. Configurar el correo transaccional
+        # 1. Renderizar el contenido HTML basado en la plantilla
+        template_path = f"src/templates/{template_name}.html"
+        html_content = render_to_string(template_path, context)
+        text_content = strip_tags(html_content) # Alternativa en texto plano
+
+        # 2. Configurar el correo
         email = EmailMultiAlternatives(
-            subject=subject,
-            body="Mensaje de AGM", # El cuerpo de texto plano se deja vacío porque usamos HTML
-            from_email=None, # Usa el DEFAULT_FROM_EMAIL configurado en settings
-            to=[to_email]
+            subject=asunto,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[destinatario_email]
         )
         email.attach_alternative(html_content, "text/html")
         
-        # 3. Enviar utilizando el backend SMTP
-        email.send()
-
-        # 4. Registrar éxito en la base de datos (Aislamiento de datos)
-        NotificationLog.objects.create(
-            tipo=tipo,
-            destinatario_email=to_email,
-            destinatario_id=context.get('alumno_id'),
-            asunto=subject,
-            contenido=html_content,
-            estado='enviado',
-            metadata=context
-        )
-        print(f"Correo [{tipo}] enviado con éxito a {to_email}")
-        return True
+        # 3. Intentar enviar el correo
+        email.send(fail_silently=False)
+        estado = 'enviado'
+        error_detalle = None
+        logger.info(f"Correo de tipo '{tipo_notificacion}' enviado exitosamente a {destinatario_email}")
 
     except Exception as e:
-        print(f"Error en el servicio de email al enviar [{tipo}]: {str(e)}")
-        
-        # 5. Registrar el fallo en el log para auditoría
+        estado = 'fallido'
+        error_detalle = str(e)
+        logger.error(f"Error al enviar correo a {destinatario_email}: {error_detalle}")
+
+    finally:
+        # 4. Guardar el registro en la base de datos (PostgreSQL vía Django ORM)
         NotificationLog.objects.create(
-            tipo=tipo,
-            destinatario_email=to_email,
-            destinatario_id=context.get('alumno_id'),
-            asunto=subject,
-            contenido="",
-            estado='fallido',
-            error_detalle=str(e),
+            tipo=tipo_notificacion,
+            destinatario_email=destinatario_email,
+            destinatario_id=context.get('alumno_id') or context.get('docente_id'),
+            asunto=asunto,
+            contenido=html_content,
+            estado=estado,
+            error_detalle=error_detalle,
             metadata=context
         )
-        return False
