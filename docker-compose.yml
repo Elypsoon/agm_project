@@ -222,6 +222,10 @@ services:
     depends_on:
       db-notificaciones:
         condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:3006 &
+             python src/grpc/server.py"
 
   # ---------------------------------------------------------------------------
   # MS-7: Reportes (Django + PostgreSQL)

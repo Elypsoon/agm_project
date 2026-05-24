@@ -24,7 +24,7 @@ COPY . .
 
 # 7. Limpiar retornos de carro (CRLF -> LF), copiar fuera del volumen de la app y dar permisos al entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
+RUN python -c "c=open('/docker-entrypoint.sh','rb').read(); c=c[3:] if c.startswith(b'\xef\xbb\xbf') else c; open('/docker-entrypoint.sh','wb').write(c.replace(b'\r\n',b'\n'))" && chmod +x /docker-entrypoint.sh
 
 # 8. Exponer puertos (REST + gRPC)
 EXPOSE 3003
