@@ -3,11 +3,12 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.conf import settings
+
+from src.utils.rabbitmq import publish_event
 
 from src.schemas.serializers import (
     RegisterSerializer,
@@ -23,95 +24,20 @@ logger = logging.getLogger(__name__)
 
 
 def _send_welcome_email(user: User, temp_password: str | None) -> None:
-    """Envía el correo de bienvenida con la contraseña temporal (si aplica)."""
-    login_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:4200') + '/auth/login'
-
-    if temp_password:
-        password_section = f"""
-        <div style="background:#f0f4ff;border-left:4px solid #4f46e5;padding:16px 20px;border-radius:6px;margin:24px 0;">
-            <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">Tu contraseña temporal</p>
-            <p style="margin:0;font-size:22px;font-weight:700;font-family:monospace;color:#1e1b4b;letter-spacing:.1em;">{temp_password}</p>
-            <p style="margin:8px 0 0;font-size:12px;color:#ef4444;">⚠️ Deberás cambiarla en tu primer inicio de sesión.</p>
-        </div>"""
-    else:
-        password_section = "<p>Utiliza la contraseña que te fue asignada por el administrador.</p>"
-
-    html_message = f"""
-    <!DOCTYPE html>
-    <html lang="es">
-    <head><meta charset="UTF-8"></head>
-    <body style="margin:0;padding:0;background:#f8fafc;font-family:'Segoe UI',Arial,sans-serif;">
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr><td align="center" style="padding:40px 16px;">
-          <table width="600" cellpadding="0" cellspacing="0"
-                 style="background:#ffffff;border-radius:12px;overflow:hidden;
-                        box-shadow:0 4px 24px rgba(0,0,0,.08);">
-            <tr>
-              <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);
-                         padding:36px 40px;text-align:center;">
-                <h1 style="margin:0;color:#fff;font-size:28px;font-weight:700;
-                           letter-spacing:-.5px;">🎓 AGM</h1>
-                <p style="margin:6px 0 0;color:#c7d2fe;font-size:14px;">
-                  Sistema de Gestión Académica
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:36px 40px;">
-                <p style="margin:0 0 16px;font-size:16px;color:#374151;">
-                  Hola, <strong>{user.nombre}</strong>:
-                </p>
-                <p style="margin:0 0 16px;font-size:15px;color:#6b7280;line-height:1.6;">
-                  Tu cuenta en el sistema <strong>AGM</strong> ha sido creada exitosamente
-                  con el rol de <strong>{user.get_role_display()}</strong>.
-                </p>
-                {password_section}
-                <a href="{login_url}"
-                   style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);
-                          color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;
-                          font-weight:600;font-size:15px;margin-top:8px;">
-                  Iniciar Sesión →
-                </a>
-                <p style="margin:28px 0 0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                  Si no reconoces este registro, puedes ignorar este correo con seguridad.<br>
-                  Este mensaje fue generado automáticamente por el sistema AGM.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="background:#f9fafb;padding:20px 40px;text-align:center;
-                         border-top:1px solid #e5e7eb;">
-                <p style="margin:0;font-size:12px;color:#9ca3af;">
-                  © 2026 AGM
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td></tr>
-      </table>
-    </body>
-    </html>"""
-
-    plain_message = (
-        f"Hola {user.nombre},\n\n"
-        f"Tu cuenta AGM ha sido creada (rol: {user.get_role_display()}).\n"
-        + (f"Contraseña temporal: {temp_password}\nDeberás cambiarla en tu primer inicio de sesión.\n" if temp_password else "")
-        + f"\nAccede en: {login_url}\n\n"
-        "Si no reconoces este registro, ignora este correo."
-    )
-
+    """Publica el evento de bienvenida en el broker para que ms-notificaciones envíe el correo."""
+    payload = {
+        "email": user.email,
+        "nombre_alumno": user.nombre,
+        "clave_temporal": temp_password,
+    }
     try:
-        send_mail(
-            subject='Bienvenido/a al Sistema AGM 🎓',
-            message=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-        logger.info("Correo de bienvenida enviado a %s", user.email)
+        success = publish_event('student.registered', payload)
+        if success:
+            logger.info("Evento 'student.registered' encolado para %s", user.email)
+        else:
+            logger.error("Fallo al encolar evento 'student.registered' para %s", user.email)
     except Exception as exc:
-        logger.error("Error al enviar correo de bienvenida a %s: %s", user.email, exc)
+        logger.error("Error inesperado al encolar evento de bienvenida para %s: %s", user.email, exc)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -224,15 +150,19 @@ class RequestPasswordResetView(generics.GenericAPIView):
             user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            reset_url = f"http://localhost:4200/auth/reset-password/{uid}/{token}/"
-
-            send_mail(
-                'Recuperación de Contraseña - AGM',
-                f'Hola {user.nombre},\n\nHaz clic en el siguiente enlace para restablecer tu contraseña:\n{reset_url}',
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
+            reset_url = (
+                getattr(settings, 'FRONTEND_URL', 'http://localhost:4200')
+                + f'/auth/reset-password/{uid}/{token}/'
             )
+            payload = {
+                "email": user.email,
+                "reset_url": reset_url,
+            }
+            success = publish_event('usuario.reset', payload)
+            if success:
+                logger.info("Evento 'usuario.reset' encolado para %s", user.email)
+            else:
+                logger.error("Fallo al encolar evento 'usuario.reset' para %s", user.email)
         except User.DoesNotExist:
             pass  # Respuesta ambigua para no revelar si el correo existe
 
