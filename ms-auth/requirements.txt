@@ -8,4 +8,5 @@ python-dotenv
 protobuf>=5.26.1
 grpcio>=1.62.1
 grpcio-tools>=1.62.1
+django-cors-headers==4.7.0
 pika==1.3.2

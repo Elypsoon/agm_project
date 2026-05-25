@@ -23,6 +23,4 @@ urlpatterns = [
     path('auth/', include('src.routes.auth_routes')),
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    path('password-reset/', RequestPasswordResetView.as_view(), name='password_reset'),
-    path('password-reset-confirm/', ConfirmPasswordResetView.as_view(), name='password_reset_confirm'),
 ]

@@ -49,6 +49,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -119,3 +120,11 @@ EMAIL_HOST_PASSWORD = 'da8c30193d389a'
 EMAIL_PORT = '2525'
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'admin@agm.com'
+
+# Permitir peticiones explícitas desde el puerto de Angular
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",
+]
+
+# Permitir que se envíen cookies e interceptores JWT en las cabeceras
+CORS_ALLOW_CREDENTIALS = True

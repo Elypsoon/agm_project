@@ -7,6 +7,8 @@ from src.controllers.auth_controller import (
     MeView,
     UserListView,
     ChangePasswordView,
+    RequestPasswordResetView,
+    ConfirmPasswordResetView,
 )
 
 urlpatterns = [
@@ -30,4 +32,10 @@ urlpatterns = [
 
     # POST /auth/logout/ — Invalida el refresh token (blacklist).
     path('logout/', TokenBlacklistView.as_view(), name='auth_logout'),
+
+    # POST /auth/forgot-password/ — Envía correo de recuperación.
+    path('forgot-password/', RequestPasswordResetView.as_view(), name='auth_forgot_password'),
+
+    # POST /auth/reset-password/ — Establece nueva contraseña usando el token.
+    path('reset-password/', ConfirmPasswordResetView.as_view(), name='auth_reset_password'),
 ]
