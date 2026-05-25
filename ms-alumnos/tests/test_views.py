@@ -106,7 +106,7 @@ class TestDocentes(TestCase):
         resp2 = self.client.get("/docentes/?limit=2&page=2")
         self.assertEqual(len(resp2.json()["data"]["docentes"]), 1)
 
-    @patch("src.services.docente_service.registrar_usuario_en_auth", return_value=None)
+    @patch("src.services.docente_service.publish_event", return_value=None)
     def test_importar_pdf_docentes(self, mock_auth):
         if not os.path.exists(PDF_DOCENTES):
             self.skipTest("PDF de docentes no disponible")
@@ -232,7 +232,7 @@ class TestAlumnos(TestCase):
         resp = self.client.get(f"/alumnos/materia/{MATERIA_ID}/")
         self.assertEqual(resp.json()["data"]["total"], 0)
 
-    @patch("src.services.alumno_service.registrar_usuario_en_auth", return_value=None)
+    @patch("src.services.alumno_service.publish_event", return_value=None)
     def test_importar_pdf_alumnos(self, mock_auth):
         if not os.path.exists(PDF_ALUMNOS):
             self.skipTest("PDF de alumnos no disponible")
@@ -247,7 +247,7 @@ class TestAlumnos(TestCase):
         self.assertEqual(data["data"]["inscripciones_nuevas"], 30)
         self.assertEqual(data["data"]["curso"]["materia"], "Servicios Web")
 
-    @patch("src.services.alumno_service.registrar_usuario_en_auth", return_value=None)
+    @patch("src.services.alumno_service.publish_event", return_value=None)
     def test_reimportar_no_duplica(self, mock_auth):
         if not os.path.exists(PDF_ALUMNOS):
             self.skipTest("PDF de alumnos no disponible")
@@ -261,7 +261,7 @@ class TestAlumnos(TestCase):
         self.assertEqual(data["data"]["alumnos_nuevos"], 0)
         self.assertEqual(data["data"]["ya_inscritos"], 30)
 
-    @patch("src.services.alumno_service.registrar_usuario_en_auth", return_value=None)
+    @patch("src.services.alumno_service.publish_event", return_value=None)
     def test_importar_a_otra_materia(self, mock_auth):
         if not os.path.exists(PDF_ALUMNOS):
             self.skipTest("PDF de alumnos no disponible")
