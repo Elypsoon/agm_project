@@ -19,6 +19,10 @@ else:
     print('Superuser ya existe')
 "
 
+# 2.5 Iniciar consumidor RabbitMQ en background
+echo "[2.5/3] Iniciando consumidor RabbitMQ en background..."
+python manage.py run_consumer &
+
 # 3. Iniciar servidor
 echo "[3/3] Iniciando servidor en puerto ${REST_PORT:-3003}..."
 exec python manage.py runserver 0.0.0.0:${REST_PORT:-3003}

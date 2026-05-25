@@ -40,10 +40,14 @@ services:
     depends_on:
       db-auth:
         condition: service_healthy
-    # --- COMANDO PARA CORRER AMBOS SERVIDORES ---
+      rabbitmq:
+        condition: service_healthy
+    # --- COMANDO PARA CORRER SERVIDORES Y CONSUMIDOR ---
     command: >
-      sh -c "python manage.py runserver 0.0.0.0:3001 & 
-             python grpc_server.py"
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:3001 & 
+             python grpc_server.py &
+             python manage.py run_consumer"
 
   # ---------------------------------------------------------------------------
   # MS-3: Docentes & Alumnos (Django + PostgreSQL)
@@ -84,6 +88,8 @@ services:
       - ./ms-alumnos/.env
     depends_on:
       db-alumnos:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
@@ -222,6 +228,13 @@ services:
     depends_on:
       db-notificaciones:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:3006 &
+             python src/grpc/server.py &
+             python manage.py run_consumer"
 
   # ---------------------------------------------------------------------------
   # MS-7: Reportes (Django + PostgreSQL)
@@ -263,6 +276,25 @@ services:
     depends_on:
       db-reportes:
         condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Message Broker – RabbitMQ
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: agm-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # AMQP protocol
+      - "15672:15672" # Admin UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ---------------------------------------------------------------------------
   # Frontend – Angular 20 SPA

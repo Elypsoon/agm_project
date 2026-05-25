@@ -15,9 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # copiar el código
 COPY . .
 
-# copiar y dar permisos al script de inicio
+# copiar, limpiar retornos de carro (CRLF -> LF) y dar permisos al script de inicio
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN python -c "c=open('/entrypoint.sh','rb').read(); c=c[3:] if c.startswith(b'\xef\xbb\xbf') else c; open('/entrypoint.sh','wb').write(c.replace(b'\r\n',b'\n'))" && chmod +x /entrypoint.sh
 
 EXPOSE 3004
 EXPOSE 50054

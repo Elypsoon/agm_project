@@ -1,0 +1,80 @@
+// ============================================================
+// AGM — Global Styles
+// ============================================================
+
+@use 'variables' as v;
+@use 'mixins' as m;
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: v.$font-body;
+  line-height: 1.5;
+  @include m.scrollbar;
+}
+
+h1, h2, h3, h4 {
+  font-family: v.$font-heading;
+  line-height: 1.3;
+}
+
+h1 { font-size: 28px; font-weight: 700; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 18px; font-weight: 600; }
+h4 { font-size: 16px; font-weight: 500; }
+
+code, .mono {
+  font-family: v.$font-mono;
+}
+
+// Badge de rol reutilizable
+.badge-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: v.$radius-full;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &--admin   { background: rgba(v.$role-admin, 0.12);   color: v.$role-admin;   }
+  &--docente { background: rgba(v.$role-docente, 0.12); color: v.$role-docente; }
+  &--alumno  { background: rgba(v.$role-alumno, 0.12);  color: v.$role-alumno;  }
+}
+
+// Estilo monoespaciado para IDs, matrículas, NRCs
+.mono-id {
+  font-family: v.$font-mono;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+// Animación de entrada para páginas
+.page-enter {
+  animation: fadeSlideIn 200ms ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

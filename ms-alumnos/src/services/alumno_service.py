@@ -11,7 +11,7 @@ from src.models.alumno import Alumno
 from src.models.inscripcion import Inscripcion
 from src.parsers.pdf_alumnos_parser import parsear_pdf_alumnos
 from src.utils import generar_clave_acceso
-from src.grpc.auth_client import registrar_usuario_en_auth
+from src.utils.rabbitmq import publish_event
 
 logger = logging.getLogger(__name__)
 
@@ -64,17 +64,19 @@ class AlumnoService:
                             f"({datos.matricula}) [{datos.correo}]"
                         )
 
-                        # Registrar en MS-1 Auth (tolerante a fallos)
+                        # Publicar evento para registro asíncrono en Auth y Notificaciones
                         if datos.correo:
-                            user_id = registrar_usuario_en_auth(
-                                email=datos.correo,
-                                nombre=datos.nombre_completo,
-                                password=clave,
-                                role="alumno",
+                            publish_event(
+                                routing_key="student.registered",
+                                payload={
+                                    "local_id": str(alumno.id),
+                                    "role": "alumno",
+                                    "email": datos.correo,
+                                    "nombre": datos.nombre_completo,
+                                    "password": clave,
+                                    "materia_id": str(materia_id),
+                                }
                             )
-                            if user_id:
-                                alumno.user_id = user_id
-                                alumno.save(update_fields=["user_id"])
                     else:
                         updated = False
                         if datos.correo and not alumno.correo:

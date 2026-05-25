@@ -8,7 +8,7 @@ from django.db import transaction, IntegrityError
 
 from src.models.docente import Docente
 from src.parsers.pdf_parser import parsear_pdf_docentes
-from src.grpc.auth_client import registrar_usuario_en_auth
+from src.utils.rabbitmq import publish_event
 
 logger = logging.getLogger(__name__)
 
@@ -60,16 +60,17 @@ class DocenteService:
                         )
                         nuevos += 1
 
-                        # Registrar en MS-1 Auth
-                        user_id = registrar_usuario_en_auth(
-                            email=datos.correo_institucional,
-                            nombre=datos.nombre_completo,
-                            password=datos.correo_institucional.split("@")[0],
-                            role="docente",
+                        # Publicar evento para registro asíncrono en MS-1 Auth
+                        publish_event(
+                            routing_key="teacher.registered",
+                            payload={
+                                "local_id": str(nuevo.id),
+                                "role": "docente",
+                                "email": datos.correo_institucional,
+                                "nombre": datos.nombre_completo,
+                                "password": datos.correo_institucional.split("@")[0],
+                            }
                         )
-                        if user_id:
-                            nuevo.user_id = user_id
-                            nuevo.save(update_fields=["user_id"])
 
             except IntegrityError:
                 errores.append(datos.correo_institucional)

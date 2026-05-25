@@ -44,8 +44,9 @@ class ModelsConfig(AppConfig):
         from src.grpc.server import crear_servidor_grpc
 
         try:
-            server = crear_servidor_grpc(settings.GRPC_PORT)
-            server.start()
-            print(f"[gRPC] Servidor escuchando en puerto {settings.GRPC_PORT}")
+            self.grpc_server = crear_servidor_grpc(settings.GRPC_PORT)
+            self.grpc_server.start()
+            print(f"[gRPC] Servidor escuchando en puerto {settings.GRPC_PORT}", flush=True)
+            self.grpc_server.wait_for_termination()
         except Exception as e:
-            print(f"[gRPC] Error al iniciar: {e}")
+            print(f"[gRPC] Error al iniciar: {e}", flush=True)
