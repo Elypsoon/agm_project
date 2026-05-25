@@ -16,6 +16,11 @@ from src.services.ponderacion_service import (
 )
 from src.utils.authentication import GrpcJWTAuthentication
 from src.utils.permissions import IsDocente, IsAlumnoOrDocente
+from src.services.autorizacion_service import (
+    verificar_docente_sobre_materia,
+    DocenteSinAutorizacion,
+    MateriaNoAccesible,
+)
 
 class PonderacionView(APIView):
     authentication_classes = [GrpcJWTAuthentication]
@@ -38,6 +43,13 @@ class PonderacionView(APIView):
         input_serializer.is_valid(raise_exception=True)
 
         try:
+            verificar_docente_sobre_materia(request.user.user_id, materia_id)
+        except DocenteSinAutorizacion as exc:
+            return Response({"detail": str(exc)}, status=403)
+        except MateriaNoAccesible as exc:
+            return Response({"detail": str(exc)}, status=503)
+
+        try:
             config, created = upsert_config(
                 materia_id, input_serializer.validated_data["categorias"]
             )
@@ -54,6 +66,13 @@ class PonderacionView(APIView):
     def put(self, request, materia_id):
         input_serializer = PonderacionConfigInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
+
+        try:
+            verificar_docente_sobre_materia(request.user.user_id, materia_id)
+        except DocenteSinAutorizacion as exc:
+            return Response({"detail": str(exc)}, status=403)
+        except MateriaNoAccesible as exc:
+            return Response({"detail": str(exc)}, status=503)
 
         try:
             config = replace_config(

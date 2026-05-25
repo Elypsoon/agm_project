@@ -5,6 +5,11 @@ from src.controllers.serializers import ActividadInputSerializer, ActividadSeria
 from src.services.actividad_service import crear_actividad, CategoriaNoEncontrada, CategoriaMateriaNoCoincide
 from src.utils.authentication import GrpcJWTAuthentication
 from src.utils.permissions import IsDocente
+from src.services.autorizacion_service import (
+    verificar_docente_sobre_materia,
+    DocenteSinAutorizacion,
+    MateriaNoAccesible,
+)
 
 class ActividadView(APIView):
     authentication_classes = [GrpcJWTAuthentication]
@@ -15,6 +20,13 @@ class ActividadView(APIView):
         input_serializer.is_valid(raise_exception=True)
 
         data = input_serializer.validated_data
+
+        try:
+            verificar_docente_sobre_materia(request.user.user_id, data['materia_id'])
+        except DocenteSinAutorizacion as exc:
+            return Response({'detail': str(exc)}, status=403)
+        except MateriaNoAccesible as exc:
+            return Response({'detail': str(exc)}, status=503)
 
         try:
             actividad = crear_actividad(
