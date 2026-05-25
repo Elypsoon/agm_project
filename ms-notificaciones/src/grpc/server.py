@@ -16,6 +16,7 @@ django.setup()
 import src.grpc.notificaciones_pb2 as pb2
 import src.grpc.notificaciones_pb2_grpc as pb2_grpc
 from src.services.email_service import send_academic_email
+from src.grpc.alumnos_client import AlumnosGRPCClient
 
 class NotificacionesServicer(pb2_grpc.NotificacionesServiceServicer):
     

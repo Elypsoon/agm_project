@@ -7,17 +7,17 @@ from src.models.notification_log import NotificationLog
 
 logger = logging.getLogger(__name__)
 
-def send_academic_email(tipo_notificacion, context, destinatario_email, asunto, template_name):
+def send_academic_email(tipo_notificacion=None, context=None, destinatario_email=None, asunto=None, template_name=None, tipo=None, to_email=None, subject=None):
     """
     Renderiza una plantilla HTML y envía un correo electrónico, 
     registrando el resultado en la base de datos (NotificationLog).
     
-    :param tipo_notificacion: str - 'bienvenida', 'baja', etc.
-    :param context: dict - Diccionario con los datos para la plantilla (ej. clave_temporal, nombre_alumno)
-    :param destinatario_email: str - Correo del destino
-    :param asunto: str - Asunto del correo
-    :param template_name: str - Nombre base de la plantilla (ej. 'bienvenida')
+    Compatibilidad de argumentos: soporta tanto la firma clásica como las llamadas de palabra clave.
     """
+    tipo_notificacion = tipo_notificacion or tipo
+    destinatario_email = destinatario_email or to_email
+    asunto = asunto or subject
+
     html_content = ""
     try:
         # 1. Renderizar el contenido HTML basado en la plantilla

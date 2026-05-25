@@ -18,7 +18,7 @@ class Command(BaseCommand):
         user = os.getenv("RABBITMQ_USER", "guest")
         password = os.getenv("RABBITMQ_PASSWORD", "guest")
 
-        print(f"⏳ [RabbitMQ] Iniciando consumidor de Notificaciones en {host}:{port}...", flush=True)
+        print(f"[RabbitMQ] Iniciando consumidor de Notificaciones en {host}:{port}...", flush=True)
 
         try:
             credentials = pika.PlainCredentials(user, password)
@@ -37,8 +37,8 @@ class Command(BaseCommand):
             queue_name = 'ms_notificaciones_queue'
             channel.queue_declare(queue=queue_name, durable=True)
 
-            # 🌟 ENLAZAR LA COLA A LOS 4 EVENTOS DE LA UNIVERSIDAD
-            eventos = ['alumno.inscrito', 'alumno.baja', 'materia.cerrada', 'usuario.reset']
+            # ENLAZAR LA COLA A LOS 4 EVENTOS DE LA UNIVERSIDAD (añadiendo student.registered para compatibilidad con ms-alumnos)
+            eventos = ['alumno.inscrito', 'student.registered', 'alumno.baja', 'materia.cerrada', 'usuario.reset']
             for evento in eventos:
                 channel.queue_bind(exchange='agm.events', queue=queue_name, routing_key=evento)
 
@@ -46,11 +46,11 @@ class Command(BaseCommand):
                 routing_key = method.routing_key
                 try:
                     payload = json.loads(body.decode('utf-8'))
-                    print(f"📥 [RabbitMQ] Evento recibido [{routing_key}]: {payload}", flush=True)
+                    print(f"[RabbitMQ] Evento recibido [{routing_key}]: {payload}", flush=True)
                     
                     email_destinatario = payload.get('email')
                     if not email_destinatario:
-                        print("❌ [RabbitMQ] Mensaje descartado: No contiene email de destinatario.", flush=True)
+                        print("[RabbitMQ] Mensaje descartado: No contiene email de destinatario.", flush=True)
                         ch.basic_ack(delivery_tag=method.delivery_tag)
                         return
 
@@ -59,14 +59,14 @@ class Command(BaseCommand):
                     # ==========================================
                     # 1. BIENVENIDA / INSCRIPCIÓN (Desde MS-3)
                     # ==========================================
-                    if routing_key == 'alumno.inscrito':
-                        # Atrapamos todas las llaves posibles
-                        clave = payload.get('clave_temporal')
-                        materia = payload.get('materia_nombre', 'tu nueva materia')
-                        nombre_alumno = payload.get('nombre_alumno', 'Alumno')
+                    if routing_key in ('alumno.inscrito', 'student.registered'):
+                        # Atrapamos todas las llaves posibles para compatibilidad
+                        clave = payload.get('clave_temporal') or payload.get('password')
+                        materia = payload.get('materia_nombre') or 'tu nueva materia'
+                        nombre_alumno = payload.get('nombre_alumno') or payload.get('nombre', 'Alumno')
                         materia_id = payload.get('materia_id', 'Desconocido') # Para logs
                         
-                        print(f"👉 Procesando inscripción: {nombre_alumno} en materia {materia_id}", flush=True)
+                        print(f"Procesando inscripción: {nombre_alumno} en materia {materia_id}", flush=True)
 
                         asunto = '¡Tu acceso y nueva materia en AGM! 🎓' if clave else f'Nueva Inscripción: {materia}'
                         
@@ -131,23 +131,23 @@ class Command(BaseCommand):
                     # CONFIRMACIÓN AL BROKER
                     # ==========================================
                     if success:
-                        print(f"✅ [RabbitMQ] Correo enviado con éxito a {email_destinatario}", flush=True)
+                        print(f"[RabbitMQ] Correo enviado con éxito a {email_destinatario}", flush=True)
                     else:
-                        print(f"❌ [RabbitMQ] Falló el envío de correo a {email_destinatario}", flush=True)
+                        print(f"[RabbitMQ] Falló el envío de correo a {email_destinatario}", flush=True)
 
                     ch.basic_ack(delivery_tag=method.delivery_tag)
 
                 except Exception as e:
-                    print(f"💥 [RabbitMQ] Error procesando notificación [{routing_key}]: {e}", flush=True)
+                    print(f"[RabbitMQ] Error procesando notificación [{routing_key}]: {e}", flush=True)
                     # Si explota por un error de código, lo devolvemos a la cola para no perderlo
                     ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
             channel.basic_qos(prefetch_count=1)
             channel.basic_consume(queue=queue_name, on_message_callback=callback)
 
-            print("🚀 [RabbitMQ] MS-6 100% Operativo. Escuchando todos los eventos...", flush=True)
+            print("[RabbitMQ] MS-6 100% Operativo. Escuchando todos los eventos...", flush=True)
             channel.start_consuming()
 
         except Exception as e:
-            print(f"💥 [RabbitMQ] Error crítico de conexión: {e}", flush=True)
+            print(f"[RabbitMQ] Error crítico de conexión: {e}", flush=True)
             sys.exit(1)
