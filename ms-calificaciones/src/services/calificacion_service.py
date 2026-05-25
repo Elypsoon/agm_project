@@ -1,38 +1,66 @@
 from django.db import transaction
 from src.models.models import Actividad, PonderacionConfig, Calificacion
 from src.parsers.file_parser import parsear_archivo
-from src.grpc.alumnos_client import AlumnosClient
+from src.grpc.alumnos_client import AlumnosClient, AlumnosGrpcError
+
 
 class ActividadNoEncontrada(Exception):
     pass
 
+
+class AlumnoNoInscrito(Exception):
+    """El alumno no está inscrito o no está activo en la materia."""
+
+
+class ServicioExternoInaccesible(Exception):
+    """MS-3 no respondió correctamente; no se puede verificar la inscripción."""
+
+
 def upsert_calificacion(actividad_id, alumno_id, valor):
-    with transaction.atomic():
-        try:
-            actividad = Actividad.objects.select_related('categoria__config').get(
-                id=actividad_id
-            )
-        except Actividad.DoesNotExist:
-            raise ActividadNoEncontrada(f'Actividad con ID {actividad_id} no encontrada.')
-        
-        config = PonderacionConfig.objects.select_for_update().get(
-            id=actividad.categoria.config_id
+    """Guarda o actualiza la calificación de un alumno en una actividad."""
+    try:
+        actividad = Actividad.objects.select_related('categoria__config').get(
+            id=actividad_id
+        )
+    except Actividad.DoesNotExist:
+        raise ActividadNoEncontrada(f'Actividad con ID {actividad_id} no encontrada.')
+
+    materia_id = actividad.categoria.config.materia_id
+
+    try:
+        inscrito = AlumnosClient().is_alumno_en_materia(alumno_id, materia_id)
+    except AlumnosGrpcError as exc:
+        raise ServicioExternoInaccesible(
+            f'No se pudo verificar la inscripción del alumno: {exc}'
         )
 
+    if not inscrito:
+        raise AlumnoNoInscrito(
+            f'El alumno {alumno_id} no está inscrito o no está activo '
+            f'en la materia {materia_id}.'
+        )
+
+    with transaction.atomic():
+        PonderacionConfig.objects.select_for_update().get(
+            id=actividad.categoria.config_id
+        )
         calificacion, created = Calificacion.objects.update_or_create(
             actividad=actividad,
             alumno_id=alumno_id,
             defaults={'valor': valor},
         )
 
-
-
     return calificacion, created
 
+
 def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
+    """Importa calificaciones masivamente desde un archivo CSV o XLSX.
+
+    Returns:
+        dict: {'importadas': int, 'errores': list[dict]}"""
     registros, _ = parsear_archivo(nombre_archivo, archivo_bytes)
 
-    # Obtener actividades de la materia indexadas por nombre (en minúsculas)
+    # Obtener actividades de la materia indexadas por nombre
     try:
         config = PonderacionConfig.objects.prefetch_related(
             'categorias__actividades'
@@ -45,8 +73,14 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
         for actividad in categoria.actividades.all():
             actividades_por_nombre[actividad.nombre.strip().lower()] = actividad
 
-    # Obtener alumnos de la materia e indexarlos por matrícula
-    alumnos_lista = AlumnosClient().get_alumnos_by_materia(materia_id)
+    # Obtener alumnos inscritos e indexarlos por matrícula
+    try:
+        alumnos_lista = AlumnosClient().get_alumnos_by_materia(materia_id)
+    except AlumnosGrpcError as exc:
+        raise ServicioExternoInaccesible(
+            f'No se pudo obtener la lista de alumnos de MS-3: {exc}'
+        )
+
     alumnos_por_matricula = {
         a['matricula']: a['id'] for a in alumnos_lista
     }
@@ -96,7 +130,6 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
                 unique_fields=['actividad', 'alumno_id'],
                 update_fields=['valor'],
             )
-
 
     return {
         'importadas': importadas,

@@ -2,7 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from src.controllers.serializers import CalificacionInputSerializer, CalificacionSerializer
-from src.services.calificacion_service import upsert_calificacion, ActividadNoEncontrada, importar_calificaciones
+from src.services.calificacion_service import (
+    upsert_calificacion,
+    importar_calificaciones,
+    ActividadNoEncontrada,
+    AlumnoNoInscrito,
+    ServicioExternoInaccesible,
+)
 from src.utils.authentication import GrpcJWTAuthentication
 from src.utils.permissions import IsDocente
 
@@ -24,6 +30,10 @@ class CalificacionView(APIView):
             )
         except ActividadNoEncontrada as exc:
             return Response({'detail': str(exc)}, status=404)
+        except AlumnoNoInscrito as exc:
+            return Response({'detail': str(exc)}, status=422)
+        except ServicioExternoInaccesible as exc:
+            return Response({'detail': str(exc)}, status=503)
 
         return Response(
             {
@@ -54,5 +64,7 @@ class ImportarCalificacionesView(APIView):
             )
         except ValueError as exc:
             return Response({'detail': str(exc)}, status=400)
+        except ServicioExternoInaccesible as exc:
+            return Response({'detail': str(exc)}, status=503)
 
         return Response(resultado, status=201)
