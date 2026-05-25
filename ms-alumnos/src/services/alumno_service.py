@@ -75,6 +75,7 @@ class AlumnoService:
                                     "nombre": datos.nombre_completo,
                                     "password": clave,
                                     "materia_id": str(materia_id),
+                                    "materia_nombre": info_curso.materia or "Materia Desconocida",
                                 }
                             )
                     else:

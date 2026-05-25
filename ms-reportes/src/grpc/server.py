@@ -1,6 +1,9 @@
 import os
-import grpc
 import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.core.settings')
+django.setup()
+
+import grpc
 from concurrent import futures
 from django.conf import settings
 from src.grpc import reportes_pb2, reportes_pb2_grpc
@@ -19,9 +22,6 @@ from src.generators.pdf_generator import (
     generate_rendimiento_pdf,
 )
 from src.models.reportes import EstadisticasSnapshot
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.core.settings')
-django.setup()
 
 
 def _safe_int(value, default=0):
