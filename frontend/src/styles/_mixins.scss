@@ -1,0 +1,43 @@
+// ============================================================
+// AGM — Reusable Mixins
+// ============================================================
+
+@use 'variables' as v;
+
+@mixin respond($bp) {
+  @if $bp == sm  { @media (min-width: v.$bp-sm)  { @content; } }
+  @if $bp == md  { @media (min-width: v.$bp-md)  { @content; } }
+  @if $bp == lg  { @media (min-width: v.$bp-lg)  { @content; } }
+  @if $bp == xl  { @media (min-width: v.$bp-xl)  { @content; } }
+  @if $bp == 2xl { @media (min-width: v.$bp-2xl) { @content; } }
+}
+
+@mixin glass($opacity: 0.08) {
+  background: rgba(255, 255, 255, $opacity);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin focus-ring($color: v.$role-admin) {
+  &:focus-visible {
+    outline: 2px solid $color;
+    outline-offset: 2px;
+  }
+}
+
+@mixin scrollbar {
+  &::-webkit-scrollbar { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: v.$radius-full;
+    &:hover { background: rgba(148, 163, 184, 0.6); }
+  }
+}
