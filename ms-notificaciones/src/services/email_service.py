@@ -7,7 +7,7 @@ from src.models.notification_log import NotificationLog
 
 logger = logging.getLogger(__name__)
 
-def send_academic_email(tipo_notificacion=None, context=None, destinatario_email=None, asunto=None, template_name=None, tipo=None, to_email=None, subject=None):
+def send_academic_email(tipo_notificacion=None, context=None, destinatario_email=None, asunto=None, template_name=None, tipo=None, to_email=None, subject=None, attachments=None):
     """
     Renderiza una plantilla HTML y envía un correo electrónico, 
     registrando el resultado en la base de datos (NotificationLog).
@@ -34,6 +34,11 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
         )
         email.attach_alternative(html_content, "text/html")
         
+        # Adjuntar archivos opcionales si se suministran
+        if attachments:
+            for file_name, file_content, mime_type in attachments:
+                email.attach(file_name, file_content, mime_type)
+                
         # 3. Intentar enviar el correo
         email.send(fail_silently=False)
         estado = 'enviado'

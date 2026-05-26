@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte Académico Disponible</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+    <div style="max-width: 600px; background: white; border: 1px solid #004b93; padding: 25px; margin: 0 auto; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="background-color: #004b93; color: white; padding: 15px; border-radius: 4px; text-align: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px;">SISTEMA ACADÉMICO AGM</h2>
+            <span style="font-size: 12px; opacity: 0.9;">Benemérita Universidad Autónoma de Puebla</span>
+        </div>
+        
+        <h3 style="color: #004b93; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-top: 0;">¡Tu reporte final está listo!</h3>
+        
+        <p>Estimado(a) Docente,</p>
+        
+        <p>Le informamos que el **Reporte Final Consolidado** (que engloba la matriz detallada de calificaciones a escala 0-1 y el desglose cronológico de asistencias) ha sido generado con éxito en segundo plano para su materia:</p>
+        
+        <div style="background-color: #f2f6fc; border-left: 4px solid #004b93; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0 0 8px 0; font-weight: bold; color: #333;">Detalles de la Materia:</p>
+            <ul style="margin: 0; padding-left: 20px; color: #555;">
+                <li style="margin-bottom: 5px;"><strong>Materia:</strong> {{ materia_nombre }}</li>
+                <li style="margin-bottom: 5px;"><strong>Formato del archivo:</strong> {{ formato }}</li>
+                <li><strong>Estado:</strong> Completado</li>
+            </ul>
+        </div>
+        
+        <p>El archivo correspondiente ha sido **adjuntado directamente a este correo** electrónico para su conveniencia y descarga inmediata.</p>
+        
+        <p style="color: #666; font-size: 12px; border-top: 1px solid #eee; padding-top: 15px; margin-top: 30px;">
+            Este es un aviso automático generado por el Sistema Académico de Gestión de Calificaciones (AGM). Por favor, no responda a este correo.
+        </p>
+    </div>
+</body>
+</html>

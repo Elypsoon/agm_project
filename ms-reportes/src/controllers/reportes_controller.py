@@ -1,8 +1,11 @@
 import os
 import tempfile
+import base64
+import threading
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
+from src.utils.rabbitmq_publisher import publish_event
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -49,12 +52,91 @@ def _enriquecer_con_asistencia(alumnos, materia_id):
     return enriched
 
 
+import logging
+logger = logging.getLogger(__name__)
+
+def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext):
+    try:
+        datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+        if not datos_materia or not datos_materia.get('alumnos'):
+            logger.error(f"[-] Error en reporte asíncrono para materia {materia_id}: No hay calificaciones.")
+            return
+
+        if ext == 'xlsx':
+            datos_asistencias = []
+            for al in datos_materia['alumnos']:
+                asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
+                    alumno_id=al['alumno_id'],
+                    materia_id=materia_id,
+                )
+                if asistencia:
+                    datos_asistencias.append(asistencia)
+                else:
+                    datos_asistencias.append({
+                        "alumno_id": al['alumno_id'],
+                        "materia_id": materia_id,
+                        "asistencias": []
+                    })
+            
+            periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+            periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+            docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
+            
+            archivo_bytes = generate_consolidated_excel(
+                materia_id=materia_id,
+                datos_calificaciones=datos_materia,
+                datos_asistencias=datos_asistencias,
+                periodo_nombre=periodo_nombre,
+                docente_nombre=docente_nombre
+            )
+        else:
+            alumnos_calif = _enriquecer_con_asistencia(datos_materia['alumnos'], materia_id)
+            archivo_bytes = generate_calificaciones_pdf(materia_id, alumnos_calif)
+
+        # Codificar los bytes a base64
+        archivo_base64 = base64.b64encode(archivo_bytes).decode('utf-8')
+        
+        materia_nombre = datos_materia.get('materia_nombre', 'Materia Desconocida').upper()
+        payload = {
+            "email": dest_email,
+            "materia_nombre": materia_nombre,
+            "formato": formato.upper(),
+            "archivo_base64": archivo_base64,
+            "archivo_nombre": f"reporte_final_{materia_id}.{ext}"
+        }
+        
+        success = publish_event('reporte.finalizado', payload)
+        if success:
+            logger.info(f"[+] Evento 'reporte.finalizado' encolado para {dest_email}")
+        else:
+            logger.error(f"[-] Falló encolado de evento 'reporte.finalizado' para {dest_email}")
+            
+    except Exception as e:
+        logger.exception(f"[-] Excepción en hilo asíncrono para {materia_id}: {e}")
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def descargar_calificaciones(request, materia_id):
     formato = request.GET.get('formato', 'pdf').lower()
     ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
     content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
+
+    # Soporte para procesamiento asíncrono
+    is_async = request.GET.get('async', 'false').lower() == 'true'
+    dest_email = request.GET.get('email')
+
+    if is_async and dest_email:
+        # Lanzar un hilo en segundo plano para no bloquear la petición REST
+        threading.Thread(
+            target=generar_y_enviar_reporte_async,
+            args=(materia_id, dest_email, formato, ext)
+        ).start()
+        
+        return Response({
+            "success": True,
+            "message": f"La generación del reporte en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
+        })
 
     cache_activo = ReporteCache.objects.filter(
         materia_id=materia_id,
