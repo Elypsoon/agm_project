@@ -1,16 +1,35 @@
 import logging
+from decimal import Decimal
+
+from src.models.models import Calificacion, Ponderacion, Actividad
+
 from src.services.concentrado_service import build_concentrado
 from src.services.estadisticas_service import get_estadisticas_materia, get_estadisticas_alumno
-from src.models.models import Calificacion, Ponderacion, Actividad
+
 from src.utils.rounding import redondeo
-from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
 
 class CalificacionesServicer:
+    """Implementa el servant gRPC CalificacionesService definido en el protocolo (.proto).
+
+    Sirve peticiones entrantes de otros microservicios para recuperar concentrados de notas, promedios de estudiantes y analíticas grupales.
+    """
 
     def GetConcentrado(self, request, context):
+        """Obtiene la matriz completa de notas de la materia.
+
+        Procesa la petición devolviendo los promedios reales y redondeados de cada
+        estudiante inscrito.
+
+        Args:
+            calificaciones_pb2.ConcentradoRequest: Mensaje con el materia_id.
+            grpc.ServicerContext: Contexto de ejecución de la llamada gRPC.
+
+        Returns:
+            calificaciones_pb2.ConcentradoResponse: Respuesta con el desglose del grupo.
+        """
         from src.grpc import calificaciones_pb2
         try:
             data = build_concentrado(request.materia_id)
@@ -41,6 +60,15 @@ class CalificacionesServicer:
             return calificaciones_pb2.ConcentradoResponse()
 
     def GetPromedioAlumno(self, request, context):
+        """Calcula y devuelve el promedio ponderado de un alumno en una materia.
+
+        Args:
+            calificaciones_pb2.PromedioRequest: Petición con el alumno_id y materia_id.
+            grpc.ServicerContext: Contexto gRPC.
+
+        Returns:
+            calificaciones_pb2.PromedioResponse: Respuesta con promedios real y redondeado.
+        """
         from src.grpc import calificaciones_pb2
         try:
             data = get_estadisticas_alumno(request.alumno_id, request.materia_id)
@@ -61,6 +89,15 @@ class CalificacionesServicer:
             return calificaciones_pb2.PromedioResponse()
 
     def GetEstadisticasMateria(self, request, context):
+        """Obtiene métricas grupales agregadas de la materia.
+
+        Args:
+            calificaciones_pb2.MateriaRequest: Petición con el materia_id.
+            grpc.ServicerContext: Contexto gRPC.
+
+        Returns:
+            calificaciones_pb2.StatsResponse: Respuesta con promedios y límites de notas.
+        """
         from src.grpc import calificaciones_pb2
         try:
             data = get_estadisticas_materia(request.materia_id)

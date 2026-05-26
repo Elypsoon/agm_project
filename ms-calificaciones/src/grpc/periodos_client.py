@@ -8,25 +8,43 @@ logger = logging.getLogger(__name__)
 
 
 class PeriodosGrpcError(Exception):
-    """Error de comunicación con el servicio gRPC de Periodos (MS-2).
+    """Error de comunicación con el servicio gRPC de Periodos.
 
     Se lanza cuando la llamada gRPC falla por red, timeout u otro error
-    de transporte."""
+    de transporte.
+    """
 
 
 class PeriodosClient(BaseGRPCClient):
+    """Cliente gRPC para interactuar con el microservicio de Periodos y Materias.
+
+    Encapsula consultas sobre información académica de cursos escolares, asignaciones
+    de materias a docentes y estatus operativo de materias.
+    """
 
     def _get_target(self):
+        """Construye y retorna el target de host:puerto para la conexión gRPC.
+
+        Returns:
+            str: Dirección IP/host y puerto de destino (ej. 'ms-periodos:50052').
+        """
         host = getattr(settings, 'PERIODOS_GRPC_HOST', 'ms-periodos')
         port = getattr(settings, 'PERIODOS_GRPC_PORT', '50052')
         return f"{host}:{port}"
 
     @staticmethod
     def _materia_to_dict(materia_info):
-        """Convierte un mensaje MateriaInfo protobuf a dict plano.
+        """Convierte un objeto de tipo MateriaInfo (protobuf) a un diccionario de Python.
 
-        Solo se extraen los campos que MS-4 necesita; los horarios
-        se omiten para mantener el contrato simple entre microservicios.
+        Solo se extraen los campos de metadata académica requeridos, omitiendo horarios
+        para conservar el contrato simple entre componentes.
+
+        Args:
+            periodos_pb2.MateriaInfo: Mensaje de protobuf con la información de la materia.
+
+        Returns:
+            dict: Estructura limpia con campos 'id', 'nrc', 'clave', 'nombre', 'seccion',
+                  'docente_id', 'periodo_id' y 'estado'.
         """
         return {
             "id": materia_info.id,
@@ -40,11 +58,16 @@ class PeriodosClient(BaseGRPCClient):
         }
 
     def get_materia_by_id(self, materia_id):
-        """Devuelve los datos de una materia por su UUID.
+        """Obtiene la información de una materia mediante su identificador único.
+
+        Realiza una llamada gRPC al MS-2 para consultar la materia y su estado.
+
+        Args:
+            materia_id: Identificador único de la materia.
 
         Returns:
-            dict: id, nrc, clave, nombre, seccion, docente_id,
-                  periodo_id, estado."""
+            dict: Metadata de la materia (clave, nombre, nrc, docente_id, etc.).
+        """
         if self.mock_mode:
             return {
                 "id": str(materia_id),
@@ -80,15 +103,18 @@ class PeriodosClient(BaseGRPCClient):
             raise
 
     def get_materias_by_docente(self, docente_id):
-        """Devuelve las materias asignadas a un docente en el periodo activo.
+        """Devuelve el listado de materias asignadas a un docente en el periodo activo.
 
-        Se usa para verificar que un docente tiene autorización sobre
-        una materia antes de permitirle crear ponderaciones, actividades
-        o calificaciones.
+        Se utiliza en el flujo de validación para garantizar que un docente cuenta
+        con asignación vigente y permisos de escritura sobre el curso escolar.
+
+        Args:
+            docente_id: Identificador único del docente.
 
         Returns:
-            list[dict]: cada elemento tiene los mismos campos que
-                get_materia_by_id (sin horarios)."""
+            list[dict]: Listado de materias asignadas al docente, donde cada elemento
+                        cuenta con la metadata del curso (nrc, clave, nombre, etc.).
+        """
         if self.mock_mode:
             # El mock devuelve una materia genérica asignada al docente mock.
             return [
