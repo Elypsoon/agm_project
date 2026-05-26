@@ -65,9 +65,9 @@ CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=True, cast=boo
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',') if config('CORS_ALLOWED_ORIGINS', default='') else []
 
 # Duración de la sesión de asistencia en segundos (10 minutos)
-SESION_DURACION_SEGUNDOS = 600
+SESION_DURACION_SEGUNDOS = 120
 # Tiempo para marcar como "Presente" (primeros 5 minutos)
-SESION_PRESENTE_SEGUNDOS = 300
+SESION_PRESENTE_SEGUNDOS = 30
 
 LANGUAGE_CODE = 'es-mx'
 TIME_ZONE = 'America/Mexico_City'

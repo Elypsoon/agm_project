@@ -64,7 +64,7 @@ def decrypt_qr_token(token: str) -> dict:
         raise ValueError(f"Token QR expirado (generado hace {age} segundos, máximo {QR_MAX_AGE_SECONDS}s).")
 
     return {
-        'alumno_id': int(alumno_id),
+        'alumno_id': alumno_id,
         'matricula': matricula,
         'sesion_id': sesion_id,
         'timestamp': timestamp,
