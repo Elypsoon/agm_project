@@ -57,8 +57,9 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
     """Importa calificaciones masivamente desde un archivo CSV o XLSX.
 
     Returns:
-        dict: {'importadas': int, 'errores': list[dict]}"""
-    registros, _ = parsear_archivo(nombre_archivo, archivo_bytes)
+        dict: {'importadas': int, 'errores': list[dict]}
+    """
+    registros, errores_parseo = parsear_archivo(nombre_archivo, archivo_bytes)
 
     # Obtener actividades de la materia indexadas por nombre
     try:
@@ -73,7 +74,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
         for actividad in categoria.actividades.all():
             actividades_por_nombre[actividad.nombre.strip().lower()] = actividad
 
-    # Obtener alumnos inscritos e indexarlos por matrícula
+    # Obtener alumnos inscritos de MS-3
     try:
         alumnos_lista = AlumnosClient().get_alumnos_by_materia(materia_id)
     except AlumnosGrpcError as exc:
@@ -81,43 +82,78 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
             f'No se pudo obtener la lista de alumnos de MS-3: {exc}'
         )
 
-    alumnos_por_matricula = {
-        a['matricula']: a['id'] for a in alumnos_lista
-    }
+    # Indexar alumnos para mapeo
+    alumnos_por_correo = {}
+    alumnos_por_nombre = {}
+    alumnos_por_matricula = {}
 
-    # Procesar cada registro
+    for a in alumnos_lista:
+        correo = a.get('correo', '').strip().lower()
+        if correo:
+            alumnos_por_correo[correo] = a
+        
+        nombre = a.get('nombre_completo', '').strip().lower()
+        if nombre:
+            alumnos_por_nombre[nombre] = a
+
+        matricula = a.get('matricula', '').strip()
+        if matricula:
+            alumnos_por_matricula[matricula] = a
+
     importadas = 0
-    errores = []
+    errores = errores_parseo.copy()
     operaciones_actualizar = []
 
     for reg in registros:
-        matricula = reg['matricula']
+        correo_reg = reg['correo'].strip().lower()
+        nombre_reg = reg['nombre_completo'].strip().lower()
         nombre_act = reg['nombre_actividad'].strip().lower()
         valor = reg['valor']
+        comentario = reg['comentario']
 
+        # Buscar la actividad
         actividad = actividades_por_nombre.get(nombre_act)
         if actividad is None:
             errores.append({
-                'matricula': matricula,
+                'correo': reg['correo'],
                 'actividad': reg['nombre_actividad'],
                 'motivo': 'Actividad no encontrada en la configuración de la materia.',
             })
             continue
 
-        alumno_id = alumnos_por_matricula.get(matricula)
-        if alumno_id is None:
+        # Actualizar fecha de vencimiento si viene en la importación y es distinta
+        fecha_venc = reg.get('fecha_vencimiento')
+        if fecha_venc and actividad.fecha_vencimiento != fecha_venc:
+            actividad.fecha_vencimiento = fecha_venc
+            actividad.save(update_fields=['fecha_vencimiento'])
+
+        # Buscar al alumno por correo, nombre o matrícula
+        alumno = alumnos_por_correo.get(correo_reg)
+        if alumno is None:
+            alumno = alumnos_por_nombre.get(nombre_reg)
+        if alumno is None:
+            # Extraer dígitos del correo como matrícula
+            digits = "".join(c for c in correo_reg.split('@')[0] if c.isdigit())
+            if digits:
+                alumno = alumnos_por_matricula.get(digits)
+
+        if alumno is None:
             errores.append({
-                'matricula': matricula,
+                'correo': reg['correo'],
                 'actividad': reg['nombre_actividad'],
-                'motivo': 'Alumno no encontrado en la materia (matrícula no registrada).',
+                'motivo': 'Alumno no encontrado o no inscrito en esta materia.',
             })
             continue
+
+        alumno_id = alumno['id']
 
         operaciones_actualizar.append(
             Calificacion(
                 actividad=actividad,
                 alumno_id=alumno_id,
                 valor=valor,
+                fuente=Calificacion.Fuente.IMPORTADA,
+                observacion=comentario,
             )
         )
         importadas += 1
@@ -128,10 +164,11 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
                 operaciones_actualizar,
                 update_conflicts=True,
                 unique_fields=['actividad', 'alumno_id'],
-                update_fields=['valor'],
+                update_fields=['valor', 'fuente', 'observacion'],
             )
 
     return {
         'importadas': importadas,
         'errores': errores,
     }
+

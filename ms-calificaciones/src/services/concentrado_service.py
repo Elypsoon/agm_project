@@ -12,14 +12,14 @@ def build_concentrado(materia_id):
         .prefetch_related('actividades')
     )
 
-    actividades = []
+    actividad_ids = []
     for categoria in categorias:
         for actividad in categoria.actividades.all():
-            actividades.append(actividad.id)
+            actividad_ids.append(actividad.id)
 
     calificaciones = {}
-    if actividades:
-        for row in Calificacion.objects.filter(actividad_id__in=actividades).values(
+    if actividad_ids:
+        for row in Calificacion.objects.filter(actividad_id__in=actividad_ids).values(
             'actividad_id', 'alumno_id', 'valor'
         ):
             calificaciones[(str(row['actividad_id']), str(row['alumno_id']))] = row['valor']

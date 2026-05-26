@@ -39,6 +39,7 @@ class Actividad(models.Model):
     )
     nombre = models.CharField(max_length=255)
     orden = models.PositiveSmallIntegerField(default=0)
+    fecha_vencimiento = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -49,6 +50,11 @@ class Actividad(models.Model):
         return f'{self.nombre}'
 
 class Calificacion(models.Model):
+
+    class Fuente(models.TextChoices):
+        MANUAL = 'manual', 'Captura manual'
+        IMPORTADA = 'importada', 'Importación masiva'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actividad = models.ForeignKey(
         Actividad,
@@ -57,6 +63,12 @@ class Calificacion(models.Model):
     )
     alumno_id = models.UUIDField()
     valor = models.DecimalField(max_digits=5, decimal_places=2)
+    fuente = models.CharField(
+        max_length=10,
+        choices=Fuente.choices,
+        default=Fuente.MANUAL,
+    )
+    observacion = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

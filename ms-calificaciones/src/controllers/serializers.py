@@ -39,7 +39,7 @@ class ActividadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Actividad
-        fields = ('id', 'categoria_id', 'nombre', 'orden', 'created_at')
+        fields = ('id', 'categoria_id', 'nombre', 'orden', 'fecha_vencimiento', 'created_at')
 
 
 # CALIFICACIONES
