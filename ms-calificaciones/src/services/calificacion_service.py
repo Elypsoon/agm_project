@@ -102,6 +102,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
             alumnos_por_matricula[matricula] = a
 
     importadas = 0
+    actividades_creadas = 0
     errores = errores_parseo.copy()
     operaciones_actualizar = []
 
@@ -109,18 +110,52 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
         correo_reg = reg['correo'].strip().lower()
         nombre_reg = reg['nombre_completo'].strip().lower()
         nombre_act = reg['nombre_actividad'].strip().lower()
+        nombre_pond = reg.get('nombre_ponderacion', '').strip().lower()
         valor = reg['valor']
         comentario = reg['comentario']
 
-        # Buscar la actividad
+        # Buscar la actividad; si no existe, intentar crearla
         actividad = actividades_por_nombre.get(nombre_act)
         if actividad is None:
-            errores.append({
-                'correo': reg['correo'],
-                'actividad': reg['nombre_actividad'],
-                'motivo': 'Actividad no encontrada en la configuración de la materia.',
-            })
-            continue
+            # Necesitamos la categoría de ponderación para poder crear la actividad
+            if not nombre_pond:
+                errores.append({
+                    'correo': reg['correo'],
+                    'actividad': reg['nombre_actividad'],
+                    'motivo': (
+                        'Actividad no encontrada y el archivo no incluye la columna '
+                        '"Nombre del criterio de evaluación" para crearla automáticamente.'
+                    ),
+                })
+                continue
+
+            # Buscar la ponderación por nombre de categoría dentro de la materia
+            ponderacion = Ponderacion.objects.filter(
+                materia_id=materia_id,
+                activa=True,
+            ).filter(nombre_categoria__iexact=reg['nombre_ponderacion'].strip()).first()
+
+            if ponderacion is None:
+                errores.append({
+                    'correo': reg['correo'],
+                    'actividad': reg['nombre_actividad'],
+                    'motivo': (
+                        f'Categoría de ponderación "{reg["nombre_ponderacion"]}" '
+                        f'no encontrada o inactiva en la materia.'
+                    ),
+                })
+                continue
+
+            # Crear la actividad automáticamente
+            actividad = Actividad.objects.create(
+                ponderacion=ponderacion,
+                nombre=reg['nombre_actividad'].strip(),
+                fecha_vencimiento=reg.get('fecha_vencimiento'),
+                estado=reg.get('estado', 'pendiente') or 'pendiente',
+            )
+            # Agregar al índice local para no duplicar en filas siguientes del mismo archivo
+            actividades_por_nombre[nombre_act] = actividad
+            actividades_creadas += 1
 
         # Actualizar fecha de vencimiento si viene en la importación y es distinta
         fecha_venc = reg.get('fecha_vencimiento')
@@ -170,6 +205,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
 
     return {
         'importadas': importadas,
+        'actividades_creadas': actividades_creadas,
         'errores': errores,
     }
 

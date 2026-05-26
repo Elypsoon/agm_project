@@ -23,6 +23,8 @@ def parsear_archivo(nombre_archivo, archivo_bytes):
       - 'Puntos' (la nota obtenida, debe estar en escala 0.00 a 100.00).
 
     Las columnas opcionales mapeadas son:
+      - 'Nombre del criterio de evaluación' (nombre de la categoría de ponderación; requerida
+        para auto-crear actividades nuevas durante la importación).
       - 'Comentarios' (retroalimentación escrita del profesor).
       - 'Estado' (estatus de entrega de la tarea).
       - 'Fecha de vencimiento' (fecha límite de entrega).
@@ -35,7 +37,7 @@ def parsear_archivo(nombre_archivo, archivo_bytes):
         tuple[list[dict], list[dict]]: Una tupla conteniendo:
             - registros (list[dict]): Lista de diccionarios de filas parseadas exitosamente.
               Cada dict contiene las claves: 'correo', 'nombre_completo', 'nombre_actividad',
-              'valor' (Decimal), 'comentario', 'estado' y 'fecha_vencimiento'.
+              'nombre_ponderacion', 'valor' (Decimal), 'comentario', 'estado' y 'fecha_vencimiento'.
             - errores (list[dict]): Lista de diccionarios detallando los errores encontrados 
               durante la lectura (línea del archivo, correo y motivo del error).
     """
@@ -79,6 +81,7 @@ def parsear_archivo(nombre_archivo, archivo_bytes):
         raise ValueError(f"Falta una columna requerida en el archivo de Teams: {e}")
 
     # Columnas opcionales
+    col_criterio = cabecera_norm.index('nombre del criterio de evaluación') if 'nombre del criterio de evaluación' in cabecera_norm else -1
     col_comentarios = cabecera_norm.index('comentarios') if 'comentarios' in cabecera_norm else -1
     col_estado = cabecera_norm.index('estado') if 'estado' in cabecera_norm else -1
     col_vencimiento = cabecera_norm.index('fecha de vencimiento') if 'fecha de vencimiento' in cabecera_norm else -1
@@ -123,6 +126,7 @@ def parsear_archivo(nombre_archivo, archivo_bytes):
             continue
 
         # Columnas opcionales
+        nombre_ponderacion = str(fila[col_criterio]).strip() if col_criterio != -1 and col_criterio < len(fila) and fila[col_criterio] is not None else ''
         comentario = str(fila[col_comentarios]).strip() if col_comentarios != -1 and col_comentarios < len(fila) and fila[col_comentarios] is not None else ''
         estado = str(fila[col_estado]).strip() if col_estado != -1 and col_estado < len(fila) and fila[col_estado] is not None else ''
         fecha_vencimiento = fila[col_vencimiento] if col_vencimiento != -1 and col_vencimiento < len(fila) else None
@@ -131,6 +135,7 @@ def parsear_archivo(nombre_archivo, archivo_bytes):
             'correo': correo,
             'nombre_completo': nombre_completo,
             'nombre_actividad': nombre_actividad,
+            'nombre_ponderacion': nombre_ponderacion,
             'valor': valor,
             'comentario': comentario,
             'estado': estado,
