@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface Periodo {
@@ -9,8 +9,16 @@ export interface Periodo {
   fecha_inicio: string;
   fecha_fin: string;
   plan_estudios: string;
+  campus?: string;
   activo: boolean;
   materias?: unknown[];
+}
+
+interface PaginatedPeriodosResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Periodo[];
 }
 
 export interface CreatePeriodoPayload {
@@ -26,7 +34,13 @@ export class PeriodosService {
   private baseUrl = `${environment.apiUrls.periodos}/api`;
 
   getPeriodos(): Observable<Periodo[]> {
-    return this.http.get<Periodo[]>(`${this.baseUrl}/periodos/`);
+    return this.http
+      .get<PaginatedPeriodosResponse>(`${this.baseUrl}/periodos/`)
+      .pipe(map((response) => response.results ?? []));
+  }
+
+  getPeriodoById(periodoId: string): Observable<Periodo> {
+    return this.http.get<Periodo>(`${this.baseUrl}/periodos/${periodoId}/`);
   }
 
   getActivePeriodo(): Observable<Periodo> {

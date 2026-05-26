@@ -1,0 +1,105 @@
+@use '../../../../styles/variables' as v;
+
+.periodos-detail-page {
+  padding: 2rem;
+}
+
+.detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid #d1d5db;
+  color: #111827;
+  border-radius: 0.75rem;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+}
+
+.detail-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.detail-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.detail-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.detail-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+}
+
+.detail-card span {
+  display: block;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.detail-card strong {
+  display: block;
+  font-size: 1.75rem;
+}
+
+.materias-table-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
+}
+
+.table-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.table-title h2 {
+  margin: 0;
+}
+
+.table-title span {
+  color: #6b7280;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 1.5rem;
+  color: #6b7280;
+}
+
+.error-banner {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #b91c1c;
+  padding: 1rem;
+  border-radius: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .detail-cards {
+    grid-template-columns: 1fr;
+  }
+}

@@ -23,18 +23,18 @@
     </div>
   </div>
 
-  <div class="summary-grid">
-    <article class="summary-card">
-      <span>Total de periodos</span>
-      <strong>{{ getPeriodosCount() }}</strong>
-    </article>
-    <article class="summary-card">
+  <div class="summary-grid summary-active">
+    <article class="summary-card ">
       <span>Periodo activo</span>
       <strong>{{ activePeriodo?.nombre || 'Ninguno' }}</strong>
     </article>
     <article class="summary-card">
-      <span>Plan de estudios activo</span>
-      <strong>{{ activePeriodo?.plan_estudios || 'N/A' }}</strong>
+      <span>Fecha de inicio</span>
+      <strong>{{ activePeriodo?.fecha_inicio ? (activePeriodo!.fecha_inicio | date:'dd/MM/yyyy') : '—' }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Fecha de fin</span>
+      <strong>{{ activePeriodo?.fecha_fin ? (activePeriodo!.fecha_fin | date:'dd/MM/yyyy') : '—' }}</strong>
     </article>
   </div>
 
@@ -62,8 +62,7 @@
         <tr>
           <th>Nombre</th>
           <th>Plan de estudios</th>
-          <th>Inicio</th>
-          <th>Fin</th>
+          <th>Campus</th>
           <th>Estado</th>
           <th>Materia(s)</th>
           <th>Acciones</th>
@@ -72,10 +71,9 @@
 
       <ng-template pTemplate="body" let-periodo>
         <tr>
-          <td>{{ periodo.nombre }}</td>
+          <td>{{ periodo.nombre || '—' }}</td>
           <td>{{ periodo.plan_estudios || '—' }}</td>
-          <td>{{ periodo.fecha_inicio | date:'dd/MM/yyyy' }}</td>
-          <td>{{ periodo.fecha_fin | date:'dd/MM/yyyy' }}</td>
+          <td>{{ periodo.campus || '—' }}</td>
           <td>
             <p-tag
               [value]="periodo.activo ? 'Activo' : 'Inactivo'"
@@ -84,33 +82,32 @@
           </td>
           <td>{{ periodo.materias?.length ?? '—' }}</td>
           <td class="actions-cell">
-            <p-button
-              label="Activar"
-              icon="pi pi-check"
-              (click)="activatePeriodo(periodo)"
-              [disabled]="periodo.activo"
-              [loading]="actionLoading === periodo.id"
-              styleClass="p-button-sm"
-            ></p-button>
-            <p-button
-              label="Eliminar"
-              icon="pi pi-trash"
-              (click)="deletePeriodo(periodo)"
-              [loading]="actionLoading === periodo.id"
-              styleClass="p-button-danger p-button-sm"
-            ></p-button>
-            <div class="import-row">
-              <input
-                type="file"
-                accept=".pdf"
-                (change)="onFileChange($event, periodo.id)"
-                class="file-input"
-              />
+            <div class="action-buttons">
+              <p-button
+                label="Detalles"
+                icon="pi pi-eye"
+                (click)="viewPeriodoDetails(periodo)"
+                styleClass="p-button-sm"
+              ></p-button>
+              <p-button
+                label="Activar"
+                icon="pi pi-check"
+                (click)="activatePeriodo(periodo)"
+                [disabled]="periodo.activo"
+                [loading]="actionLoading === periodo.id"
+                styleClass="p-button-sm"
+              ></p-button>
+              <p-button
+                label="Eliminar"
+                icon="pi pi-trash"
+                (click)="deletePeriodo(periodo)"
+                [loading]="actionLoading === periodo.id"
+                styleClass="p-button-danger p-button-sm"
+              ></p-button>
               <p-button
                 label="Importar PDF"
                 icon="pi pi-upload"
-                (click)="uploadPdf(periodo)"
-                [loading]="actionLoading === periodo.id"
+                (click)="openImportDialog(periodo)"
                 styleClass="p-button-secondary p-button-sm"
               ></p-button>
             </div>
@@ -120,7 +117,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="7" class="empty-state">No se encontraron periodos.</td>
+          <td colspan="6" class="empty-state">No se encontraron periodos.</td>
         </tr>
       </ng-template>
     </p-table>
@@ -140,6 +137,44 @@
     <div *ngIf="uploadSuccess" class="success-banner">
       <i class="pi pi-check-circle"></i>
       <span>{{ uploadSuccess }}</span>
+    </div>
+  </div>
+
+  <div class="dialog-backdrop" *ngIf="importDialogOpened">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <h3>Importar materias</h3>
+        <button type="button" class="close-btn" (click)="closeImportDialog()">×</button>
+      </div>
+
+      <div class="import-dialog-body">
+        <p>Selecciona el PDF para importar materias del periodo <strong>{{ importTargetName }}</strong>.</p>
+
+        <label class="file-label">
+          Archivo PDF
+          <input type="file" accept=".pdf" (change)="onFileChange($event, importTargetId || '')" />
+        </label>
+
+        <div class="dialog-actions">
+          <p-button
+            label="Cancelar"
+            type="button"
+            (click)="closeImportDialog()"
+            styleClass="p-button-outlined"
+          ></p-button>
+          <p-button
+            label="Importar PDF"
+            type="button"
+            (click)="uploadPdf()"
+            [loading]="actionLoading === importTargetId"
+          ></p-button>
+        </div>
+
+        <div *ngIf="uploadError" class="error-banner">
+          <i class="pi pi-exclamation-triangle"></i>
+          <span>{{ uploadError }}</span>
+        </div>
+      </div>
     </div>
   </div>
 

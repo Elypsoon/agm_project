@@ -45,7 +45,7 @@ class PeriodoSerializer(serializers.ModelSerializer):
         model = Periodo
         fields = [
             'id', 'nombre', 'fecha_inicio', 'fecha_fin',
-            'plan_estudios', 'activo', 'created_at', 'updated_at'
+            'plan_estudios', 'campus', 'activo', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -57,7 +57,7 @@ class PeriodoCreateUpdateSerializer(serializers.ModelSerializer):
         model = Periodo
         fields = [
             'nombre', 'fecha_inicio', 'fecha_fin',
-            'plan_estudios', 'activo'
+            'plan_estudios', 'campus', 'activo'
         ]
 
 
@@ -69,7 +69,7 @@ class PeriodoWithMateriasSerializer(serializers.ModelSerializer):
         model = Periodo
         fields = [
             'id', 'nombre', 'fecha_inicio', 'fecha_fin',
-            'plan_estudios', 'activo', 'materias', 'created_at', 'updated_at'
+            'plan_estudios', 'campus', 'activo', 'materias', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

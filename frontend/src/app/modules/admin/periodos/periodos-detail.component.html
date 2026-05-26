@@ -1,0 +1,84 @@
+<section class="periodos-detail-page">
+  <div class="detail-header">
+    <div>
+      <button type="button" class="back-button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i> Volver
+      </button>
+      <h1>Detalle del periodo</h1>
+      <p>Información detallada y materias asociadas del periodo seleccionado.</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">Cargando periodo...</div>
+  <div *ngIf="errorMessage" class="error-banner">
+    <i class="pi pi-exclamation-triangle"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <div *ngIf="periodo" class="detail-content">
+    <div class="detail-cards">
+      <article class="detail-card">
+        <span>Nombre</span>
+        <strong>{{ periodo.nombre }}</strong>
+      </article>
+      <article class="detail-card">
+        <span>Plan de estudios</span>
+        <strong>{{ periodo.plan_estudios }}</strong>
+      </article>
+      <article class="detail-card">
+        <span>Campus</span>
+        <strong>{{ periodo.campus || '—' }}</strong>
+      </article>
+      <article class="detail-card">
+        <span>Activo</span>
+        <p-tag
+          [value]="periodo.activo ? 'Activo' : 'Inactivo'"
+          [severity]="periodo.activo ? 'success' : 'warn'"
+        ></p-tag>
+      </article>
+      <article class="detail-card">
+        <span>Inicio</span>
+        <strong>{{ periodo.fecha_inicio | date:'dd/MM/yyyy' }}</strong>
+      </article>
+      <article class="detail-card">
+        <span>Fin</span>
+        <strong>{{ periodo.fecha_fin | date:'dd/MM/yyyy' }}</strong>
+      </article>
+    </div>
+
+    <div class="materias-table-card">
+      <div class="table-title">
+        <h2>Materias del periodo</h2>
+        <span>{{ periodo.materias?.length ?? 0 }} materias</span>
+      </div>
+
+      <p-table [value]="periodo.materias || []" [paginator]="true" [rows]="10">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>NRC</th>
+            <th>Nombre</th>
+            <th>Sección</th>
+            <th>Docente</th>
+            <th>Estado</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-materia>
+          <tr>
+            <td>{{ materia.nrc }}</td>
+            <td>{{ materia.nombre }}</td>
+            <td>{{ materia.seccion }}</td>
+            <td>{{ materia.docente_nombre || '—' }}</td>
+            <td>
+              <p-tag [value]="materia.estado" [severity]="materia.estado === 'ABIERTA' ? 'success' : 'warn'"></p-tag>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="empty-state">No hay materias registradas en este periodo.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</section>

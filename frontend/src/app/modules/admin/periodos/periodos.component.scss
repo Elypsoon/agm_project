@@ -55,6 +55,10 @@
   margin-bottom: 1.75rem;
 }
 
+.summary-grid.summary-active .summary-card {
+  min-height: 160px;
+}
+
 .summary-card {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -73,8 +77,20 @@
     display: block;
     font-size: 2rem;
     color: #111827;
-    line-height: 1;
+    line-height: 1.1;
   }
+
+  .active-plan {
+    margin: 0.75rem 0 0;
+    color: #4b5563;
+    font-size: 0.95rem;
+  }
+}
+
+.active-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .table-card {
@@ -112,23 +128,71 @@
 }
 
 .actions-cell {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+  align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .import-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+  display: none;
 }
 
 .file-input {
+  display: block;
+  width: 100%;
   border: 1px solid #d1d5db;
   border-radius: 0.65rem;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.9rem;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.95rem;
   color: #111827;
+  background: #f8fafc;
+}
+
+.import-dialog-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.file-label {
+  display: grid;
+  gap: 0.5rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.file-label input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  background: #f8fafc;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 20;
+}
+
+.dialog-panel {
+  width: min(640px, 100%);
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.75rem;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.18);
 }
 
 .dialog-backdrop {

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -15,6 +16,7 @@ import { PeriodosService, Periodo } from './periodos.service';
 })
 export class PeriodosComponent implements OnInit {
   private fb = inject(FormBuilder);
+  private router = inject(Router);
   private periodosService = inject(PeriodosService);
 
   periodos: Periodo[] = [];
@@ -24,12 +26,14 @@ export class PeriodosComponent implements OnInit {
   successMessage = '';
   lastUpdated = 0;
   createDialog = false;
+  importDialogOpened = false;
+  importTargetId: string | null = null;
+  importTargetName = '';
   periodoForm: FormGroup;
   actionLoading = '';
   uploadError = '';
   uploadSuccess = '';
   selectedFile: File | null = null;
-  importTargetId: string | null = null;
 
   constructor() {
     this.periodoForm = this.fb.group({
@@ -80,6 +84,24 @@ export class PeriodosComponent implements OnInit {
 
   closeCreateDialog() {
     this.createDialog = false;
+  }
+
+  openImportDialog(periodo: Periodo) {
+    this.importDialogOpened = true;
+    this.importTargetId = periodo.id;
+    this.importTargetName = periodo.nombre;
+    this.selectedFile = null;
+    this.uploadError = '';
+    this.uploadSuccess = '';
+  }
+
+  closeImportDialog() {
+    this.importDialogOpened = false;
+    this.importTargetId = null;
+    this.importTargetName = '';
+    this.selectedFile = null;
+    this.uploadError = '';
+    this.uploadSuccess = '';
   }
 
   submitNewPeriodo() {
@@ -159,30 +181,35 @@ export class PeriodosComponent implements OnInit {
     this.uploadSuccess = '';
   }
 
-  uploadPdf(periodo: Periodo) {
-    if (!this.selectedFile || this.importTargetId !== periodo.id) {
+  uploadPdf() {
+    if (!this.selectedFile || !this.importTargetId) {
       this.uploadError = 'Selecciona un archivo PDF antes de subir.';
       return;
     }
 
-    this.actionLoading = periodo.id;
+    this.actionLoading = this.importTargetId;
     this.errorMessage = '';
     this.uploadError = '';
     this.uploadSuccess = '';
 
-    this.periodosService.importPdf(periodo.id, this.selectedFile).subscribe({
+    this.periodosService.importPdf(this.importTargetId, this.selectedFile).subscribe({
       next: (res) => {
         this.actionLoading = '';
         this.uploadSuccess = res?.message || 'PDF importado con éxito.';
         this.selectedFile = null;
         this.importTargetId = null;
         this.loadPeriodos();
+        this.closeImportDialog();
       },
       error: (err) => {
         this.actionLoading = '';
         this.uploadError = err?.error?.detail || err?.message || 'Error al importar el PDF.';
       }
     });
+  }
+
+  viewPeriodoDetails(periodo: Periodo) {
+    this.router.navigate(['/admin/periodos', periodo.id]);
   }
 
   getPeriodosCount() {
