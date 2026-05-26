@@ -7,7 +7,7 @@ from django.test import TransactionTestCase
 
 from src.grpc import calificaciones_pb2, calificaciones_pb2_grpc
 from src.grpc.handlers.calificaciones_handler import CalificacionesServicer
-from src.models.models import PonderacionConfig, CategoriaPonderacion, Actividad, Calificacion
+from src.models.models import Ponderacion, Actividad, Calificacion
 
 MATERIA_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 ALUMNO_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -17,12 +17,16 @@ class GrpcCalificacionesTestBase(TransactionTestCase):
 
     def setUp(self):
         # Configurar datos en BD de pruebas
-        self.config = PonderacionConfig.objects.create(materia_id=MATERIA_ID)
-        self.categoria = CategoriaPonderacion.objects.create(
-            config=self.config, nombre="Proyecto", porcentaje=100.00
+        self.ponderacion = Ponderacion.objects.create(
+            materia_id=MATERIA_ID,
+            nombre_categoria="Proyecto",
+            porcentaje=100.00,
+            orden=0
         )
         self.actividad = Actividad.objects.create(
-            categoria=self.categoria, nombre="Entrega Final", orden=0
+            ponderacion=self.ponderacion,
+            nombre="Entrega Final",
+            orden=0
         )
         self.calificacion = Calificacion.objects.create(
             actividad=self.actividad, alumno_id=ALUMNO_ID, valor=92.50
@@ -61,7 +65,7 @@ class TestGrpcGetConcentrado(GrpcCalificacionesTestBase):
         self.assertEqual(resp.materia_nombre, "Materia gRPC")
         self.assertEqual(len(resp.alumnos), 1)
         self.assertEqual(resp.alumnos[0].alumno_nombre, "Alumno gRPC")
-        self.assertEqual(resp.alumnos[0].promedio_redondeado, 93)  # 92.50 redondea hacia arriba a 93
+        self.assertEqual(resp.alumnos[0].promedio_redondeado, 9)  # 92.50 → 9.25 en escala 0-10, fracción < 0.5 → piso → 9
 
     def test_materia_no_existente(self):
         with self.assertRaises(grpc.RpcError) as ctx:
@@ -82,7 +86,7 @@ class TestGrpcGetPromedioAlumno(GrpcCalificacionesTestBase):
             )
         )
         self.assertEqual(resp.promedio_real, 92.50)
-        self.assertEqual(resp.promedio_redondeado, 93)
+        self.assertEqual(resp.promedio_redondeado, 9)  # 9.25 en escala 0-10, fracción < 0.5 → piso → 9
 
 
 class TestGrpcGetEstadisticasMateria(GrpcCalificacionesTestBase):
