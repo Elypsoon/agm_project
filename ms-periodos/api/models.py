@@ -12,6 +12,12 @@ class EstadoMateria(models.TextChoices):
     FINALIZADA = 'finalizada', 'Finalizada'
 
 
+class CampusOptions(models.TextChoices):
+    """Sedes físicas de la facultad"""
+    CU2 = 'CU2', 'Campus CU2'
+    SAN_MANUEL = 'SAN_MANUEL', 'Campus CU San Manuel'
+
+
 class Periodo(models.Model):
     """Modelo para periodos académicos"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -20,6 +26,13 @@ class Periodo(models.Model):
     fecha_fin = models.DateField()
     plan_estudios = models.CharField(max_length=50)  # e.g., "ITI"
     activo = models.BooleanField(default=False)
+    
+    campus = models.CharField(
+        max_length=20,
+        choices=CampusOptions.choices,
+        default=CampusOptions.SAN_MANUEL
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -29,7 +42,7 @@ class Periodo(models.Model):
         verbose_name_plural = 'Periodos'
 
     def __str__(self):
-        return f"{self.nombre} ({self.plan_estudios})"
+        return f"{self.nombre} ({self.plan_estudios}) - {self.get_campus_display()}"
 
 
 class Materia(models.Model):
