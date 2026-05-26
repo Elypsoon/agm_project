@@ -18,33 +18,64 @@ class CalificacionesServicer:
     """
 
     def GetConcentrado(self, request, context):
-        """Obtiene la matriz completa de notas de la materia.
+        """Obtiene la matriz completa de notas del grupo incluyendo el desglose por actividad.
 
-        Procesa la petición devolviendo los promedios reales y redondeados de cada
-        estudiante inscrito.
+        Retorna la jerarquía de categorías de ponderación de la materia (una sola vez)
+        y los promedios e historial de calificaciones por actividad de cada alumno.
 
         Args:
-            calificaciones_pb2.ConcentradoRequest: Mensaje con el materia_id.
+            calificaciones_pb2.MateriaIdRequest: Mensaje con el materia_id.
             grpc.ServicerContext: Contexto de ejecución de la llamada gRPC.
 
         Returns:
-            calificaciones_pb2.ConcentradoResponse: Respuesta con el desglose del grupo.
+            calificaciones_pb2.ConcentradoResponse: Respuesta con categorías y desglose grupal.
         """
         from src.grpc import calificaciones_pb2
         try:
             data = build_concentrado(request.materia_id)
-            alumnos = [
-                calificaciones_pb2.AlumnoCalif(
-                    alumno_id=a['alumno_id'],
-                    alumno_nombre=a['alumno_nombre'],
-                    promedio_real=a['promedio_real'],
-                    promedio_redondeado=a['promedio_redondeado'],
+
+            # Construir jerarquía de categorías con sus actividades
+            categorias = []
+            for cat in data['categorias']:
+                actividades = [
+                    calificaciones_pb2.ActividadInfo(
+                        actividad_id=a['actividad_id'],
+                        actividad_nombre=a['actividad_nombre'],
+                    )
+                    for a in cat['actividades']
+                ]
+                categorias.append(
+                    calificaciones_pb2.CategoriaPonderacion(
+                        nombre_categoria=cat['nombre_categoria'],
+                        porcentaje=cat['porcentaje'],
+                        actividades=actividades,
+                    )
                 )
-                for a in data['alumnos']
-            ]
+
+            # Construir lista de alumnos con sus calificaciones por actividad
+            alumnos = []
+            for a in data['alumnos']:
+                calificaciones_pb = [
+                    calificaciones_pb2.CalificacionActividad(
+                        actividad_id=c['actividad_id'],
+                        valor=c['valor'],
+                    )
+                    for c in a['calificaciones']
+                ]
+                alumnos.append(
+                    calificaciones_pb2.AlumnoCalif(
+                        alumno_id=a['alumno_id'],
+                        alumno_nombre=a['alumno_nombre'],
+                        promedio_real=a['promedio_real'],
+                        promedio_redondeado=a['promedio_redondeado'],
+                        calificaciones=calificaciones_pb,
+                    )
+                )
+
             return calificaciones_pb2.ConcentradoResponse(
                 materia_id=data['materia_id'],
                 materia_nombre=data['materia_nombre'],
+                categorias=categorias,
                 alumnos=alumnos,
             )
         except Ponderacion.DoesNotExist:
@@ -58,6 +89,7 @@ class CalificacionesServicer:
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(exc))
             return calificaciones_pb2.ConcentradoResponse()
+
 
     def GetPromedioAlumno(self, request, context):
         """Calcula y devuelve el promedio ponderado de un alumno en una materia.
