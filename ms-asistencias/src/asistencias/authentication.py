@@ -48,6 +48,7 @@ class GrpcJWTAuthentication(BaseAuthentication):
             user_id=user_claims.get('user_id'),
             rol=user_claims.get('rol'),
             email=user_claims.get('email', ''),
+            matricula=user_claims.get('matricula', ''),
         )
         return (user, token)
 
@@ -110,11 +111,12 @@ class GrpcJWTAuthentication(BaseAuthentication):
 
 
 class AuthenticatedUser:
-    def __init__(self, user_id, rol, email):
+    def __init__(self, user_id, rol, email, matricula=''):
         self.id = user_id
         self.user_id = user_id
         self.rol = rol
         self.email = email
+        self.matricula = matricula
         self.is_authenticated = True
         self.is_anonymous = False
 

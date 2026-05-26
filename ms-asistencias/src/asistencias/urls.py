@@ -5,6 +5,7 @@ from .views import (
     CerrarSesionView,
     AsistenciasHoyView,
     HistorialAsistenciasView,
+    GenerarQRView,
 )
 
 urlpatterns = [
@@ -16,4 +17,7 @@ urlpatterns = [
     path('asistencias/registrar', RegistrarAsistenciaView.as_view(), name='registrar-asistencia'),
     path('asistencias/<uuid:materia_id>/hoy', AsistenciasHoyView.as_view(), name='asistencias-hoy'),
     path('asistencias/<uuid:materia_id>/historial', HistorialAsistenciasView.as_view(), name='historial-asistencias'),
+
+    # QR
+    path('asistencias/qr/generar', GenerarQRView.as_view(), name='generar-qr'),
 ]
