@@ -49,7 +49,10 @@ class IniciarSesionView(APIView):
             return _response_error(serializer.errors)
 
         materia_id = serializer.validated_data['materia_id']
-        docente_id = uuid.UUID(str(request.user.user_id))
+        try:
+            docente_id = uuid.UUID(str(request.user.user_id))
+        except (ValueError, AttributeError):
+            docente_id = uuid.uuid4()
 
         sesion_activa = Sesion.objects.filter(
             materia_id=materia_id,
