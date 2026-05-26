@@ -3,6 +3,25 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+interface Horario {
+  id: string;
+  dia: string;
+  hora_inicio: string;
+  hora_fin: string | null;
+  salon: string;
+  es_virtual: boolean;
+}
+
+interface Materia {
+  id: string;
+  nrc: string;
+  nombre: string;
+  seccion: string;
+  docente_nombre: string | null;
+  estado: string;
+  horarios?: Horario[];
+}
+
 export interface Periodo {
   id: string;
   nombre: string;
@@ -11,7 +30,7 @@ export interface Periodo {
   plan_estudios: string;
   campus?: string;
   activo: boolean;
-  materias?: unknown[];
+  materias?: Materia[];
 }
 
 interface PaginatedPeriodosResponse {

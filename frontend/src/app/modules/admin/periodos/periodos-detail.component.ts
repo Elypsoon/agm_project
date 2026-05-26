@@ -21,6 +21,7 @@ export class PeriodosDetailComponent implements OnInit {
   periodo: Periodo | null = null;
   loading = true;
   errorMessage = '';
+  expandedMateriaId: string | null = null;
 
   ngOnInit() {
     const periodoId = this.route.snapshot.paramMap.get('id');
@@ -40,6 +41,14 @@ export class PeriodosDetailComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  toggleMateriaSchedule(materiaId: string) {
+    this.expandedMateriaId = this.expandedMateriaId === materiaId ? null : materiaId;
+  }
+
+  isMateriaExpanded(materiaId: string) {
+    return this.expandedMateriaId === materiaId;
   }
 
   goBack() {

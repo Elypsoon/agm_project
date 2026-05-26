@@ -71,6 +71,46 @@
             <td>
               <p-tag [value]="materia.estado" [severity]="materia.estado === 'ABIERTA' ? 'success' : 'warn'"></p-tag>
             </td>
+            <td>
+              <p-button
+                label="Horario"
+                icon="pi pi-calendar"
+                styleClass="p-button-sm"
+                (click)="toggleMateriaSchedule(materia.id)"
+              ></p-button>
+            </td>
+          </tr>
+          <tr *ngIf="isMateriaExpanded(materia.id)" class="schedule-row">
+            <td colspan="6">
+              <div class="schedule-panel">
+                <h3>Horario de {{ materia.nombre }}</h3>
+                <div *ngIf="materia.horarios?.length; else noSchedule">
+                  <table class="schedule-table">
+                    <thead>
+                      <tr>
+                        <th>Día</th>
+                        <th>Hora inicio</th>
+                        <th>Hora fin</th>
+                        <th>Salón</th>
+                        <th>Virtual</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let horario of materia.horarios">
+                        <td>{{ horario.dia }}</td>
+                        <td>{{ horario.hora_inicio || '—' }}</td>
+                        <td>{{ horario.hora_fin || '—' }}</td>
+                        <td>{{ horario.salon || '—' }}</td>
+                        <td>{{ horario.es_virtual ? 'Sí' : 'No' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ng-template #noSchedule>
+                  <p class="empty-state">No hay horarios disponibles para esta materia.</p>
+                </ng-template>
+              </div>
+            </td>
           </tr>
         </ng-template>
         <ng-template pTemplate="emptymessage">
