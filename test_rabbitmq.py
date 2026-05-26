@@ -21,10 +21,10 @@ def main():
     print("PRUEBA DE INTEGRACIÓN - RABBITMQ BROKER")
 
     # Datos realistas de prueba
-    email_prueba = "carlos.peralta@alumno.buap.mx"
-    nombre_completo = "Carlos Peralta Ruiz"
-    matricula = "202610001"
-    clave_acceso = "Peralta123"
+    email_prueba = "angel.gutierrezpa@alumno.buap.mx"
+    nombre_completo = "Angel Gutiérrez Pacheco"
+    matricula = "202623500"
+    clave_acceso = "Gutierrez@123"
     materia_id = "12345678-1234-5678-1234-567812345678"
 
     print("Este script realizará las siguientes acciones:")
@@ -76,7 +76,8 @@ publish_event('student.registered', {{
     'email': '{email_prueba}',
     'nombre': '{nombre_completo}',
     'password': '{clave_acceso}',
-    'materia_id': '{materia_id}'
+    'materia_id': '{materia_id}',
+    'materia_nombre': 'Desarrollo de Sistemas Distribuídos (Prueba)'
 }})
 """
     run_container_command("ms-alumnos", cmd_publicar)

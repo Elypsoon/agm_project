@@ -1,25 +1,25 @@
 from decimal import Decimal
-from src.models.models import PonderacionConfig, CategoriaPonderacion, Calificacion
+from src.models.models import Ponderacion, Calificacion
 from src.grpc.alumnos_client import AlumnosClient
 from src.grpc.periodos_client import PeriodosClient
 from src.utils.rounding import redondeo
 
 def build_concentrado(materia_id):
-    config = PonderacionConfig.objects.get(materia_id=materia_id)
-
-    categorias = (
-        CategoriaPonderacion.objects.filter(config=config)
+    ponderaciones = (
+        Ponderacion.objects.filter(materia_id=materia_id, activa=True)
         .prefetch_related('actividades')
     )
+    if not ponderaciones.exists():
+        raise Ponderacion.DoesNotExist("No existe configuración de ponderación para esta materia.")
 
-    actividades = []
-    for categoria in categorias:
-        for actividad in categoria.actividades.all():
-            actividades.append(actividad.id)
+    actividad_ids = []
+    for pond in ponderaciones:
+        for actividad in pond.actividades.all():
+            actividad_ids.append(actividad.id)
 
     calificaciones = {}
-    if actividades:
-        for row in Calificacion.objects.filter(actividad_id__in=actividades).values(
+    if actividad_ids:
+        for row in Calificacion.objects.filter(actividad_id__in=actividad_ids).values(
             'actividad_id', 'alumno_id', 'valor'
         ):
             calificaciones[(str(row['actividad_id']), str(row['alumno_id']))] = row['valor']
@@ -32,8 +32,8 @@ def build_concentrado(materia_id):
         alumno_id = str(alumno['id'])
         total = Decimal('0.00')
 
-        for categoria in categorias:
-            actividades = list(categoria.actividades.all())
+        for pond in ponderaciones:
+            actividades = list(pond.actividades.all())
             if not actividades:
                 promedio_cat = Decimal('0.00')
             else:
@@ -44,7 +44,7 @@ def build_concentrado(materia_id):
                     )
                 promedio_cat = suma / Decimal(len(actividades))
 
-            porcentaje = categoria.porcentaje / Decimal('100.00')
+            porcentaje = pond.porcentaje / Decimal('100.00')
             total += promedio_cat * porcentaje
         
         promedio_real = float(total.quantize(Decimal('0.01')))

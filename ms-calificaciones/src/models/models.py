@@ -1,54 +1,61 @@
 import uuid
 from django.db import models
 
-class PonderacionConfig(models.Model):
+class Ponderacion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    materia_id = models.UUIDField(unique=True)
-    bloqueada = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'ponderacion_config'
-
-    def __str__(self):
-        estado = 'bloqueada' if self.bloqueada else 'activa'
-        return f'Config materia {self.materia_id} ({estado})'
-
-class CategoriaPonderacion(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    config = models.ForeignKey(
-        PonderacionConfig,
-        on_delete=models.CASCADE,
-        related_name='categorias'
-    )
-    nombre = models.CharField(max_length=100)
+    materia_id = models.UUIDField()
+    nombre_categoria = models.CharField(max_length=100)
     porcentaje = models.DecimalField(max_digits=5, decimal_places=2)
+    orden = models.PositiveSmallIntegerField(default=0)
+    activa = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'categoria_ponderacion'
+        db_table = 'ponderacion'
+        ordering = ['orden', 'created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['materia_id', 'nombre_categoria'],
+                condition=models.Q(activa=True),
+                name='unique_activa_ponderacion_nombre_materia'
+            )
+        ]
 
     def __str__(self):
-        return f'{self.nombre} ({self.porcentaje}%)'
+        estado = 'activa' if self.activa else 'inactiva'
+        return f'{self.nombre_categoria} ({self.porcentaje}%) - Materia {self.materia_id} ({estado})'
+
 
 class Actividad(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    categoria = models.ForeignKey(
-        CategoriaPonderacion,
+    ponderacion = models.ForeignKey(
+        Ponderacion,
         on_delete=models.RESTRICT,
         related_name='actividades'
     )
     nombre = models.CharField(max_length=255)
+    descripcion = models.TextField(blank=True, default='')
     orden = models.PositiveSmallIntegerField(default=0)
+    fecha_vencimiento = models.DateTimeField(null=True, blank=True)
+    estado = models.CharField(max_length=50, default='pendiente')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'actividad'
-        ordering = ['orden']
+        ordering = ['orden', 'created_at']
 
     def __str__(self):
         return f'{self.nombre}'
 
+
 class Calificacion(models.Model):
+
+    class Fuente(models.TextChoices):
+        MANUAL = 'manual', 'Captura manual'
+        IMPORTADA = 'importada', 'Importación masiva'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actividad = models.ForeignKey(
         Actividad,
@@ -57,6 +64,12 @@ class Calificacion(models.Model):
     )
     alumno_id = models.UUIDField()
     valor = models.DecimalField(max_digits=5, decimal_places=2)
+    fuente = models.CharField(
+        max_length=10,
+        choices=Fuente.choices,
+        default=Fuente.MANUAL,
+    )
+    observacion = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

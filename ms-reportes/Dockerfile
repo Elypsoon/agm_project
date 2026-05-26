@@ -25,5 +25,6 @@ COPY . /app/
 EXPOSE 3007
 EXPOSE 50057
 
-RUN chmod +x entrypoint.sh
-CMD ["./entrypoint.sh"]
+COPY entrypoint.sh /entrypoint.sh
+RUN python -c "c=open('/entrypoint.sh','rb').read(); c=c[3:] if c.startswith(b'\xef\xbb\xbf') else c; open('/entrypoint.sh','wb').write(c.replace(b'\r\n',b'\n'))" && chmod +x /entrypoint.sh
+CMD ["/entrypoint.sh"]

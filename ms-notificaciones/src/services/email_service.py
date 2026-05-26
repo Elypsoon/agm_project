@@ -21,7 +21,7 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
     html_content = ""
     try:
         # 1. Renderizar el contenido HTML basado en la plantilla
-        template_path = f"src/templates/{template_name}.html"
+        template_path = f"{template_name}.html"
         html_content = render_to_string(template_path, context)
         text_content = strip_tags(html_content) # Alternativa en texto plano
 
@@ -39,11 +39,13 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
         estado = 'enviado'
         error_detalle = None
         logger.info(f"Correo de tipo '{tipo_notificacion}' enviado exitosamente a {destinatario_email}")
+        ret_val = True
 
     except Exception as e:
         estado = 'fallido'
         error_detalle = str(e)
         logger.error(f"Error al enviar correo a {destinatario_email}: {error_detalle}")
+        ret_val = False
 
     finally:
         # 4. Guardar el registro en la base de datos (PostgreSQL vía Django ORM)
@@ -57,3 +59,4 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
             error_detalle=error_detalle,
             metadata=context
         )
+    return ret_val

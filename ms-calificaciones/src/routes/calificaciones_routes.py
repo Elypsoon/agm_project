@@ -3,6 +3,7 @@ from src.controllers.ponderacion_controller import PonderacionView
 from src.controllers.actividad_controller import ActividadView
 from src.controllers.calificacion_controller import CalificacionView, ImportarCalificacionesView
 from src.controllers.concentrado_controller import ConcentradoView
+from src.controllers.estadisticas_controller import EstadisticasMateriaView, EstadisticasAlumnoView
 
 urlpatterns = [
     # Ponderaciones
@@ -17,4 +18,8 @@ urlpatterns = [
 
     # Concentrado
     path('concentrado/<uuid:materia_id>/', ConcentradoView.as_view(), name='concentrado'),
+
+    # Estadísticas
+    path('estadisticas/materia/<uuid:materia_id>/', EstadisticasMateriaView.as_view(), name='estadisticas-materia'),
+    path('estadisticas/alumno/<uuid:alumno_id>/materia/<uuid:materia_id>/', EstadisticasAlumnoView.as_view(), name='estadisticas-alumno'),
 ]

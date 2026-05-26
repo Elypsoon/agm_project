@@ -1,6 +1,7 @@
 import logging
 from src.services.concentrado_service import build_concentrado
-from src.models.models import Calificacion, PonderacionConfig
+from src.services.estadisticas_service import get_estadisticas_materia, get_estadisticas_alumno
+from src.models.models import Calificacion, Ponderacion, Actividad
 from src.utils.rounding import redondeo
 from decimal import Decimal
 
@@ -27,7 +28,7 @@ class CalificacionesServicer:
                 materia_nombre=data['materia_nombre'],
                 alumnos=alumnos,
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('No existe configuración de ponderación para esa materia.')
@@ -42,30 +43,12 @@ class CalificacionesServicer:
     def GetPromedioAlumno(self, request, context):
         from src.grpc import calificaciones_pb2
         try:
-            config = PonderacionConfig.objects.prefetch_related(
-                'categorias__actividades'
-            ).get(materia_id=request.materia_id)
-
-            total = Decimal('0.00')
-            for categoria in config.categorias.all():
-                actividades = list(categoria.actividades.all())
-                if not actividades:
-                    continue
-                suma = Decimal('0.00')
-                for actividad in actividades:
-                    cal = Calificacion.objects.filter(
-                        actividad=actividad,
-                        alumno_id=request.alumno_id
-                    ).first()
-                    suma += cal.valor if cal else Decimal('0.00')
-                promedio_cat = suma / Decimal(len(actividades))
-                total += promedio_cat * (categoria.porcentaje / Decimal('100'))
-
+            data = get_estadisticas_alumno(request.alumno_id, request.materia_id)
             return calificaciones_pb2.PromedioResponse(
-                promedio_real=float(total),
-                promedio_redondeado=redondeo(total),
+                promedio_real=data['promedio_real'],
+                promedio_redondeado=data['promedio_redondeado'],
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('Materia no encontrada.')
@@ -80,35 +63,16 @@ class CalificacionesServicer:
     def GetEstadisticasMateria(self, request, context):
         from src.grpc import calificaciones_pb2
         try:
-            config = PonderacionConfig.objects.prefetch_related(
-                'categorias__actividades'
-            ).get(materia_id=request.materia_id)
-
-            actividad_ids = [
-                act.id
-                for cat in config.categorias.all()
-                for act in cat.actividades.all()
-            ]
-
-            calificaciones = Calificacion.objects.filter(
-                actividad_id__in=actividad_ids
-            ).values_list('valor', flat=True)
-
-            valores = [float(v) for v in calificaciones]
-            if not valores:
-                return calificaciones_pb2.StatsResponse()
-
-            alumnos_unicos = Calificacion.objects.filter(
-                actividad_id__in=actividad_ids
-            ).values('alumno_id').distinct().count()
-
+            data = get_estadisticas_materia(request.materia_id)
+            if data['promedio_grupo'] is None:
+                return calificaciones_pb2.StatsResponse(total_alumnos=data['total_alumnos'])
             return calificaciones_pb2.StatsResponse(
-                promedio_grupo=sum(valores) / len(valores),
-                calificacion_max=max(valores),
-                calificacion_min=min(valores),
-                total_alumnos=alumnos_unicos,
+                promedio_grupo=data['promedio_grupo'],
+                calificacion_max=data['calificacion_max'],
+                calificacion_min=data['calificacion_min'],
+                total_alumnos=data['total_alumnos'],
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('Materia no encontrada.')

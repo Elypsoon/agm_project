@@ -5,6 +5,7 @@ import django
 # Inicializar Django antes de importar cualquier modelo o componente que dependa de él
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
+import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.core.settings')
 django.setup()
 

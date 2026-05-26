@@ -1,26 +1,28 @@
 from django.db import transaction
 from django.db.models import Max
-from src.models.models import CategoriaPonderacion, Actividad
+from src.models.models import Ponderacion, Actividad
+from src.services.autorizacion_service import verificar_materia_abierta
 
-class CategoriaNoEncontrada(Exception):
+class PonderacionNoEncontrada(Exception):
     pass
 
-class CategoriaMateriaNoCoincide(Exception):
+class PonderacionMateriaNoCoincide(Exception):
     pass
 
-def crear_actividad(materia_id, categoria_id, nombre):
+def crear_actividad(materia_id, ponderacion_id, nombre, descripcion='', estado='pendiente'):
+    # Verificar si la materia está abierta antes de modificar nada
+    verificar_materia_abierta(materia_id)
+    
     with transaction.atomic():
-        categoria = CategoriaPonderacion.objects.select_related('config').filter(
-            id=categoria_id
-        ).first()
-        if not categoria:
-            raise CategoriaNoEncontrada('No se encontró la categoría de ponderación.')
+        ponderacion = Ponderacion.objects.filter(id=ponderacion_id).first()
+        if not ponderacion:
+            raise PonderacionNoEncontrada('No se encontró la categoría de ponderación (Ponderacion).')
         
-        if categoria.config.materia_id != materia_id:
-            raise CategoriaMateriaNoCoincide('La categoría de ponderación no pertenece a la materia especificada.')
+        if ponderacion.materia_id != materia_id:
+            raise PonderacionMateriaNoCoincide('La ponderación no pertenece a la materia especificada.')
         
         max_orden = (
-            Actividad.objects.filter(categoria=categoria)
+            Actividad.objects.filter(ponderacion=ponderacion)
             .aggregate(max_orden=Max('orden'))
             .get('max_orden')
         )
@@ -28,8 +30,10 @@ def crear_actividad(materia_id, categoria_id, nombre):
         orden = (max_orden or -1) + 1
 
         actividad = Actividad.objects.create(
-            categoria=categoria,
+            ponderacion=ponderacion,
             nombre=nombre,
+            descripcion=descripcion,
+            estado=estado,
             orden=orden,
         )
 
