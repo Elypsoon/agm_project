@@ -65,6 +65,7 @@ class CalificacionesServicer:
                 alumnos.append(
                     calificaciones_pb2.AlumnoCalif(
                         alumno_id=a['alumno_id'],
+                        alumno_matricula=a['alumno_matricula'],
                         alumno_nombre=a['alumno_nombre'],
                         promedio_real=a['promedio_real'],
                         promedio_redondeado=a['promedio_redondeado'],

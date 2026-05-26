@@ -91,6 +91,7 @@ class TestGrpcGetConcentrado(GrpcCalificacionesTestBase):
         self.assertEqual(len(resp.alumnos), 1)
         alumno = resp.alumnos[0]
         self.assertEqual(alumno.alumno_nombre, "Alumno gRPC")
+        self.assertEqual(alumno.alumno_matricula, "202200001")
         self.assertEqual(alumno.promedio_redondeado, 9)  # 92.50 -> 9.25 en escala 0-10, fracción < 0.5 -> piso -> 9
         self.assertEqual(len(alumno.calificaciones), 1)
         self.assertEqual(alumno.calificaciones[0].actividad_id, str(self.actividad.id))
