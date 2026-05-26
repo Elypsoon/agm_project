@@ -7,6 +7,21 @@ logger = logging.getLogger(__name__)
 
 
 def validar_token_en_auth(token):
+    """Valida un token JWT contra el microservicio de autenticación (MS-1) vía gRPC.
+
+    Esta función extrae los datos de identidad y el rol del usuario a partir del token.
+
+    Args:
+        token (str): Token JWT (access_token) extraído del header HTTP Authorization.
+
+    Returns:
+        dict: Estructura de datos que contiene:
+            - valid (bool): True si el token es vigente y auténtico, False de lo contrario.
+            - user_id (str): Identificador UUID del usuario en el MS-1.
+            - email (str): Correo institucional del usuario.
+            - role (str): Rol escolar ("docente" o "alumno").
+            - error (str): Mensaje descriptivo en caso de error.
+    """
     mock_mode = getattr(settings, 'GRPC_MOCK_MODE', True)
     if mock_mode:
         return {
@@ -44,3 +59,4 @@ def validar_token_en_auth(token):
     except Exception as e:
         logger.exception("Error inesperado validando token")
         return {"valid": False, "error": str(e)}
+

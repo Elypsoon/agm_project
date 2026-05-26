@@ -1,3 +1,9 @@
+"""Configuración de endpoints para el microservicio de Calificaciones (MS-4).
+
+Define los puntos de acceso para la gestión de ponderaciones, actividades, calificaciones, 
+concentrados de notas y estadísticas grupales e individuales de alumnos.
+"""
+
 from django.urls import path
 from src.controllers.ponderacion_controller import PonderacionView
 from src.controllers.actividad_controller import ActividadView

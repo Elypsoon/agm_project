@@ -14,17 +14,34 @@ class AlumnosGrpcError(Exception):
     de transporte.
     """
 
-
 class AlumnosClient(BaseGRPCClient):
+    """Cliente gRPC para interactuar con el microservicio de Alumnos.
+
+    Encapsula consultas sobre información académica de los estudiantes, listado de alumnos 
+    inscritos por materia y verificación de su estatus escolar.
+    """
 
     def _get_target(self):
+        """Construye y retorna el target de host:puerto para la conexión gRPC a MS-3.
+
+        Returns:
+            str: Dirección IP/host y puerto de destino (ej. 'ms-alumnos:50053').
+        """
         host = getattr(settings, 'ALUMNOS_GRPC_HOST', 'ms-alumnos')
         port = getattr(settings, 'ALUMNOS_GRPC_PORT', '50053')
         return f"{host}:{port}"
 
     @staticmethod
     def _alumno_to_dict(alumno_info):
-        """Convierte un mensaje AlumnoInfo protobuf a dict plano."""
+        """Convierte un objeto de tipo AlumnoInfo (protobuf) a un diccionario de Python.
+
+        Args:
+            alumnos_pb2.AlumnoInfo: Mensaje de protobuf con la información del alumno.
+
+        Returns:
+            dict: Estructura de datos limpia con claves 'id', 'matricula', 'nombre_completo',
+                  'correo' y 'tipo_formacion'.
+        """
         return {
             "id": alumno_info.id,
             "matricula": alumno_info.matricula,
@@ -33,12 +50,19 @@ class AlumnosClient(BaseGRPCClient):
             "tipo_formacion": alumno_info.tipo_formacion,
         }
 
+
     def get_alumnos_by_materia(self, materia_id):
-        """Devuelve la lista de alumnos inscritos en una materia.
+        """Devuelve el listado de alumnos inscritos en una materia específica.
+
+        Realiza una llamada gRPC al endpoint de consulta grupal del MS-3.
+
+        Args:
+            materia_id: Identificador único de la materia.
 
         Returns:
-            list[dict]: cada elemento tiene las claves
-                id, matricula, nombre_completo, correo, tipo_formacion."""
+            list[dict]: Lista de alumnos, donde cada elemento cuenta con los detalles
+                        del perfil del estudiante (id, matricula, nombre_completo, correo, tipo_formacion).
+        """
         if self.mock_mode:
             return [
                 {
@@ -80,10 +104,14 @@ class AlumnosClient(BaseGRPCClient):
             raise
 
     def get_alumno_by_id(self, alumno_id):
-        """Devuelve los datos de un alumno por su UUID.
+        """Obtiene la información detallada de un alumno mediante su identificador.
+
+        Args:
+            alumno_id: Identificador único del alumno.
 
         Returns:
-            dict: id, matricula, nombre_completo, correo, tipo_formacion."""
+            dict: Datos del alumno con su matrícula y correo (id, matricula, nombre_completo, correo, tipo_formacion).
+        """
         if self.mock_mode:
             return {
                 "id": str(alumno_id),
@@ -116,13 +144,18 @@ class AlumnosClient(BaseGRPCClient):
             raise
 
     def is_alumno_en_materia(self, alumno_id, materia_id):
-        """Verifica si un alumno está inscrito Y activo en una materia.
+        """Verifica si un alumno está inscrito y activo en una materia.
 
-        Consulta MS-3 y devuelve True solo cuando ambos campos
-        `inscrito` y `activo` son verdaderos en la respuesta.
+        Se consulta al MS-3 para cerciorarse de que el registro del alumno
+        en la materia cuente con estatus inscrito y activo simultáneamente.
+
+        Args:
+            alumno_id: Identificador del estudiante.
+            materia_id: Identificador de la materia.
 
         Returns:
-            bool: True si el alumno está inscrito y activo."""
+            bool: True si el alumno está inscrito y activo, False en caso contrario.
+        """
         if self.mock_mode:
             # En modo mock se asume que el alumno siempre está inscrito.
             return True

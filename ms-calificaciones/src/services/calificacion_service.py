@@ -1,24 +1,45 @@
 from django.db import transaction
+
 from src.models.models import Actividad, Ponderacion, Calificacion
+
 from src.parsers.file_parser import parsear_archivo
+
 from src.grpc.alumnos_client import AlumnosClient, AlumnosGrpcError
+
 from src.services.autorizacion_service import verificar_materia_abierta
 
 
 class ActividadNoEncontrada(Exception):
+    """Excepción cuando una actividad no existe en el microservicio."""
     pass
 
 
 class AlumnoNoInscrito(Exception):
     """El alumno no está inscrito o no está activo en la materia."""
+    pass
 
 
 class ServicioExternoInaccesible(Exception):
     """MS-3 no respondió correctamente; no se puede verificar la inscripción."""
+    pass
 
 
 def upsert_calificacion(actividad_id, alumno_id, valor):
-    """Guarda o actualiza la calificación de un alumno en una actividad."""
+    """Guarda o actualiza la calificación de un alumno en una actividad específica.
+
+    Verifica que la actividad exista, que la materia esté abierta y que el alumno
+    se encuentre inscrito en la materia (mediante gRPC a MS-3). Emplea bloqueo de
+    concurrencia mediante `select_for_update` sobre la categoría de ponderación.
+
+    Args:
+        actividad_id: Identificador único de la actividad evaluable.
+        alumno_id: Identificador único del alumno.
+        valor: Calificación numérica (rango de 0.00 a 100.00).
+
+    Returns:
+        tuple[Calificacion, bool]: Una tupla con el objeto Calificacion creado o
+            actualizado y un booleano indicando True si fue creado o False si fue actualizado.
+    """
     try:
         actividad = Actividad.objects.select_related('ponderacion').get(
             id=actividad_id
@@ -58,10 +79,26 @@ def upsert_calificacion(actividad_id, alumno_id, valor):
 
 
 def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
-    """Importa calificaciones masivamente desde un archivo CSV o XLSX.
+    """Importa calificaciones masivamente desde un archivo de MS Teams (CSV o XLSX).
+
+    Verifica que la materia esté abierta, procesa el archivo, mapea los estudiantes
+    (por correo, nombre o matrícula) y registra las calificaciones usando `bulk_create`
+    con resolución de conflictos de unicidad.
+
+    Si una actividad contenida en el archivo no existe en la materia, pero viene acompañada
+    por el nombre del criterio de evaluación (categoría de ponderación) y esta categoría es
+    válida y activa, la crea automáticamente de forma dinámica.
+
+    Args:
+        materia_id: Identificador único de la materia.
+        nombre_archivo: Nombre del archivo para identificar su formato.
+        archivo_bytes: Contenido binario del archivo subido.
 
     Returns:
-        dict: {'importadas': int, 'errores': list[dict]}
+        dict: Un diccionario con el reporte de la operación:
+            - importadas (int): Cantidad de calificaciones guardadas con éxito.
+            - actividades_creadas (int): Cantidad de actividades evaluables auto-creadas.
+            - errores (list[dict]): Lista de filas fallidas con detalles de la causa.
     """
     # Validar si la materia está abierta antes de importar calificaciones
     verificar_materia_abierta(materia_id)
@@ -102,6 +139,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
             alumnos_por_matricula[matricula] = a
 
     importadas = 0
+    actividades_creadas = 0
     errores = errores_parseo.copy()
     operaciones_actualizar = []
 
@@ -109,18 +147,52 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
         correo_reg = reg['correo'].strip().lower()
         nombre_reg = reg['nombre_completo'].strip().lower()
         nombre_act = reg['nombre_actividad'].strip().lower()
+        nombre_pond = reg.get('nombre_ponderacion', '').strip().lower()
         valor = reg['valor']
         comentario = reg['comentario']
 
-        # Buscar la actividad
+        # Buscar la actividad; si no existe, intentar crearla
         actividad = actividades_por_nombre.get(nombre_act)
         if actividad is None:
-            errores.append({
-                'correo': reg['correo'],
-                'actividad': reg['nombre_actividad'],
-                'motivo': 'Actividad no encontrada en la configuración de la materia.',
-            })
-            continue
+            # Necesitamos la categoría de ponderación para poder crear la actividad
+            if not nombre_pond:
+                errores.append({
+                    'correo': reg['correo'],
+                    'actividad': reg['nombre_actividad'],
+                    'motivo': (
+                        'Actividad no encontrada y el archivo no incluye la columna '
+                        '"Nombre del criterio de evaluación" para crearla automáticamente.'
+                    ),
+                })
+                continue
+
+            # Buscar la ponderación por nombre de categoría dentro de la materia
+            ponderacion = Ponderacion.objects.filter(
+                materia_id=materia_id,
+                activa=True,
+            ).filter(nombre_categoria__iexact=reg['nombre_ponderacion'].strip()).first()
+
+            if ponderacion is None:
+                errores.append({
+                    'correo': reg['correo'],
+                    'actividad': reg['nombre_actividad'],
+                    'motivo': (
+                        f'Categoría de ponderación "{reg["nombre_ponderacion"]}" '
+                        f'no encontrada o inactiva en la materia.'
+                    ),
+                })
+                continue
+
+            # Crear la actividad automáticamente
+            actividad = Actividad.objects.create(
+                ponderacion=ponderacion,
+                nombre=reg['nombre_actividad'].strip(),
+                fecha_vencimiento=reg.get('fecha_vencimiento'),
+                estado=reg.get('estado', 'pendiente') or 'pendiente',
+            )
+            # Agregar al índice local para no duplicar en filas siguientes del mismo archivo
+            actividades_por_nombre[nombre_act] = actividad
+            actividades_creadas += 1
 
         # Actualizar fecha de vencimiento si viene en la importación y es distinta
         fecha_venc = reg.get('fecha_vencimiento')
@@ -170,6 +242,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
 
     return {
         'importadas': importadas,
+        'actividades_creadas': actividades_creadas,
         'errores': errores,
     }
 

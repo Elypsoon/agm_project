@@ -1,16 +1,28 @@
 from decimal import Decimal
+
 from src.models.models import Ponderacion, Actividad, Calificacion
+
 from src.utils.rounding import redondeo
 
 
 def get_estadisticas_materia(materia_id):
-    """Calcula estadísticas de grupo para una materia.
+    """Calcula analíticas agregadas a nivel grupal para una materia específica.
 
-    El promedio_grupo es la media de los promedios ponderados individuales,
-    no un promedio simple de todas las calificaciones brutas.
+    Calcula la nota media, la calificación máxima y la calificación mínima del grupo.
+    Para garantizar coherencia con el acta oficial, estas métricas se basan en el
+    promedio ponderado individual de cada estudiante, no en un promedio simple de
+    las calificaciones brutas sin ponderar.
+
+    Args:
+        materia_id: Identificador único de la materia.
 
     Returns:
-        dict: promedio_grupo, calificacion_max, calificacion_min, total_alumnos"""
+        dict: Métricas de rendimiento grupal conteniendo:
+            - promedio_grupo (float): Nota grupal promedio ponderada.
+            - calificacion_max (float): Mayor promedio individual registrado en el grupo.
+            - calificacion_min (float): Menor promedio individual registrado en el grupo.
+            - total_alumnos (int): Cantidad de alumnos que cuentan con al menos una calificación.
+    """
     ponderaciones = Ponderacion.objects.filter(materia_id=materia_id, activa=True)
     if not ponderaciones.exists():
         raise Ponderacion.DoesNotExist("No existe configuración de ponderación para esta materia.")
@@ -50,12 +62,29 @@ def get_estadisticas_materia(materia_id):
     }
 
 
-
 def get_estadisticas_alumno(alumno_id, materia_id):
-    """Calcula el promedio ponderado de un alumno en una materia.
+    """Calcula el promedio ponderado detallado y desglose de notas de un alumno.
+
+    Calcula la suma ponderada del estudiante basándose en las categorías configuradas.
+    Retorna el promedio real acumulado (escala 0.00-100.00), el promedio redondeado
+    (escala 0-10) y la lista del desempeño detallado por categoría de evaluación.
+
+    Args:
+        alumno_id: Identificador único del estudiante.
+        materia_id: Identificador único de la materia.
 
     Returns:
-        dict: promedio_real, promedio_redondeado, calificaciones (lista por ponderación)"""
+        dict: Analítica detallada del estudiante con la estructura:
+            - alumno_id (str)
+            - materia_id (str)
+            - promedio_real (float): Promedio acumulado (escala 0.00-100.00).
+            - promedio_redondeado (int): Promedio final redondeado oficial (escala 0-10).
+            - desglose (list[dict]): Lista de rendimiento por ponderación conteniendo:
+                * ponderacion (str): Nombre de la categoría.
+                * porcentaje (float): Peso de la categoría.
+                * promedio_categoria (float): Promedio obtenido en esa categoría.
+                * calificaciones (list[dict]): Lista de actividades y su nota.
+    """
     ponderaciones = (
         Ponderacion.objects.filter(materia_id=materia_id, activa=True)
         .prefetch_related('actividades')

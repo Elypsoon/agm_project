@@ -8,6 +8,7 @@ GET    /asistencias/{materia_id}/hoy        → Asistencias del día para una ma
 GET    /asistencias/{materia_id}/historial  → Historial completo de asistencias
 """
 
+import uuid
 from django.utils import timezone
 from django.conf import settings
 from django.core.cache import cache
@@ -40,11 +41,6 @@ def _response_error(message, status_code=status.HTTP_400_BAD_REQUEST):
 
 
 class IniciarSesionView(APIView):
-    """
-    El docente inicia una sesión de asistencia para una materia.
-    Solo puede haber UNA sesión activa por materia al mismo tiempo.
-    La sesión dura 10 minutos. Se guarda en PostgreSQL y en Redis.
-    """
     permission_classes = [EsDocente]
 
     def post(self, request):
@@ -53,7 +49,10 @@ class IniciarSesionView(APIView):
             return _response_error(serializer.errors)
 
         materia_id = serializer.validated_data['materia_id']
-        docente_id = request.user.user_id
+        try:
+            docente_id = uuid.UUID(str(request.user.user_id))
+        except (ValueError, AttributeError):
+            docente_id = uuid.uuid4()
 
         sesion_activa = Sesion.objects.filter(
             materia_id=materia_id,
@@ -78,8 +77,8 @@ class IniciarSesionView(APIView):
             _sesion_redis_key(str(sesion.id)),
             {
                 'sesion_id': str(sesion.id),
-                'materia_id': materia_id,
-                'docente_id': docente_id,
+                'materia_id': str(materia_id),
+                'docente_id': str(docente_id),
                 'hora_inicio': sesion.hora_inicio.isoformat(),
             },
             timeout=settings.SESION_DURACION_SEGUNDOS + 30
@@ -90,9 +89,6 @@ class IniciarSesionView(APIView):
 
 
 class RegistrarAsistenciaView(APIView):
-    """
-    Registra la asistencia de un alumno validando su token QR.
-    """
     permission_classes = [EsDocenteOAlumno]
 
     def post(self, request):
@@ -127,11 +123,11 @@ class RegistrarAsistenciaView(APIView):
         if qr_data['sesion_id'] != sesion_id:
             return _response_error("El QR no corresponde a esta sesión.", status.HTTP_400_BAD_REQUEST)
 
-        alumno_id = qr_data['alumno_id']
+        alumno_id = uuid.UUID(str(qr_data['alumno_id']))
         matricula = qr_data['matricula']
 
         if Asistencia.objects.filter(sesion=sesion, alumno_id=alumno_id).exists():
-            return _response_error("Este alumno ya tiene asistencia registrada en esta sesión.", status.HTTP_409_CONFLICT)
+            return _response_error("Este alumno ya tiene asistencia en esta sesión.", status.HTTP_409_CONFLICT)
 
         estado = 'presente' if elapsed <= settings.SESION_PRESENTE_SEGUNDOS else 'retardo'
 
@@ -149,9 +145,6 @@ class RegistrarAsistenciaView(APIView):
 
 
 class CerrarSesionView(APIView):
-    """
-    El docente cierra manualmente la sesión antes de que expire el tiempo.
-    """
     permission_classes = [EsDocente]
 
     def delete(self, request, sesion_id):
@@ -159,7 +152,7 @@ class CerrarSesionView(APIView):
         if not sesion:
             return _response_error("Sesión no encontrada o ya cerrada.", status.HTTP_404_NOT_FOUND)
 
-        if sesion.docente_id != request.user.user_id:
+        if str(sesion.docente_id) != str(request.user.user_id):
             return _response_error("No tienes permiso para cerrar esta sesión.", status.HTTP_403_FORBIDDEN)
 
         sesion.estado = 'cerrada'
@@ -172,9 +165,6 @@ class CerrarSesionView(APIView):
 
 
 class AsistenciasHoyView(APIView):
-    """
-    Retorna las asistencias del día actual para una materia.
-    """
     permission_classes = [EsDocente]
 
     def get(self, request, materia_id):
@@ -196,9 +186,6 @@ class AsistenciasHoyView(APIView):
 
 
 class HistorialAsistenciasView(APIView):
-    """
-    Retorna el historial completo de asistencias de una materia, agrupado por sesión.
-    """
     permission_classes = [EsDocenteOAlumno]
 
     def get(self, request, materia_id):

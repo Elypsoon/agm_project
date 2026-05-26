@@ -1,22 +1,75 @@
 from decimal import Decimal
+
 from src.models.models import Ponderacion, Calificacion
+
 from src.grpc.alumnos_client import AlumnosClient
 from src.grpc.periodos_client import PeriodosClient
+
 from src.utils.rounding import redondeo
 
+
 def build_concentrado(materia_id):
+    """Calcula y construye el acta concentrada de calificaciones de un grupo de estudiantes.
+
+    Recupera el listado de alumnos inscritos en MS-3 y el esquema de ponderaciones activas
+    de la materia. Para cada alumno:
+      1. Obtiene las calificaciones registradas de cada actividad.
+      2. Calcula el promedio aritmético por categoría de ponderación.
+      3. Suma de forma ponderada el desempeño total en escala de 0.00 a 100.00.
+      4. Aplica el redondeo oficial (escala 0 a 10).
+
+    Además, retorna la jerarquía de categorías y actividades una sola vez a nivel de
+    materia, para que los consumidores puedan cruzar las calificaciones por 
+    actividad_id sin datos redundantes.
+
+    Args:
+        materia_id: Identificador único de la materia.
+
+    Returns:
+        dict: Acta concentrada con la estructura:
+            - materia_id (str)
+            - materia_nombre (str)
+            - categorias (list[dict]): Jerarquía de categorías (una vez, compartida por todos los alumnos).
+                Cada dict contiene:
+                * nombre_categoria (str)
+                * porcentaje (float)
+                * actividades (list[dict]): Lista de dicts con 'actividad_id' y 'actividad_nombre'.
+            - alumnos (list[dict]): Promedios y calificaciones individuales por alumno.
+                Cada dict contiene:
+                * alumno_id (str)
+                * alumno_nombre (str)
+                * promedio_real (float): Promedio ponderado en escala 0.00–100.00.
+                * promedio_redondeado (int): Promedio oficial redondeado en escala 0–10.
+                * calificaciones (list[dict]): Notas por actividad, dicts con 'actividad_id' y 'valor'.
+    """
     ponderaciones = (
         Ponderacion.objects.filter(materia_id=materia_id, activa=True)
         .prefetch_related('actividades')
+        .order_by('orden', 'created_at')
     )
     if not ponderaciones.exists():
         raise Ponderacion.DoesNotExist("No existe configuración de ponderación para esta materia.")
 
-    actividad_ids = []
-    for pond in ponderaciones:
-        for actividad in pond.actividades.all():
-            actividad_ids.append(actividad.id)
+    # Materializar ponderaciones para reutilizarlas múltiples veces sin rehits a BD
+    ponderaciones_list = list(ponderaciones)
 
+    # Construir jerarquía de categorías (compartida por todos los alumnos del grupo)
+    categorias_result = []
+    actividad_ids = []
+    for pond in ponderaciones_list:
+        actividades_pond = list(pond.actividades.all())
+        actividades_info = [
+            {'actividad_id': str(a.id), 'actividad_nombre': a.nombre}
+            for a in actividades_pond
+        ]
+        categorias_result.append({
+            'nombre_categoria': pond.nombre_categoria,
+            'porcentaje': float(pond.porcentaje),
+            'actividades': actividades_info,
+        })
+        actividad_ids.extend(a.id for a in actividades_pond)
+
+    # Cargar todas las calificaciones de la materia en un solo query
     calificaciones = {}
     if actividad_ids:
         for row in Calificacion.objects.filter(actividad_id__in=actividad_ids).values(
@@ -31,36 +84,41 @@ def build_concentrado(materia_id):
     for alumno in alumnos:
         alumno_id = str(alumno['id'])
         total = Decimal('0.00')
+        califs_alumno = []
 
-        for pond in ponderaciones:
+        for pond in ponderaciones_list:
             actividades = list(pond.actividades.all())
             if not actividades:
                 promedio_cat = Decimal('0.00')
             else:
                 suma = Decimal('0.00')
                 for actividad in actividades:
-                    suma += calificaciones.get(
-                        (str(actividad.id), alumno_id), Decimal('0.00')
-                    )
+                    act_id = str(actividad.id)
+                    valor = calificaciones.get((act_id, alumno_id), Decimal('0.00'))
+                    suma += valor
+                    califs_alumno.append({
+                        'actividad_id': act_id,
+                        'valor': float(valor),
+                    })
                 promedio_cat = suma / Decimal(len(actividades))
 
             porcentaje = pond.porcentaje / Decimal('100.00')
             total += promedio_cat * porcentaje
-        
+
         promedio_real = float(total.quantize(Decimal('0.01')))
         promedio_redondeado = redondeo(total)
 
-        alumnos_result.append(
-            {
-                'alumno_id': alumno_id,
-                'alumno_nombre': alumno.get('nombre_completo', ''),
-                'promedio_real': promedio_real,
-                'promedio_redondeado': promedio_redondeado,
-            }
-        )
+        alumnos_result.append({
+            'alumno_id': alumno_id,
+            'alumno_nombre': alumno.get('nombre_completo', ''),
+            'promedio_real': promedio_real,
+            'promedio_redondeado': promedio_redondeado,
+            'calificaciones': califs_alumno,
+        })
 
     return {
         'materia_id': str(materia_id),
         'materia_nombre': materia.get('nombre', ''),
-        'alumnos': alumnos_result
+        'categorias': categorias_result,
+        'alumnos': alumnos_result,
     }
