@@ -52,11 +52,11 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
         NotificationLog.objects.create(
             tipo=tipo_notificacion,
             destinatario_email=destinatario_email,
-            destinatario_id=context.get('alumno_id') or context.get('docente_id'),
+            destinatario_id=(context or {}).get('alumno_id') or (context or {}).get('docente_id'),
             asunto=asunto,
             contenido=html_content,
             estado=estado,
             error_detalle=error_detalle,
-            metadata=context
+            metadata=context or {}
         )
     return ret_val

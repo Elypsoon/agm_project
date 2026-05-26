@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 from django.core.management.base import BaseCommand
+from django.db import close_old_connections
 
 from src.services.email_service import send_academic_email
 
@@ -43,6 +44,9 @@ class Command(BaseCommand):
                 channel.queue_bind(exchange='agm.events', queue=queue_name, routing_key=evento)
 
             def callback(ch, method, properties, body):
+                # Asegurar conexiones de base de datos frescas para procesos persistentes (evitar timeout/OperationalError)
+                close_old_connections()
+                
                 routing_key = method.routing_key
                 try:
                     payload = json.loads(body.decode('utf-8'))
