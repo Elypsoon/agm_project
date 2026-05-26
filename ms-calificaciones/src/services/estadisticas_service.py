@@ -6,6 +6,9 @@ from src.utils.rounding import redondeo
 def get_estadisticas_materia(materia_id):
     """Calcula estadísticas de grupo para una materia.
 
+    El promedio_grupo es la media de los promedios ponderados individuales,
+    no un promedio simple de todas las calificaciones brutas.
+
     Returns:
         dict: promedio_grupo, calificacion_max, calificacion_min, total_alumnos"""
     ponderaciones = Ponderacion.objects.filter(materia_id=materia_id, activa=True)
@@ -18,31 +21,34 @@ def get_estadisticas_materia(materia_id):
         for act in pond.actividades.all()
     ]
 
-    valores = list(
+    alumno_ids = list(
         Calificacion.objects.filter(actividad_id__in=actividad_ids)
-        .values_list('valor', flat=True)
+        .values_list('alumno_id', flat=True).distinct()
     )
 
-    total_alumnos = (
-        Calificacion.objects.filter(actividad_id__in=actividad_ids)
-        .values('alumno_id').distinct().count()
-    )
+    total_alumnos = len(alumno_ids)
 
-    if not valores:
+    if not alumno_ids:
         return {
             'promedio_grupo': None,
             'calificacion_max': None,
             'calificacion_min': None,
-            'total_alumnos': total_alumnos,
+            'total_alumnos': 0,
         }
 
-    valores_float = [float(v) for v in valores]
+    # Calcular el promedio ponderado de cada alumno
+    promedios = [
+        get_estadisticas_alumno(alumno_id, materia_id)['promedio_real']
+        for alumno_id in alumno_ids
+    ]
+
     return {
-        'promedio_grupo': round(sum(valores_float) / len(valores_float), 2),
-        'calificacion_max': max(valores_float),
-        'calificacion_min': min(valores_float),
+        'promedio_grupo': round(sum(promedios) / len(promedios), 2),
+        'calificacion_max': max(promedios),
+        'calificacion_min': min(promedios),
         'total_alumnos': total_alumnos,
     }
+
 
 
 def get_estadisticas_alumno(alumno_id, materia_id):
