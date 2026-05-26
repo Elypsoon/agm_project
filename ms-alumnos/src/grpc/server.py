@@ -155,6 +155,32 @@ class AlumnosServiceServicer:
             context.set_details(str(e))
             return alumnos_pb2.DocenteInfo()
 
+    def GetDocenteByName(self, request, context):
+        """Obtener informacion de un docente por su nombre completo."""
+        from src.models.docente import Docente
+        from src.grpc import alumnos_pb2
+
+        try:
+            nombre = request.nombre_completo.strip()
+            docente = Docente.objects.filter(nombre_completo__iexact=nombre).first()
+
+            if not docente:
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("Docente no encontrado por nombre")
+                return alumnos_pb2.DocenteInfo()
+
+            return alumnos_pb2.DocenteInfo(
+                id=str(docente.id),
+                nombre_completo=docente.nombre_completo or "",
+                correo_institucional=docente.correo_institucional or "",
+                cubiculo=docente.cubiculo or "",
+            )
+        except Exception as e:
+            logger.error(f"gRPC GetDocenteByName error: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return alumnos_pb2.DocenteInfo()
+
 
 def crear_servidor_grpc(port: int) -> grpc.Server:
     """Crea y retorna un servidor gRPC (sin iniciar)."""
