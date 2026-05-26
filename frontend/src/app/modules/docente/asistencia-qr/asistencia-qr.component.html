@@ -1,0 +1,104 @@
+<p-toast position="top-right" />
+
+<div class="page-enter">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Asistencia QR</h1>
+      <p class="page-subtitle">Escanea el código QR del alumno para registrar su asistencia</p>
+    </div>
+  </div>
+
+  <div class="scanner-layout">
+
+    <!-- Camera Panel -->
+    <div class="camera-panel">
+      <div class="camera-frame" [class.scanning]="status() === 'scanning'"
+           [class.success-frame]="status() === 'success'"
+           [class.error-frame]="status() === 'error'">
+
+        @if (status() === 'idle') {
+          <div class="camera-placeholder">
+            <i class="pi pi-qrcode placeholder-icon"></i>
+            <p>Haz clic en "Iniciar escaneo" para activar la cámara</p>
+          </div>
+        }
+
+        <video #videoEl [hidden]="status() === 'idle'" autoplay playsinline muted
+               class="camera-video"></video>
+        <canvas #canvasEl hidden></canvas>
+
+        <!-- Scan overlay -->
+        @if (status() === 'scanning') {
+          <div class="scan-overlay">
+            <div class="scan-corner tl"></div>
+            <div class="scan-corner tr"></div>
+            <div class="scan-corner bl"></div>
+            <div class="scan-corner br"></div>
+            <div class="scan-line"></div>
+          </div>
+        }
+
+        @if (status() === 'success') {
+          <div class="result-overlay success-overlay">
+            <i class="pi pi-check-circle result-icon"></i>
+            <p>Asistencia registrada</p>
+          </div>
+        }
+
+        @if (status() === 'error') {
+          <div class="result-overlay error-overlay">
+            <i class="pi pi-times-circle result-icon"></i>
+            <p>QR inválido</p>
+          </div>
+        }
+      </div>
+
+      <div class="camera-controls">
+        @if (status() === 'idle') {
+          <p-button label="Iniciar escaneo" icon="pi pi-camera"
+            (onClick)="startScanning()" />
+        } @else if (status() === 'scanning') {
+          <p-button label="Detener" icon="pi pi-stop-circle"
+            severity="secondary" (onClick)="stopScanning()" />
+        } @else {
+          <p-button label="Escanear otro" icon="pi pi-refresh"
+            (onClick)="resetScanner()" />
+        }
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="history-panel">
+      <div class="history-header">
+        <h2 class="history-title">Registros de hoy</h2>
+        <p-tag [value]="scanHistory().length + ' asistencias'" severity="info" />
+      </div>
+
+      @if (scanHistory().length === 0) {
+        <div class="history-empty">
+          <i class="pi pi-inbox"></i>
+          <p>Sin registros todavía</p>
+        </div>
+      } @else {
+        <div class="history-list">
+          @for (record of scanHistory(); track record.timestamp) {
+            <div class="history-item" [class.history-success]="record.success">
+              <div class="history-avatar">
+                {{ record.initials }}
+              </div>
+              <div class="history-info">
+                <span class="history-name">{{ record.name }}</span>
+                <span class="history-time">{{ record.timestamp }}</span>
+              </div>
+              <i class="pi"
+                 [class.pi-check-circle]="record.success"
+                 [class.pi-times-circle]="!record.success"
+                 [style.color]="record.success ? '#22C55E' : '#EF4444'"></i>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+  </div>
+</div>

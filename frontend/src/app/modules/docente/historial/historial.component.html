@@ -1,0 +1,103 @@
+<div class="page-enter">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Historial de Asistencia</h1>
+      <p class="page-subtitle">Consulta y filtra los registros de asistencia por fecha y materia</p>
+    </div>
+    <p-button label="Exportar" icon="pi pi-download" severity="secondary" (onClick)="exportar()" />
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row">
+    <p-datepicker
+      id="rango-fechas"
+      [(ngModel)]="rangoFechas"
+      selectionMode="range"
+      [readonlyInput]="true"
+      placeholder="Selecciona rango de fechas"
+      styleClass="date-picker"
+      (onSelect)="onFilterChange()" />
+
+    <p-select
+      id="materia-filter"
+      [options]="materiaOptions"
+      [(ngModel)]="selectedMateria"
+      placeholder="Todas las materias"
+      [showClear]="true"
+      styleClass="materia-filter"
+      (onChange)="onFilterChange()" />
+
+    <p-iconfield>
+      <p-inputicon styleClass="pi pi-search" />
+      <input id="buscar-alumno" pInputText [(ngModel)]="searchText"
+        placeholder="Buscar alumno..."
+        (input)="onFilterChange()" />
+    </p-iconfield>
+
+    <p-button icon="pi pi-filter-slash" severity="secondary" [text]="true"
+      pTooltip="Limpiar filtros" (onClick)="clearFilters()" />
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    @for (stat of statsCards; track stat.label) {
+      <div class="stat-card" [style.--sc]="stat.color">
+        <span class="stat-val">{{ stat.value }}</span>
+        <span class="stat-label">{{ stat.label }}</span>
+      </div>
+    }
+  </div>
+
+  <!-- Table -->
+  @if (loading()) {
+    <div class="skeleton-col">
+      @for (i of [1,2,3,4,5,6]; track i) {
+        <p-skeleton height="44px" borderRadius="6px" />
+      }
+    </div>
+  } @else {
+    <p-table
+      id="tabla-historial"
+      [value]="filteredData()"
+      [paginator]="true"
+      [rows]="15"
+      [rowsPerPageOptions]="[10, 15, 25, 50]"
+      sortField="fecha"
+      [sortOrder]="-1"
+      styleClass="p-datatable-sm">
+
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="fecha">Fecha <p-sortIcon field="fecha"/></th>
+          <th pSortableColumn="materia">Materia <p-sortIcon field="materia"/></th>
+          <th pSortableColumn="alumno">Alumno <p-sortIcon field="alumno"/></th>
+          <th>Matrícula</th>
+          <th pSortableColumn="hora">Hora <p-sortIcon field="hora"/></th>
+          <th style="text-align:center">Estado</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-row>
+        <tr>
+          <td>{{ row.fecha }}</td>
+          <td>{{ row.materia }}</td>
+          <td>{{ row.alumno }}</td>
+          <td><span class="mono-id">{{ row.matricula }}</span></td>
+          <td>{{ row.hora }}</td>
+          <td style="text-align:center">
+            <p-tag [value]="estadoLabel(row.estado)" [severity]="estadoSeverity(row.estado)" />
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="6" class="empty-table-msg">
+            <i class="pi pi-history" style="font-size:32px;display:block;margin-bottom:12px"></i>
+            No hay registros para los filtros seleccionados
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</div>

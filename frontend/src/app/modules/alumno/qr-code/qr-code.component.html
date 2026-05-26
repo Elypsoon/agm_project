@@ -1,0 +1,107 @@
+<p-toast position="top-right" />
+
+<div class="page-enter">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Mi Código QR</h1>
+      <p class="page-subtitle">Presenta este código al docente para registrar tu asistencia</p>
+    </div>
+  </div>
+
+  <div class="qr-layout">
+
+    <!-- QR Panel -->
+    <div class="qr-panel">
+      <div class="qr-card" [class.expiring]="secondsLeft() <= 10">
+
+        <!-- User info strip -->
+        <div class="qr-user-strip">
+          <div class="qr-avatar">{{ avatarLabel() }}</div>
+          <div class="qr-user-info">
+            <span class="qr-user-name">{{ userName() }}</span>
+            <span class="qr-user-id mono-id">{{ shortId() }}</span>
+          </div>
+          <p-tag value="Activo" severity="success" />
+        </div>
+
+        <!-- QR Code -->
+        <div class="qr-wrapper" [class.shake]="secondsLeft() <= 5">
+          <qrcode
+            [qrdata]="qrData()"
+            [width]="260"
+            [errorCorrectionLevel]="'M'"
+            [colorDark]="'#1E293B'"
+            [colorLight]="'#FFFFFF'"
+            [margin]="2" />
+        </div>
+
+        <!-- Countdown -->
+        <div class="countdown-section">
+          <div class="countdown-ring" [style.--pct]="countdownPct()">
+            <svg viewBox="0 0 60 60" class="ring-svg">
+              <circle cx="30" cy="30" r="27" class="ring-bg" />
+              <circle cx="30" cy="30" r="27" class="ring-fill"
+                [class.ring-danger]="secondsLeft() <= 10"
+                [style.stroke-dashoffset]="dashOffset()" />
+            </svg>
+            <span class="countdown-num" [class.text-danger]="secondsLeft() <= 10">
+              {{ secondsLeft() }}
+            </span>
+          </div>
+          <div class="countdown-label">
+            <p>El QR se renueva automáticamente</p>
+            <p class="countdown-sub">cada 60 segundos</p>
+          </div>
+        </div>
+
+        <!-- Refresh manual -->
+        <p-button
+          label="Renovar ahora"
+          icon="pi pi-refresh"
+          [text]="true"
+          styleClass="refresh-btn"
+          (onClick)="refreshQr()" />
+      </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel">
+      <h2 class="info-title">¿Cómo funciona?</h2>
+
+      <div class="steps">
+        @for (step of steps; track step.num) {
+          <div class="step">
+            <div class="step-num">{{ step.num }}</div>
+            <div class="step-content">
+              <span class="step-title">{{ step.title }}</span>
+              <span class="step-desc">{{ step.desc }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="security-note">
+        <i class="pi pi-shield"></i>
+        <div>
+          <p class="security-title">QR Seguro</p>
+          <p class="security-desc">
+            Cada código incluye tu ID único y una marca de tiempo. Se invalida automáticamente
+            después de 60 segundos para evitar suplantación.
+          </p>
+        </div>
+      </div>
+
+      <div class="materia-info">
+        <h3 class="mat-info-title">Materias con asistencia hoy</h3>
+        @for (mat of materiasHoy; track mat.nombre) {
+          <div class="mat-info-item">
+            <div class="mat-dot" [style.background]="mat.color"></div>
+            <span>{{ mat.nombre }}</span>
+            <span class="mat-hora">{{ mat.hora }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+</div>
