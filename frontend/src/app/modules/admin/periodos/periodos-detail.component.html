@@ -96,7 +96,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let horario of materia.horarios">
+                      <tr *ngFor="let horario of getOrderedHorarios(materia.horarios)">
                         <td>{{ horario.dia }}</td>
                         <td>{{ horario.hora_inicio || '—' }}</td>
                         <td>{{ horario.hora_fin || '—' }}</td>

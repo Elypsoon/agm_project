@@ -24,28 +24,23 @@ logger = logging.getLogger(__name__)
 
 
 def _ejecutar_evaluacion_periodos(hoy: date):
-    # 1. Automatically ACTIVATE periods whose start date has arrived and aren't active yet
-    periodos_a_activar = Periodo.objects.filter(
+    """Helper method to run strict single-active-period evaluations."""
+    periodo_actual = Periodo.objects.filter(
         fecha_inicio__lte=hoy,
-        fecha_fin__gte=hoy,
-        activo=False
-    )
-    for p in periodos_a_activar:
-        p.activo = True
-        p.save()
-        logger.info(f"Periodo activado automáticamente: {p.nombre} ({p.plan_estudios} - {p.campus})")
+        fecha_fin__gte=hoy
+    ).first()
 
-    # 2. Automatically DEACTIVATE expired periods OR periods whose start date is in the future
-    periodos_a_desactivar = Periodo.objects.filter(
-        Q(fecha_fin__lt=hoy) | Q(fecha_inicio__gt=hoy),
-        activo=True
-    )
-    for p in periodos_a_desactivar:
-        p.activo = False
-        p.save()
-        logger.info(f"Periodo desactivado automáticamente: {p.nombre} ({p.plan_estudios} - {p.campus})")
-
-
+    if periodo_actual and not periodo_actual.activo:
+        Periodo.objects.filter(activo=True).exclude(id=periodo_actual.id).update(activo=False)
+        
+        periodo_actual.activo = True
+        periodo_actual.save()
+        logger.info(f"Periodo de referencia global activado: {periodo_actual.nombre}")
+        
+    elif not periodo_actual:
+        # If today doesn't match any period bounds, ensure everything is turned off
+        Periodo.objects.filter(activo=True).update(activo=False)
+        
 async def cron_evaluador_periodos():
     """
     Automated background task that evaluates calendar date bounds.
@@ -117,20 +112,20 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
             return periodos_pb2.MateriaInfo()
 
     def GetMateriasByDocente(self, request: periodos_pb2.DocenteIdRequest, context):
-        """Get all materias for a docente across ALL currently active periodos/campuses."""
+        """Get all materias for a given docente in the active periodo."""
         try:
-            periodos_activos = Periodo.objects.filter(activo=True)
+            periodo_activo = Periodo.objects.filter(activo=True).first()
             
-            if not periodos_activos.exists():
+            if not periodo_activo:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("No active periodos found currently.")
+                context.set_details("No unique active periodo found currently.")
                 return periodos_pb2.MateriasListResponse()
             
             materias = (
                 Materia.objects
                 .filter(
                     docente_id=uuid.UUID(request.docente_id),
-                    periodo__in=periodos_activos,
+                    periodo=periodo_activo,
                 )
                 .prefetch_related('horarios')
             )

@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
-import { PeriodosService, Periodo } from './periodos.service';
+import { PeriodosService, Periodo, Horario } from './periodos.service';
 
 @Component({
   selector: 'agm-periodos-detail',
@@ -49,6 +49,24 @@ export class PeriodosDetailComponent implements OnInit {
 
   isMateriaExpanded(materiaId: string) {
     return this.expandedMateriaId === materiaId;
+  }
+
+  getOrderedHorarios(horarios: Horario[]) {
+    const order = ['L', 'A', 'M', 'J', 'V', 'S', 'D'];
+    return [...horarios].sort((a, b) => {
+      const idxA = order.indexOf(a.dia.toUpperCase());
+      const idxB = order.indexOf(b.dia.toUpperCase());
+      if (idxA === -1 && idxB === -1) {
+        return a.dia.localeCompare(b.dia);
+      }
+      if (idxA === -1) {
+        return 1;
+      }
+      if (idxB === -1) {
+        return -1;
+      }
+      return idxA - idxB;
+    });
   }
 
   goBack() {

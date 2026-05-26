@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
-interface Horario {
+export interface Horario {
   id: string;
   dia: string;
   hora_inicio: string;
@@ -12,7 +12,7 @@ interface Horario {
   es_virtual: boolean;
 }
 
-interface Materia {
+export interface Materia {
   id: string;
   nrc: string;
   nombre: string;

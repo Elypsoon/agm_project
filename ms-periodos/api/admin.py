@@ -7,18 +7,18 @@ from .models import Periodo, Materia, Horario
 
 @admin.register(Periodo)
 class PeriodoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'plan_estudios', 'fecha_inicio', 'fecha_fin', 'activo', 'created_at')
-    list_filter = ('activo', 'created_at', 'plan_estudios')
-    search_fields = ('nombre', 'plan_estudios')
+    list_display = ('nombre', 'fecha_inicio', 'fecha_fin', 'activo', 'created_at')
+    list_filter = ('activo', 'created_at')
+    search_fields = ('nombre',)
     ordering = ('-created_at',)
     readonly_fields = ('id', 'created_at', 'updated_at')
 
 
 @admin.register(Materia)
 class MateriaAdmin(admin.ModelAdmin):
-    list_display = ('clave', 'nombre', 'nrc', 'seccion', 'periodo', 'estado', 'created_at')
-    list_filter = ('estado', 'periodo', 'created_at')
-    search_fields = ('clave', 'nombre', 'nrc')
+    list_display = ('clave', 'nombre', 'nrc', 'seccion', 'plan_estudios', 'campus', 'periodo', 'estado', 'created_at')
+    list_filter = ('estado', 'plan_estudios', 'campus', 'periodo', 'created_at')
+    search_fields = ('clave', 'nombre', 'nrc', 'docente_nombre')
     ordering = ('-created_at',)
     readonly_fields = ('id', 'created_at', 'updated_at')
 

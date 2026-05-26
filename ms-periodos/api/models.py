@@ -13,7 +13,6 @@ class EstadoMateria(models.TextChoices):
 
 
 class CampusOptions(models.TextChoices):
-    """Sedes físicas de la facultad"""
     CU2 = 'CU2', 'Campus CU2'
     SAN_MANUEL = 'SAN_MANUEL', 'Campus CU San Manuel'
 
@@ -24,37 +23,31 @@ class Periodo(models.Model):
     nombre = models.CharField(max_length=100)  # e.g., "Primavera 2026"
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
-    plan_estudios = models.CharField(max_length=50)  # e.g., "ITI"
     activo = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+class Materia(models.Model):
+    """Modelo para materias/cursos - Maneja el branching por campus y carrera"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nrc = models.CharField(max_length=20)
+    clave = models.CharField(max_length=20)  # e.g., "ITIS 604"
+    nombre = models.CharField(max_length=255)
+    seccion = models.CharField(max_length=10, null=True, blank=True)
+    docente_nombre = models.CharField(max_length=255, null=True, blank=True)
+    docente_id = models.UUIDField(null=True, blank=True)
     
     campus = models.CharField(
         max_length=20,
         choices=CampusOptions.choices,
         default=CampusOptions.SAN_MANUEL
     )
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    plan_estudios = models.CharField(max_length=50, default="ITI")  # e.g., ITI, LCC, ICC
 
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Periodo'
-        verbose_name_plural = 'Periodos'
-
-    def __str__(self):
-        return f"{self.nombre} ({self.plan_estudios}) - {self.get_campus_display()}"
-
-
-class Materia(models.Model):
-    """Modelo para materias/cursos"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    nrc = models.CharField(max_length=20)
-    clave = models.CharField(max_length=20)  # e.g., "ITIS 604"
-    nombre = models.CharField(max_length=255)  # e.g., "Inteligencia Artificial"
-    seccion = models.CharField(max_length=10, null=True, blank=True)  # e.g., "001"
-    docente_nombre = models.CharField(max_length=255, null=True, blank=True) 
-    docente_id = models.UUIDField(null=True, blank=True)
-    
     periodo = models.ForeignKey(
         Periodo,
         on_delete=models.CASCADE,
