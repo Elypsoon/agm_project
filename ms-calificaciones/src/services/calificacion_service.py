@@ -1,7 +1,8 @@
 from django.db import transaction
-from src.models.models import Actividad, PonderacionConfig, Calificacion
+from src.models.models import Actividad, Ponderacion, Calificacion
 from src.parsers.file_parser import parsear_archivo
 from src.grpc.alumnos_client import AlumnosClient, AlumnosGrpcError
+from src.services.autorizacion_service import verificar_materia_abierta
 
 
 class ActividadNoEncontrada(Exception):
@@ -19,13 +20,16 @@ class ServicioExternoInaccesible(Exception):
 def upsert_calificacion(actividad_id, alumno_id, valor):
     """Guarda o actualiza la calificación de un alumno en una actividad."""
     try:
-        actividad = Actividad.objects.select_related('categoria__config').get(
+        actividad = Actividad.objects.select_related('ponderacion').get(
             id=actividad_id
         )
     except Actividad.DoesNotExist:
         raise ActividadNoEncontrada(f'Actividad con ID {actividad_id} no encontrada.')
 
-    materia_id = actividad.categoria.config.materia_id
+    materia_id = actividad.ponderacion.materia_id
+
+    # Validar si la materia está abierta antes de modificar la calificación
+    verificar_materia_abierta(materia_id)
 
     try:
         inscrito = AlumnosClient().is_alumno_en_materia(alumno_id, materia_id)
@@ -41,8 +45,8 @@ def upsert_calificacion(actividad_id, alumno_id, valor):
         )
 
     with transaction.atomic():
-        PonderacionConfig.objects.select_for_update().get(
-            id=actividad.categoria.config_id
+        Ponderacion.objects.select_for_update().get(
+            id=actividad.ponderacion_id
         )
         calificacion, created = Calificacion.objects.update_or_create(
             actividad=actividad,
@@ -59,20 +63,17 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
     Returns:
         dict: {'importadas': int, 'errores': list[dict]}
     """
+    # Validar si la materia está abierta antes de importar calificaciones
+    verificar_materia_abierta(materia_id)
+
     registros, errores_parseo = parsear_archivo(nombre_archivo, archivo_bytes)
 
     # Obtener actividades de la materia indexadas por nombre
-    try:
-        config = PonderacionConfig.objects.prefetch_related(
-            'categorias__actividades'
-        ).get(materia_id=materia_id)
-    except PonderacionConfig.DoesNotExist:
+    if not Ponderacion.objects.filter(materia_id=materia_id).exists():
         raise ValueError(f'No existe configuración de ponderación para la materia {materia_id}.')
 
-    actividades_por_nombre = {}
-    for categoria in config.categorias.all():
-        for actividad in categoria.actividades.all():
-            actividades_por_nombre[actividad.nombre.strip().lower()] = actividad
+    actividades = Actividad.objects.filter(ponderacion__materia_id=materia_id).select_related('ponderacion')
+    actividades_por_nombre = {actividad.nombre.strip().lower(): actividad for actividad in actividades}
 
     # Obtener alumnos inscritos de MS-3
     try:

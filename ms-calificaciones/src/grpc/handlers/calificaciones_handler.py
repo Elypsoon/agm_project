@@ -1,6 +1,6 @@
 import logging
 from src.services.concentrado_service import build_concentrado
-from src.models.models import Calificacion, PonderacionConfig
+from src.models.models import Calificacion, Ponderacion, Actividad
 from src.utils.rounding import redondeo
 from decimal import Decimal
 
@@ -27,7 +27,7 @@ class CalificacionesServicer:
                 materia_nombre=data['materia_nombre'],
                 alumnos=alumnos,
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('No existe configuración de ponderación para esa materia.')
@@ -42,13 +42,16 @@ class CalificacionesServicer:
     def GetPromedioAlumno(self, request, context):
         from src.grpc import calificaciones_pb2
         try:
-            config = PonderacionConfig.objects.prefetch_related(
-                'categorias__actividades'
-            ).get(materia_id=request.materia_id)
+            ponderaciones = Ponderacion.objects.prefetch_related(
+                'actividades'
+            ).filter(materia_id=request.materia_id, activa=True)
+
+            if not ponderaciones.exists():
+                raise Ponderacion.DoesNotExist()
 
             total = Decimal('0.00')
-            for categoria in config.categorias.all():
-                actividades = list(categoria.actividades.all())
+            for pond in ponderaciones:
+                actividades = list(pond.actividades.all())
                 if not actividades:
                     continue
                 suma = Decimal('0.00')
@@ -59,13 +62,13 @@ class CalificacionesServicer:
                     ).first()
                     suma += cal.valor if cal else Decimal('0.00')
                 promedio_cat = suma / Decimal(len(actividades))
-                total += promedio_cat * (categoria.porcentaje / Decimal('100'))
+                total += promedio_cat * (pond.porcentaje / Decimal('100'))
 
             return calificaciones_pb2.PromedioResponse(
                 promedio_real=float(total),
                 promedio_redondeado=redondeo(total),
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('Materia no encontrada.')
@@ -80,14 +83,17 @@ class CalificacionesServicer:
     def GetEstadisticasMateria(self, request, context):
         from src.grpc import calificaciones_pb2
         try:
-            config = PonderacionConfig.objects.prefetch_related(
-                'categorias__actividades'
-            ).get(materia_id=request.materia_id)
+            ponderaciones = Ponderacion.objects.prefetch_related(
+                'actividades'
+            ).filter(materia_id=request.materia_id, activa=True)
+
+            if not ponderaciones.exists():
+                raise Ponderacion.DoesNotExist()
 
             actividad_ids = [
                 act.id
-                for cat in config.categorias.all()
-                for act in cat.actividades.all()
+                for pond in ponderaciones
+                for act in pond.actividades.all()
             ]
 
             calificaciones = Calificacion.objects.filter(
@@ -108,7 +114,7 @@ class CalificacionesServicer:
                 calificacion_min=min(valores),
                 total_alumnos=alumnos_unicos,
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('Materia no encontrada.')

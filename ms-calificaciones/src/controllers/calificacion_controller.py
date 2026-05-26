@@ -9,6 +9,7 @@ from src.services.calificacion_service import (
     AlumnoNoInscrito,
     ServicioExternoInaccesible,
 )
+from src.services.autorizacion_service import MateriaCerradaError, MateriaNoAccesible
 from src.utils.authentication import GrpcJWTAuthentication
 from src.utils.permissions import IsDocente
 
@@ -32,6 +33,10 @@ class CalificacionView(APIView):
             return Response({'detail': str(exc)}, status=404)
         except AlumnoNoInscrito as exc:
             return Response({'detail': str(exc)}, status=422)
+        except MateriaCerradaError as exc:
+            return Response({'detail': str(exc)}, status=403)
+        except MateriaNoAccesible as exc:
+            return Response({'detail': str(exc)}, status=503)
         except ServicioExternoInaccesible as exc:
             return Response({'detail': str(exc)}, status=503)
 
@@ -64,6 +69,10 @@ class ImportarCalificacionesView(APIView):
             )
         except ValueError as exc:
             return Response({'detail': str(exc)}, status=400)
+        except MateriaCerradaError as exc:
+            return Response({'detail': str(exc)}, status=403)
+        except MateriaNoAccesible as exc:
+            return Response({'detail': str(exc)}, status=503)
         except ServicioExternoInaccesible as exc:
             return Response({'detail': str(exc)}, status=503)
 
