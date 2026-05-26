@@ -187,8 +187,6 @@ services:
         condition: service_healthy
       redis-asistencias:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
 
   # ---------------------------------------------------------------------------
   # MS-6: Notificaciones (Django + PostgreSQL)
