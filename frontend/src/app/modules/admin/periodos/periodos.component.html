@@ -1,0 +1,187 @@
+<section class="page-periodos">
+  <div class="page-top">
+    <div class="page-title">
+      <span class="eyebrow">Administrador</span>
+      <h1>Periodos académicos</h1>
+      <p>Visualiza la información que provee el microservicio de periodos y administra periodos, activaciones y cargas de materias.</p>
+    </div>
+
+    <div class="page-actions">
+      <p-button
+        label="Agregar periodo"
+        icon="pi pi-plus"
+        (click)="openCreateDialog()"
+        [loading]="actionLoading === 'create'"
+      ></p-button>
+      <p-button
+        label="Refrescar"
+        icon="pi pi-sync"
+        (click)="loadPeriodos()"
+        [loading]="loading"
+        styleClass="p-button-outlined"
+      ></p-button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span>Total de periodos</span>
+      <strong>{{ getPeriodosCount() }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Periodo activo</span>
+      <strong>{{ activePeriodo?.nombre || 'Ninguno' }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Plan de estudios activo</span>
+      <strong>{{ activePeriodo?.plan_estudios || 'N/A' }}</strong>
+    </article>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <h2>Catálogo de periodos</h2>
+        <p>Ver, activar, eliminar y subir materias por periodo directamente desde el panel.</p>
+      </div>
+      <div class="table-meta">
+        <span *ngIf="lastUpdated">Última actualización: {{ lastUpdated | date:'short' }}</span>
+      </div>
+    </div>
+
+    <p-table
+      [value]="periodos"
+      [paginator]="true"
+      [rows]="10"
+      [loading]="loading"
+      currentPageReportTemplate="Mostrando {first} - {last} de {totalRecords}"
+      [rowsPerPageOptions]="[5, 10, 20]"
+      [showCurrentPageReport]="true"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Nombre</th>
+          <th>Plan de estudios</th>
+          <th>Inicio</th>
+          <th>Fin</th>
+          <th>Estado</th>
+          <th>Materia(s)</th>
+          <th>Acciones</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-periodo>
+        <tr>
+          <td>{{ periodo.nombre }}</td>
+          <td>{{ periodo.plan_estudios || '—' }}</td>
+          <td>{{ periodo.fecha_inicio | date:'dd/MM/yyyy' }}</td>
+          <td>{{ periodo.fecha_fin | date:'dd/MM/yyyy' }}</td>
+          <td>
+            <p-tag
+              [value]="periodo.activo ? 'Activo' : 'Inactivo'"
+              [severity]="periodo.activo ? 'success' : 'warn'"
+            ></p-tag>
+          </td>
+          <td>{{ periodo.materias?.length ?? '—' }}</td>
+          <td class="actions-cell">
+            <p-button
+              label="Activar"
+              icon="pi pi-check"
+              (click)="activatePeriodo(periodo)"
+              [disabled]="periodo.activo"
+              [loading]="actionLoading === periodo.id"
+              styleClass="p-button-sm"
+            ></p-button>
+            <p-button
+              label="Eliminar"
+              icon="pi pi-trash"
+              (click)="deletePeriodo(periodo)"
+              [loading]="actionLoading === periodo.id"
+              styleClass="p-button-danger p-button-sm"
+            ></p-button>
+            <div class="import-row">
+              <input
+                type="file"
+                accept=".pdf"
+                (change)="onFileChange($event, periodo.id)"
+                class="file-input"
+              />
+              <p-button
+                label="Importar PDF"
+                icon="pi pi-upload"
+                (click)="uploadPdf(periodo)"
+                [loading]="actionLoading === periodo.id"
+                styleClass="p-button-secondary p-button-sm"
+              ></p-button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="empty-state">No se encontraron periodos.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <div *ngIf="successMessage" class="success-banner">
+      <i class="pi pi-check-circle"></i>
+      <span>{{ successMessage }}</span>
+    </div>
+    <div *ngIf="errorMessage" class="error-banner">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+    <div *ngIf="uploadError" class="error-banner">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ uploadError }}</span>
+    </div>
+    <div *ngIf="uploadSuccess" class="success-banner">
+      <i class="pi pi-check-circle"></i>
+      <span>{{ uploadSuccess }}</span>
+    </div>
+  </div>
+
+  <div class="dialog-backdrop" *ngIf="createDialog">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <h3>Agregar nuevo periodo</h3>
+        <button type="button" class="close-btn" (click)="closeCreateDialog()">×</button>
+      </div>
+
+      <form [formGroup]="periodoForm" (ngSubmit)="submitNewPeriodo()" class="create-form">
+        <label>
+          Nombre
+          <input pInputText formControlName="nombre" />
+        </label>
+        <label>
+          Plan de estudios
+          <input pInputText formControlName="plan_estudios" />
+        </label>
+        <label>
+          Fecha inicio
+          <input type="date" formControlName="fecha_inicio" />
+        </label>
+        <label>
+          Fecha fin
+          <input type="date" formControlName="fecha_fin" />
+        </label>
+
+        <div class="dialog-actions">
+          <p-button
+            label="Cancelar"
+            type="button"
+            (click)="closeCreateDialog()"
+            styleClass="p-button-outlined"
+          ></p-button>
+          <p-button
+            label="Crear periodo"
+            type="submit"
+            [loading]="actionLoading === 'create'"
+          ></p-button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
