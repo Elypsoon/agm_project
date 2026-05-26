@@ -17,7 +17,6 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .publisher import publicar_alerta_asistencia
 
 from .models import Sesion, Asistencia
 from .serializers import (
@@ -141,16 +140,6 @@ class RegistrarAsistenciaView(APIView):
             estado=estado,
             qr_token_hash=token_hash,
         )
-
-        # Si es retardo publicar alerta asincrónicamente en RabbitMQ
-        if estado == 'retardo':
-            publicar_alerta_asistencia(
-                alumno_id=str(alumno_id),
-                materia_id=str(sesion.materia_id),
-                tipo='retardo',
-                hora_registro=asistencia.hora_registro.isoformat(),
-                sesion_id=str(sesion.id),
-            )
 
         data = AsistenciaSerializer(asistencia).data
         return _response_ok(data, f"Asistencia registrada: {estado}.", status.HTTP_201_CREATED)
