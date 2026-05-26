@@ -2,6 +2,11 @@ import uuid
 from django.db import models
 
 class Ponderacion(models.Model):
+    """Modelo de base de datos para registrar las categorías de ponderación de una materia.
+
+    Asigna un porcentaje a cada categoría de evaluación. Un esquema es válido si y solo si 
+    la suma de porcentajes de las categorías activas es igual a 100.00%.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     materia_id = models.UUIDField()
     nombre_categoria = models.CharField(max_length=100)
@@ -28,6 +33,10 @@ class Ponderacion(models.Model):
 
 
 class Actividad(models.Model):
+    """Modelo para registrar las actividades evaluables asignadas dentro de una materia.
+
+    Cada actividad debe estar necesariamente vinculada a una categoría de ponderación.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ponderacion = models.ForeignKey(
         Ponderacion,
@@ -51,8 +60,14 @@ class Actividad(models.Model):
 
 
 class Calificacion(models.Model):
+    """Modelo para almacenar las calificaciones individuales de los alumnos.
+
+    Registra la nota obtenida por un alumno en una actividad evaluable específica,
+    manteniendo la trazabilidad de la fuente de captura (manual o importada).
+    """
 
     class Fuente(models.TextChoices):
+        """Opciones de la fuente de origen del registro de la calificación."""
         MANUAL = 'manual', 'Captura manual'
         IMPORTADA = 'importada', 'Importación masiva'
 
@@ -84,3 +99,4 @@ class Calificacion(models.Model):
 
     def __str__(self):
         return f'Alumno: {self.alumno_id} | Actividad: {self.actividad_id} -> {self.valor}'
+
