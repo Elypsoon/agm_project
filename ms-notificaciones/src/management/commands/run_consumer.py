@@ -149,7 +149,8 @@ class Command(BaseCommand):
                             template_name='reporte-finalizado',
                             context={
                                 'materia_nombre': payload.get('materia_nombre', 'Materia Desconocida'),
-                                'formato': payload.get('formato', 'XLSX')
+                                'formato': payload.get('formato', 'XLSX'),
+                                'fecha_expiracion': payload.get('fecha_expiracion', 'las próximas 24 horas')
                             },
                             to_email=email_destinatario,
                             subject=f'Reporte Académico Disponible - {payload.get("materia_nombre", "Materia")}',

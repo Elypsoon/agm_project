@@ -54,14 +54,17 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
 
     finally:
         # 4. Guardar el registro en la base de datos (PostgreSQL vía Django ORM)
-        NotificationLog.objects.create(
-            tipo=tipo_notificacion,
-            destinatario_email=destinatario_email,
-            destinatario_id=(context or {}).get('alumno_id') or (context or {}).get('docente_id'),
-            asunto=asunto,
-            contenido=html_content,
-            estado=estado,
-            error_detalle=error_detalle,
-            metadata=context or {}
-        )
+        try:
+            NotificationLog.objects.create(
+                tipo=tipo_notificacion,
+                destinatario_email=destinatario_email,
+                destinatario_id=(context or {}).get('alumno_id') or (context or {}).get('docente_id'),
+                asunto=asunto,
+                contenido=html_content,
+                estado=estado,
+                error_detalle=error_detalle,
+                metadata=context or {}
+            )
+        except Exception as db_err:
+            logger.warning(f"[-] Database error while logging notification entry: {db_err}")
     return ret_val
