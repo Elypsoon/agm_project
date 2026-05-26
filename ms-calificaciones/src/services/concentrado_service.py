@@ -37,6 +37,7 @@ def build_concentrado(materia_id):
             - alumnos (list[dict]): Promedios y calificaciones individuales por alumno.
                 Cada dict contiene:
                 * alumno_id (str)
+                * alumno_matricula (str): Matrícula institucional del alumno.
                 * alumno_nombre (str)
                 * promedio_real (float): Promedio ponderado en escala 0.00–100.00.
                 * promedio_redondeado (int): Promedio oficial redondeado en escala 0–10.
@@ -110,6 +111,7 @@ def build_concentrado(materia_id):
 
         alumnos_result.append({
             'alumno_id': alumno_id,
+            'alumno_matricula': alumno.get('matricula', ''),
             'alumno_nombre': alumno.get('nombre_completo', ''),
             'promedio_real': promedio_real,
             'promedio_redondeado': promedio_redondeado,
