@@ -1,24 +1,45 @@
 from django.db import transaction
+
 from src.models.models import Actividad, Ponderacion, Calificacion
+
 from src.parsers.file_parser import parsear_archivo
+
 from src.grpc.alumnos_client import AlumnosClient, AlumnosGrpcError
+
 from src.services.autorizacion_service import verificar_materia_abierta
 
 
 class ActividadNoEncontrada(Exception):
+    """Excepción cuando una actividad no existe en el microservicio."""
     pass
 
 
 class AlumnoNoInscrito(Exception):
     """El alumno no está inscrito o no está activo en la materia."""
+    pass
 
 
 class ServicioExternoInaccesible(Exception):
     """MS-3 no respondió correctamente; no se puede verificar la inscripción."""
+    pass
 
 
 def upsert_calificacion(actividad_id, alumno_id, valor):
-    """Guarda o actualiza la calificación de un alumno en una actividad."""
+    """Guarda o actualiza la calificación de un alumno en una actividad específica.
+
+    Verifica que la actividad exista, que la materia esté abierta y que el alumno
+    se encuentre inscrito en la materia (mediante gRPC a MS-3). Emplea bloqueo de
+    concurrencia mediante `select_for_update` sobre la categoría de ponderación.
+
+    Args:
+        actividad_id: Identificador único de la actividad evaluable.
+        alumno_id: Identificador único del alumno.
+        valor: Calificación numérica (rango de 0.00 a 100.00).
+
+    Returns:
+        tuple[Calificacion, bool]: Una tupla con el objeto Calificacion creado o
+            actualizado y un booleano indicando True si fue creado o False si fue actualizado.
+    """
     try:
         actividad = Actividad.objects.select_related('ponderacion').get(
             id=actividad_id
@@ -58,10 +79,26 @@ def upsert_calificacion(actividad_id, alumno_id, valor):
 
 
 def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
-    """Importa calificaciones masivamente desde un archivo CSV o XLSX.
+    """Importa calificaciones masivamente desde un archivo de MS Teams (CSV o XLSX).
+
+    Verifica que la materia esté abierta, procesa el archivo, mapea los estudiantes
+    (por correo, nombre o matrícula) y registra las calificaciones usando `bulk_create`
+    con resolución de conflictos de unicidad.
+
+    Si una actividad contenida en el archivo no existe en la materia, pero viene acompañada
+    por el nombre del criterio de evaluación (categoría de ponderación) y esta categoría es
+    válida y activa, la crea automáticamente de forma dinámica.
+
+    Args:
+        materia_id: Identificador único de la materia.
+        nombre_archivo: Nombre del archivo para identificar su formato.
+        archivo_bytes: Contenido binario del archivo subido.
 
     Returns:
-        dict: {'importadas': int, 'errores': list[dict]}
+        dict: Un diccionario con el reporte de la operación:
+            - importadas (int): Cantidad de calificaciones guardadas con éxito.
+            - actividades_creadas (int): Cantidad de actividades evaluables auto-creadas.
+            - errores (list[dict]): Lista de filas fallidas con detalles de la causa.
     """
     # Validar si la materia está abierta antes de importar calificaciones
     verificar_materia_abierta(materia_id)

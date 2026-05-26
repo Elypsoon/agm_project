@@ -1,10 +1,36 @@
 from decimal import Decimal
+
 from src.models.models import Ponderacion, Calificacion
+
 from src.grpc.alumnos_client import AlumnosClient
 from src.grpc.periodos_client import PeriodosClient
+
 from src.utils.rounding import redondeo
 
+
 def build_concentrado(materia_id):
+    """Calcula y construye el acta concentrada de calificaciones de un grupo de estudiantes.
+
+    Recupera el listado de alumnos inscritos en MS-3 y el esquema de ponderaciones activas
+    de la materia. Para cada alumno:
+      1. Obtiene las calificaciones registradas de cada actividad.
+      2. Calcula el promedio aritmético por categoría de ponderación.
+      3. Suma de forma ponderada el desempeño total en escala de 0.00 a 100.00.
+      4. Aplica el redondeo oficial (escala 0 a 10).
+
+    Args:
+        materia_id: Identificador único de la materia.
+
+    Returns:
+        dict: Acta o concentrado grupal de calificaciones con la estructura:
+            - materia_id (str): Identificador de la materia.
+            - materia_nombre (str): Nombre oficial de la materia.
+            - alumnos (list[dict]): Lista de promedios individuales conteniendo:
+                * alumno_id (str)
+                * alumno_nombre (str)
+                * promedio_real (float): Promedio total ponderado en escala de 0.00 a 100.00.
+                * promedio_redondeado (int): Promedio final redondeado oficial en escala 0 a 10.
+    """
     ponderaciones = (
         Ponderacion.objects.filter(materia_id=materia_id, activa=True)
         .prefetch_related('actividades')

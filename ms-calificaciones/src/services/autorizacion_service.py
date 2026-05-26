@@ -17,11 +17,15 @@ class MateriaCerradaError(Exception):
 
 
 def verificar_docente_sobre_materia(docente_id, materia_id):
-    """Consulta MS-2 y verifica que el docente es responsable de la materia.
+    """Consulta MS-2 (Servicio de Periodos/Materias) y verifica que el docente es titular de la materia.
+
+    Args:
+        docente_id: Identificador del docente autenticado.
+        materia_id: Identificador único de la materia a consultar.
 
     Returns:
-        dict: datos completos de la materia (id, nrc, nombre, estado, …)
-            para que el caller pueda reutilizarlos sin una segunda llamada."""
+        dict: Datos detallados de la materia obtenidos de MS-2 para su reutilización.
+    """
     try:
         materia = PeriodosClient().get_materia_by_id(materia_id)
     except PeriodosGrpcError as exc:
@@ -38,7 +42,17 @@ def verificar_docente_sobre_materia(docente_id, materia_id):
 
 
 def verificar_materia_abierta(materia_id):
-    """Verifica si la materia no está cerrada en MS-2."""
+    """Verifica si la materia no se encuentra en estado 'cerrada' en MS-2.
+
+    Evita modificaciones a ponderaciones, actividades o calificaciones si el período 
+    o materia ya han concluido formalmente.
+
+    Args:
+        materia_id: Identificador único de la materia.
+
+    Returns:
+        None
+    """
     try:
         materia = PeriodosClient().get_materia_by_id(materia_id)
     except PeriodosGrpcError as exc:

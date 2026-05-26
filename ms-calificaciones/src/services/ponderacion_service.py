@@ -1,24 +1,39 @@
 from decimal import Decimal
 from django.db import transaction
 from django.db.models.deletion import ProtectedError, RestrictedError
+
 from src.models.models import Ponderacion, Actividad, Calificacion
+
 from src.services.autorizacion_service import verificar_materia_abierta
 
+
 class PonderacionError(Exception):
+    """Clase base para errores de lógica de ponderaciones."""
     pass
 
 class PonderacionSumaInvalida(PonderacionError):
+    """Excepción cuando los porcentajes de evaluación no suman exactamente 100.00%."""
     pass
 
 class PonderacionBloqueada(PonderacionError):
+    """Excepción cuando se intenta alterar ponderaciones ya bloqueadas por calificaciones."""
     pass
 
 class PonderacionCategoriasRestringidas(PonderacionError):
+    """Excepción cuando se intentan eliminar categorías que ya tienen actividades asociadas."""
     pass
 
 
 def _validar_categorias(categorias):
-    if not categorias:
+    """Valida la integridad de la lista de categorías de ponderación.
+
+    Verifica que la lista no esté vacía, que no existan nombres duplicados y que la suma 
+    total de porcentajes sea exactamente igual a 100.00%.
+
+    Args:
+        categorias (list[dict]): Lista de diccionarios de categorías con nombre y porcentaje.
+    """
+    if not list(categorias):
         raise PonderacionSumaInvalida("La lista de categorías no puede estar vacía.")
     
     # Validar que no existan nombres duplicados
@@ -35,6 +50,19 @@ def _validar_categorias(categorias):
 
 
 def _reemplazar_categorias(materia_id, categorias):
+    """Aplica la actualización de categorías de ponderación en base de datos.
+
+    Calcula la diferencia entre las categorías existentes y las nuevas entrantes.
+    Elimina las no deseadas (siempre y cuando no contengan actividades asociadas)
+    y realiza inserción o actualización de las entrantes.
+
+    Args:
+        materia_id: Identificador único de la materia.
+        categorias (list[dict]): Configuración de categorías de evaluación.
+
+    Returns:
+        list[Ponderacion]: Lista de ponderaciones activas resultantes.
+    """
     # Obtener categorías actuales de la base de datos
     ponderaciones_existentes = list(Ponderacion.objects.filter(materia_id=materia_id))
     existentes_dict = {p.nombre_categoria.strip().lower(): p for p in ponderaciones_existentes}
@@ -79,6 +107,19 @@ def _reemplazar_categorias(materia_id, categorias):
 
 
 def upsert_config(materia_id, categorias):
+    """Registra o reemplaza el esquema de ponderación de una materia abierta.
+
+    Verifica que la materia se encuentre abierta, valida la suma del 100.00% y ejecuta
+    la operación transaccional empleando bloqueo pesimista en base de datos.
+
+    Args:
+        materia_id: Identificador único de la materia.
+        categorias (list[dict]): Lista de categorías y sus porcentajes de ponderación.
+
+    Returns:
+        tuple[list[Ponderacion], bool]: Una tupla con la lista de ponderaciones resultantes
+            y un booleano indicando True si se creó el esquema por primera vez, o False en caso contrario.
+    """
     verificar_materia_abierta(materia_id)
     _validar_categorias(categorias)
 
@@ -100,6 +141,22 @@ def upsert_config(materia_id, categorias):
 
 
 def replace_config(materia_id, categorias):
+    """Actualiza y reemplaza la configuración de ponderación existente de una materia.
+
+    Verifica que el esquema exista previamente antes de realizar la modificación.
+
+    Args:
+        materia_id (UUID / str): Identificador único de la materia.
+        categorias (list[dict]): Nueva configuración de categorías de evaluación.
+
+    Returns:
+        list[Ponderacion]: Lista de ponderaciones actualizadas.
+
+    Raises:
+        MateriaCerradaError: Si la materia está cerrada.
+        Ponderacion.DoesNotExist: Si la materia no tenía ponderación previamente configurada.
+        PonderacionSumaInvalida: Si los porcentajes son inválidos.
+    """
     verificar_materia_abierta(materia_id)
     _validar_categorias(categorias)
 
@@ -114,18 +171,17 @@ def replace_config(materia_id, categorias):
 
 
 def es_ponderacion_bloqueada(materia_id):
-    """Determina si el esquema de ponderaciones de la materia está bloqueado.
+    """Determina dinámicamente si el esquema de ponderaciones de una materia está bloqueado.
 
-    Un esquema está bloqueado cuando ya cuenta con al menos una calificación
-    registrada para alguna de sus actividades evaluables.
+    El esquema se bloquea automáticamente en el momento en que se captura al menos
+    una calificación para cualquiera de las actividades evaluables del grupo.
 
     Args:
-        materia_id (UUID): Identificador único de la materia.
+        materia_id: Identificador único de la materia.
 
     Returns:
-        bool: True si la materia tiene calificaciones, False de lo contrario.
+        bool: True si cuenta con calificaciones capturadas, False en caso contrario.
     """
     return Calificacion.objects.filter(
         actividad__ponderacion__materia_id=materia_id
     ).exists()
-
