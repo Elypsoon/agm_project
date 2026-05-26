@@ -11,6 +11,7 @@ from src.generators.excel_generator import (
     generate_calificaciones_excel,
     generate_asistencias_excel,
     generate_rendimiento_excel,
+    generate_consolidated_excel,
 )
 from src.generators.pdf_generator import (
     generate_calificaciones_pdf,
@@ -76,7 +77,33 @@ def descargar_calificaciones(request, materia_id):
     alumnos_calif = _enriquecer_con_asistencia(datos_materia['alumnos'], materia_id)
 
     if ext == 'xlsx':
-        archivo_bytes = generate_calificaciones_excel(materia_id, alumnos_calif)
+        # Obtener asistencias de todos los alumnos de la materia para la segunda pestaña
+        datos_asistencias = []
+        for al in datos_materia['alumnos']:
+            asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
+                alumno_id=al['alumno_id'],
+                materia_id=materia_id,
+            )
+            if asistencia:
+                datos_asistencias.append(asistencia)
+            else:
+                datos_asistencias.append({
+                    "alumno_id": al['alumno_id'],
+                    "materia_id": materia_id,
+                    "asistencias": []
+                })
+        
+        periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+        periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+        docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
+        
+        archivo_bytes = generate_consolidated_excel(
+            materia_id=materia_id,
+            datos_calificaciones=datos_materia,
+            datos_asistencias=datos_asistencias,
+            periodo_nombre=periodo_nombre,
+            docente_nombre=docente_nombre
+        )
     else:
         archivo_bytes = generate_calificaciones_pdf(materia_id, alumnos_calif)
 
@@ -218,15 +245,18 @@ def obtener_estadisticas(request, materia_id):
     aprobados = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
     tasa_aprobacion = (aprobados / total_alumnos) * 100 if total_alumnos else 0.0
     tasa_asistencia = asistencia_global.get('porcentaje_global', 0.0) if asistencia_global else 0.0
-    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo()
+    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+    periodo_id = periodo_activo.get('id', 'N/A') if periodo_activo else 'N/A'
 
-    snapshot = EstadisticasSnapshot.objects.create(
+    snapshot, created = EstadisticasSnapshot.objects.update_or_create(
         materia_id=materia_id,
-        periodo_id=periodo_activo.get('id', 'N/A') if periodo_activo else 'N/A',
-        promedio_grupo=round(promedio_grupo, 2),
-        tasa_aprobacion=round(tasa_aprobacion, 2),
-        tasa_asistencia=round(tasa_asistencia, 2),
-        total_alumnos=total_alumnos,
+        periodo_id=periodo_id,
+        defaults={
+            "promedio_grupo": round(promedio_grupo, 2),
+            "tasa_aprobacion": round(tasa_aprobacion, 2),
+            "tasa_asistencia": round(tasa_asistencia, 2),
+            "total_alumnos": total_alumnos,
+        }
     )
 
     return Response({
@@ -248,25 +278,70 @@ def obtener_estadisticas(request, materia_id):
 @permission_classes([AllowAny])
 def obtener_estadisticas_docente(request, id):
     materias = PeriodosGRPCClient.obtener_materias_docente(id) or []
-    materia_ids = [m['materia_id'] for m in materias]
+    
+    # 1. Crear un diccionario de metadatos de materias para rápido acceso
+    materias_dict = {
+        m['materia_id']: {
+            "nombre": m.get('nombre', 'Materia Desconocida'),
+            "nrc": m.get('nrc', ''),
+            "periodo_id": m.get('periodo_id', '')
+        }
+        for m in materias
+    }
+    
+    # 2. Autogenerar de forma proactiva snapshots en BD para materias asignadas que aún no los posean
+    for m in materias:
+        m_id = m['materia_id']
+        exists = EstadisticasSnapshot.objects.filter(materia_id=m_id).exists()
+        if not exists:
+            try:
+                datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(m_id)
+                if datos_materia and datos_materia.get('alumnos'):
+                    alumnos_base = datos_materia['alumnos']
+                    total_al = len(alumnos_base)
+                    prom_g = sum(a['promedio_real'] for a in alumnos_base) / total_al if total_al > 0 else 0.0
+                    aprob = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
+                    tasa_aprob = (aprob / total_al) * 100 if total_al > 0 else 0.0
+                    
+                    asist_global = AsistenciasGRPCClient.obtener_estadisticas_asistencia(m_id)
+                    tasa_asist = asist_global.get('porcentaje_global', 0.0) if asist_global else 0.0
+                    
+                    p_id = m.get('periodo_id', 'N/A')
+                    
+                    EstadisticasSnapshot.objects.create(
+                        materia_id=m_id,
+                        periodo_id=p_id,
+                        promedio_grupo=round(prom_g, 2),
+                        tasa_aprobacion=round(tasa_aprob, 2),
+                        tasa_asistencia=round(tasa_asist, 2),
+                        total_alumnos=total_al,
+                    )
+            except Exception as e:
+                # Silenciar errores individuales de generación para no interrumpir el flujo
+                pass
 
+    # 3. Recuperar snapshots ordenados y enriquecidos con nombres y NRCs legibles
+    materia_ids = [m['materia_id'] for m in materias]
     snapshots = EstadisticasSnapshot.objects.filter(materia_id__in=materia_ids).order_by('materia_id', 'snapshot_date')
-    historial = [
-        {
+    
+    historial = []
+    for s in snapshots:
+        m_info = materias_dict.get(s.materia_id, {})
+        historial.append({
             "periodo_id": s.periodo_id,
             "materia_id": s.materia_id,
+            "materia_nombre": m_info.get("nombre", "DESARROLLO DE APLICACIONES WEB"),
+            "nrc": m_info.get("nrc", ""),
             "promedio_grupo": float(s.promedio_grupo),
             "tasa_asistencia": float(s.tasa_asistencia),
             "tasa_aprobacion": float(s.tasa_aprobacion),
             "total_alumnos": s.total_alumnos,
             "generado_en": s.snapshot_date,
-        }
-        for s in snapshots
-    ]
+        })
 
     return Response({
         "success": True,
-        "message": f"Historial del docente {id} recuperado correctamente.",
+        "message": f"Historial del docente {id} recuperado y enriquecido correctamente.",
         "data": historial,
     })
 

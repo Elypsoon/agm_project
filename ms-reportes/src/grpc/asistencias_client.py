@@ -39,6 +39,15 @@ class AsistenciasGRPCClient:
             )
             try:
                 response = stub.GetAsistenciaAlumno(request, timeout=3)
+                
+                # Parsear el listado de asistencias individuales para la segunda pestaña
+                historial_asistencias = []
+                for a in response.asistencias:
+                    historial_asistencias.append({
+                        "fecha": a.fecha,     # Formato ISO (ej. 2026-05-26)
+                        "estado": a.estado    # 'presente', 'retardo', 'ausente'
+                    })
+                
                 return {
                     "alumno_id": response.alumno_id,
                     "materia_id": response.materia_id,
@@ -47,6 +56,7 @@ class AsistenciasGRPCClient:
                     "total_retardos": response.total_retardos,
                     "total_ausentes": response.total_ausentes,
                     "porcentaje": response.porcentaje,
+                    "asistencias": historial_asistencias
                 }
             except grpc.RpcError:
                 return None

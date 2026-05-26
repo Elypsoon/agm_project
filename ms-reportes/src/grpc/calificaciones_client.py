@@ -18,17 +18,44 @@ class CalificacionesGRPCClient:
             request = calificaciones_pb2.MateriaIdRequest(materia_id=materia_id)
             try:
                 response = stub.GetConcentrado(request, timeout=5)
+                
+                # Parsear las ponderaciones del gRPC
+                ponderaciones = []
+                for p in response.ponderaciones:
+                    actividades = []
+                    for act in p.actividades:
+                        actividades.append({
+                            "id": act.id,
+                            "nombre": act.nombre
+                        })
+                    ponderaciones.append({
+                        "id": p.id,
+                        "nombre_categoria": p.nombre_categoria,
+                        "porcentaje": p.porcentaje,
+                        "actividades": actividades
+                    })
+
+                # Parsear los alumnos con su matrícula y notas desglosadas por actividad
+                alumnos = []
+                for a in response.alumnos:
+                    calificaciones_map = {}
+                    for c in a.calificaciones:
+                        calificaciones_map[c.actividad_id] = c.valor
+                    
+                    alumnos.append({
+                        "alumno_id": a.alumno_id,
+                        "alumno_nombre": a.alumno_nombre,
+                        "matricula": a.matricula or "N/A",
+                        "promedio_real": a.promedio_real,
+                        "promedio_redondeado": a.promedio_redondeado,
+                        "calificaciones": calificaciones_map
+                    })
+
                 return {
                     "materia_id": response.materia_id,
                     "materia_nombre": response.materia_nombre,
-                    "alumnos": [
-                        {
-                            "alumno_id": a.alumno_id,
-                            "alumno_nombre": a.alumno_nombre,
-                            "promedio_real": a.promedio_real,
-                            "promedio_redondeado": a.promedio_redondeado
-                        } for a in response.alumnos
-                    ]
+                    "alumnos": alumnos,
+                    "ponderaciones": ponderaciones
                 }
             except grpc.RpcError as e:
                 print(f"[-] Error al contactar MS-4 (Concentrado): {e.details()}")

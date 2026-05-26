@@ -21,6 +21,7 @@ from src.generators.excel_generator import (
     generate_calificaciones_excel,
     generate_asistencias_excel,
     generate_rendimiento_excel,
+    generate_consolidated_excel,
 )
 from src.generators.pdf_generator import (
     generate_calificaciones_pdf,
@@ -60,9 +61,35 @@ def _build_calificaciones_report_bytes(materia_id, ext):
     if not datos_materia or not datos_materia.get('alumnos'):
         return None
 
-    alumnos = _enriquecer_calificaciones_con_asistencia(datos_materia['alumnos'], materia_id)
     if ext == 'xlsx':
-        return generate_calificaciones_excel(materia_id, alumnos)
+        datos_asistencias = []
+        for al in datos_materia['alumnos']:
+            asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
+                alumno_id=al['alumno_id'],
+                materia_id=materia_id,
+            )
+            if asistencia:
+                datos_asistencias.append(asistencia)
+            else:
+                datos_asistencias.append({
+                    "alumno_id": al['alumno_id'],
+                    "materia_id": materia_id,
+                    "asistencias": []
+                })
+        
+        periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+        periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+        docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
+        
+        return generate_consolidated_excel(
+            materia_id=materia_id,
+            datos_calificaciones=datos_materia,
+            datos_asistencias=datos_asistencias,
+            periodo_nombre=periodo_nombre,
+            docente_nombre=docente_nombre
+        )
+
+    alumnos = _enriquecer_calificaciones_con_asistencia(datos_materia['alumnos'], materia_id)
     return generate_calificaciones_pdf(materia_id, alumnos)
 
 
