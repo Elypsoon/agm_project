@@ -354,6 +354,7 @@ services:
       - "4200:4200"
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - NG_CLI_ANALYTICS=false
