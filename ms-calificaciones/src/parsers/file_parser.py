@@ -4,28 +4,40 @@ from decimal import Decimal, InvalidOperation
 import openpyxl
 
 def _normalizar(texto):
+    """Normaliza un texto para facilitar la comparación de cabeceras de columnas.
+
+    Remueve espacios en blanco al inicio/final y convierte a minúsculas.
+    """
     return str(texto).strip().lower() if texto is not None else ''
 
-def parsear_archivo(nombre_archivo, archivo_bytes, escala=None):
-    """Parsea un archivo CSV o XLSX.
+def parsear_archivo(nombre_archivo, archivo_bytes):
+    """Parsea un archivo en formato CSV o XLSX exportado desde Microsoft Teams.
 
-    Busca la fila de cabecera que contiene 'Nombre completo' y extrae dinámicamente
-    las columnas requeridas:
-      - Dirección de correo (alumno)
-      - Nombre completo (alumno)
-      - Tareas (nombre de la actividad)
-      - Puntos (calificación, escala 0.00 a 100.00)
-      - Comentarios (comentario del profesor)
-      - Estado (estado de la entrega)
-      - Fecha de vencimiento (fecha límite de la tarea)
+    Busca dinámicamente la fila de cabecera que contiene las columnas 'Nombre completo' 
+    y 'Dirección de correo' para mapear y procesar los registros de calificaciones.
+
+    Las columnas obligatorias mapeadas son:
+      - 'Dirección de correo' (identifica al estudiante en MS-3).
+      - 'Nombre completo' (nombre del estudiante).
+      - 'Tareas' (nombre de la actividad evaluable).
+      - 'Puntos' (la nota obtenida, debe estar en escala 0.00 a 100.00).
+
+    Las columnas opcionales mapeadas son:
+      - 'Comentarios' (retroalimentación escrita del profesor).
+      - 'Estado' (estatus de entrega de la tarea).
+      - 'Fecha de vencimiento' (fecha límite de entrega).
+
+    Args:
+        nombre_archivo (str): Nombre del archivo para identificar su extensión (.csv o .xlsx).
+        archivo_bytes (bytes): Contenido binario del archivo subido.
 
     Returns:
-        tuple: (registros, errores_parseo, escala_usada)
-          - registros: lista de diccionarios con las llaves:
-              'correo', 'nombre_completo', 'nombre_actividad', 'valor',
-              'comentario', 'estado', 'fecha_vencimiento'
-          - errores_parseo: lista de diccionarios con detalles de filas fallidas
-          - escala_usada: siempre '0-100'
+        tuple[list[dict], list[dict]]: Una tupla conteniendo:
+            - registros (list[dict]): Lista de diccionarios de filas parseadas exitosamente.
+              Cada dict contiene las claves: 'correo', 'nombre_completo', 'nombre_actividad',
+              'valor' (Decimal), 'comentario', 'estado' y 'fecha_vencimiento'.
+            - errores (list[dict]): Lista de diccionarios detallando los errores encontrados 
+              durante la lectura (línea del archivo, correo y motivo del error).
     """
     extension = nombre_archivo.rsplit('.', 1)[-1].lower()
     if extension == 'xlsx':
@@ -126,3 +138,4 @@ def parsear_archivo(nombre_archivo, archivo_bytes, escala=None):
         })
 
     return registros, errores
+
