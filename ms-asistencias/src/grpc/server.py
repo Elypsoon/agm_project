@@ -80,8 +80,8 @@ class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
             ))
 
         return asistencias_pb2.AsistenciaAlumnoResponse(
-            alumno_id=alumno_id,
-            materia_id=materia_id,
+            alumno_id=str(alumno_id),
+            materia_id=str(materia_id),
             total_clases=total_sesiones,
             total_presentes=presentes,
             total_retardos=retardos,
@@ -101,7 +101,7 @@ class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
         porcentaje = (presentes + retardos) / total_registros * 100 if total_registros > 0 else 0.0
 
         return asistencias_pb2.EstadisticasResponse(
-            materia_id=materia_id,
+            materia_id=str(materia_id),
             total_sesiones=total_sesiones,
             total_registros=total_registros,
             total_presentes=presentes,

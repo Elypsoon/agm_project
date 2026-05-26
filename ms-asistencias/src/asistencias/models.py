@@ -3,20 +3,14 @@ import uuid
 
 
 class Sesion(models.Model):
-    """
-    Sesión de asistencia iniciada por un docente para una materia.
-    Dura exactamente 10 minutos. Los primeros 5 minutos = Presente, los siguientes 5 = Retardo.
-    Los datos volátiles (sesiones activas) también se guardan en Redis para consulta rápida.
-    El registro permanente queda en PostgreSQL.
-    """
     ESTADO_CHOICES = [
         ('activa', 'Activa'),
         ('cerrada', 'Cerrada'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    materia_id = models.IntegerField()
-    docente_id = models.IntegerField()
+    materia_id = models.UUIDField()
+    docente_id = models.UUIDField()
     fecha = models.DateField(auto_now_add=True)
     hora_inicio = models.DateTimeField(auto_now_add=True)
     hora_fin = models.DateTimeField(null=True, blank=True)
@@ -32,10 +26,6 @@ class Sesion(models.Model):
 
 
 class Asistencia(models.Model):
-    """
-    Registro individual de asistencia de un alumno en una sesión.
-    Estado: 'presente' (primeros 5 min) o 'retardo' (5-10 min).
-    """
     ESTADO_CHOICES = [
         ('presente', 'Presente'),
         ('retardo', 'Retardo'),
@@ -44,8 +34,8 @@ class Asistencia(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     sesion = models.ForeignKey(Sesion, on_delete=models.CASCADE, related_name='asistencias')
-    alumno_id = models.IntegerField()
-    materia_id = models.IntegerField()
+    alumno_id = models.UUIDField()
+    materia_id = models.UUIDField()
     matricula = models.CharField(max_length=20)
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='presente')
     hora_registro = models.DateTimeField(auto_now_add=True)
