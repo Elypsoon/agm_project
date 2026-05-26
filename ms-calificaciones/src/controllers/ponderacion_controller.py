@@ -12,6 +12,7 @@ from src.controllers.serializers import (
 from src.services.ponderacion_service import (
     upsert_config, 
     replace_config, 
+    es_ponderacion_bloqueada,
     PonderacionSumaInvalida, 
     PonderacionBloqueada, 
     PonderacionCategoriasRestringidas,
@@ -64,7 +65,7 @@ class PonderacionView(APIView):
 
         data = {
             "materia_id": str(materia_id),
-            "bloqueada": False, 
+            "bloqueada": es_ponderacion_bloqueada(materia_id), 
             "categorias": [
                 {
                     "id": str(p.id),
@@ -123,7 +124,7 @@ class PonderacionView(APIView):
 
         data = {
             "materia_id": str(materia_id),
-            "bloqueada": False,
+            "bloqueada": es_ponderacion_bloqueada(materia_id),
             "categorias": [
                 {
                     "id": str(p.id),
@@ -185,7 +186,7 @@ class PonderacionView(APIView):
 
         data = {
             "materia_id": str(materia_id),
-            "bloqueada": False,
+            "bloqueada": es_ponderacion_bloqueada(materia_id),
             "categorias": [
                 {
                     "id": str(p.id),

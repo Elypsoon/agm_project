@@ -233,12 +233,12 @@ class TestCalificacionesViews(TestCase):
         act = Actividad.objects.create(ponderacion=pond, nombre="Examen Final", orden=0)
         Calificacion.objects.create(actividad=act, alumno_id=ALUMNO_ID, valor=85.00)
 
-        # GET al concentrado como Alumno
+        # GET al concentrado como Docente
         with patch("src.utils.authentication.validar_token_en_auth", return_value={
             "valid": True,
-            "user_id": str(ALUMNO_ID),
-            "email": "alumno.test@buap.mx",
-            "role": "alumno",
+            "user_id": str(DOCENTE_ID),
+            "email": "docente.test@buap.mx",
+            "role": "docente",
             "error": ""
         }):
             resp = self.client.get(f"/api/concentrado/{MATERIA_ID}/")
@@ -246,6 +246,18 @@ class TestCalificacionesViews(TestCase):
             self.assertEqual(resp.data["materia_nombre"], "Materia de Prueba")
             self.assertEqual(len(resp.data["alumnos"]), 1)
             self.assertEqual(resp.data["alumnos"][0]["promedio_redondeado"], 9)  # 85.00 → 8.5 en escala 0-10, fracción 0.5 >= 0.5 → techo → 9
+
+        # Validar rechazo de GET al concentrado como Alumno
+        with patch("src.utils.authentication.validar_token_en_auth", return_value={
+            "valid": True,
+            "user_id": str(ALUMNO_ID),
+            "email": "alumno.test@buap.mx",
+            "role": "alumno",
+            "error": ""
+        }):
+            resp_alumno = self.client.get(f"/api/concentrado/{MATERIA_ID}/")
+            self.assertEqual(resp_alumno.status_code, 403)
+
 
     @patch("src.grpc.alumnos_client.AlumnosClient.is_alumno_en_materia")
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")

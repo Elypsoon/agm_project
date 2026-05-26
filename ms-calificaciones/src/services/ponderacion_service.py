@@ -111,3 +111,21 @@ def replace_config(materia_id, categorias):
         config_list = _reemplazar_categorias(materia_id, categorias)
 
     return config_list
+
+
+def es_ponderacion_bloqueada(materia_id):
+    """Determina si el esquema de ponderaciones de la materia está bloqueado.
+
+    Un esquema está bloqueado cuando ya cuenta con al menos una calificación
+    registrada para alguna de sus actividades evaluables.
+
+    Args:
+        materia_id (UUID): Identificador único de la materia.
+
+    Returns:
+        bool: True si la materia tiene calificaciones, False de lo contrario.
+    """
+    return Calificacion.objects.filter(
+        actividad__ponderacion__materia_id=materia_id
+    ).exists()
+
