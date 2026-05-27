@@ -22,10 +22,10 @@
         <strong>{{ periodo.nombre }}</strong>
       </article>
       <article class="detail-card">
-        <span>Activo</span>
+        <span>Estado</span>
         <p-tag
-          [value]="periodo.activo ? 'Activo' : 'Inactivo'"
-          [severity]="periodo.activo ? 'success' : 'warn'"
+          [value]="getEstadoLabel(periodo.estado)"
+          [severity]="getEstadoSeverity(periodo.estado)"
         ></p-tag>
       </article>
       <article class="detail-card">
@@ -141,7 +141,7 @@
                     </thead>
                     <tbody>
                       <tr *ngFor="let horario of getOrderedHorarios(materia.horarios)">
-                        <td>{{ horario.dia }}</td>
+                        <td>{{ getDayName(horario.dia) }}</td>
                         <td>{{ horario.hora_inicio || '—' }}</td>
                         <td>{{ horario.hora_fin || '—' }}</td>
                         <td>{{ horario.salon || '—' }}</td>
@@ -240,6 +240,7 @@
                   <option value="J">Jueves</option>
                   <option value="V">Viernes</option>
                   <option value="S">Sábado</option>
+                  <option value="D">Domingo</option>
                 </select>
                 <input type="text" [(ngModel)]="horario.hora_inicio" placeholder="Inicio (ej: 0800)" class="time-input" maxlength="4" />
                 <span class="time-separator">-</span>

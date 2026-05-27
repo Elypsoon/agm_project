@@ -3,6 +3,7 @@ Models for MS-Periodos API
 """
 import uuid
 from django.db import models
+from datetime import date
 
 
 class EstadoMateria(models.TextChoices):
@@ -11,6 +12,10 @@ class EstadoMateria(models.TextChoices):
     CERRADA = 'cerrada', 'Cerrada'
     FINALIZADA = 'finalizada', 'Finalizada'
 
+class EstadoPeriodo(models.TextChoices):
+    PENDIENTE = 'pendiente', 'Pendiente'
+    ACTIVO = 'activo', 'Activo'
+    FINALIZADA = 'finalizada', 'Finalizada'
 
 class CampusOptions(models.TextChoices):
     CU2 = 'CU2', 'Campus CU2'
@@ -23,7 +28,11 @@ class Periodo(models.Model):
     nombre = models.CharField(max_length=100)  # e.g., "Primavera 2026"
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
-    activo = models.BooleanField(default=False)
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoPeriodo.choices,
+        default=EstadoPeriodo.PENDIENTE
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -34,6 +43,25 @@ class Periodo(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+    def save(self, *args, **kwargs):
+        """Override save to evaluate bounds, allowing manual activation overrides."""
+        hoy = date.today()
+        
+        if self.estado not in [EstadoPeriodo.ACTIVO, EstadoPeriodo.FINALIZADA]:
+            if self.fecha_inicio <= hoy <= self.fecha_fin:
+                self.estado = EstadoPeriodo.ACTIVO
+            elif hoy > self.fecha_fin:
+                self.estado = EstadoPeriodo.FINALIZADA
+            else:
+                self.estado = EstadoPeriodo.PENDIENTE
+
+        if self.estado == EstadoPeriodo.ACTIVO:
+            Periodo.objects.exclude(id=self.id).filter(estado=EstadoPeriodo.ACTIVO).update(
+                estado=EstadoPeriodo.FINALIZADA
+            )
+
+        super().save(*args, **kwargs)
 
 
 class Materia(models.Model):

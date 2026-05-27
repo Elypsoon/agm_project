@@ -255,7 +255,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5438:5432"   # Puerto 5438 en host para no colisionar con otras DBs
+      - "5438:5432"
     volumes:
       - db_periodos_data:/var/lib/postgresql/data
 
@@ -270,15 +270,18 @@ services:
       - "3002:3002"   # API REST
       - "50052:50052" # gRPC
     volumes:
-      - ./ms-periodos:/app    # Hot-reload en desarrollo
+      - ./ms-periodos:/app    # Hot-reload
     env_file:
       - ./ms-periodos/.env
     depends_on:
       db-periodos:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     command: >
       sh -c "python manage.py migrate --noinput &&
-             python manage.py runserver_with_grpc"
+             python manage.py run_consumer &
+             python manage.py run_with_grpc"
 
   # ---------------------------------------------------------------------------
   # MS-7: Reportes (Django + PostgreSQL)
