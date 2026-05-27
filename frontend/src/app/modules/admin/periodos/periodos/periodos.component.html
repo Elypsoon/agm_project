@@ -1,51 +1,98 @@
-<section class="page-periodos">
+<section class="page-periodos page-enter">
+
+  <!-- Page Header -->
   <div class="page-top">
-    <div class="page-title">
-      <span class="eyebrow">Administrador</span>
-      <h1>Periodos académicos</h1>
-      <p>Visualiza la información que provee el microservicio de periodos y administra periodos, activaciones y cargas de materias.</p>
+    <div class="page-title-block">
+      <h1 class="page-title">Periodos académicos</h1>
+      <p class="page-subtitle">Visualiza, activa y administra periodos con carga de materias desde el panel.</p>
     </div>
 
     <div class="page-actions">
       <p-button
-        label="Agregar periodo"
-        icon="pi pi-plus"
-        (click)="openCreateDialog()"
-        [loading]="actionLoading === 'create'"
-      ></p-button>
-      <p-button
-        label="Refrescar"
         icon="pi pi-sync"
+        pTooltip="Refrescar lista"
+        tooltipPosition="bottom"
         (click)="loadPeriodos()"
         [loading]="loading"
-        styleClass="p-button-outlined"
+        styleClass="p-button-outlined p-button-rounded"
+      ></p-button>
+      <p-button
+        icon="pi pi-plus"
+        pTooltip="Agregar periodo"
+        tooltipPosition="bottom"
+        (click)="openCreateDialog()"
+        [loading]="actionLoading === 'create'"
+        styleClass="p-button-rounded"
       ></p-button>
     </div>
   </div>
 
-  <div class="summary-grid summary-active">
-    <article class="summary-card ">
-      <span>Periodo activo</span>
-      <strong>{{ activePeriodo?.nombre || 'Ninguno' }}</strong>
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <article class="summary-card" [class.summary-card--active]="activePeriodo?.nombre">
+      <div class="summary-icon-wrap" style="--card-accent: #4338CA">
+        <i class="pi pi-calendar-clock"></i>
+      </div>
+      <div class="summary-body">
+        <span class="summary-label">Periodo activo</span>
+        <strong class="summary-value">{{ activePeriodo?.nombre || 'Ninguno' }}</strong>
+      </div>
+      @if (activePeriodo) {
+        <div class="summary-pulse"></div>
+      }
     </article>
+
     <article class="summary-card">
-      <span>Fecha de inicio</span>
-      <strong>{{ activePeriodo?.fecha_inicio ? (activePeriodo!.fecha_inicio | date:'dd/MM/yyyy') : '—' }}</strong>
+      <div class="summary-icon-wrap" style="--card-accent: #06B6D4">
+        <i class="pi pi-calendar"></i>
+      </div>
+      <div class="summary-body">
+        <span class="summary-label">Fecha de inicio</span>
+        <strong class="summary-value">
+          {{ activePeriodo?.fecha_inicio ? (activePeriodo!.fecha_inicio | date:'dd/MM/yyyy') : '—' }}
+        </strong>
+      </div>
     </article>
+
     <article class="summary-card">
-      <span>Fecha de fin</span>
-      <strong>{{ activePeriodo?.fecha_fin ? (activePeriodo!.fecha_fin | date:'dd/MM/yyyy') : '—' }}</strong>
+      <div class="summary-icon-wrap" style="--card-accent: #F59E0B">
+        <i class="pi pi-calendar-times"></i>
+      </div>
+      <div class="summary-body">
+        <span class="summary-label">Fecha de fin</span>
+        <strong class="summary-value">
+          {{ activePeriodo?.fecha_fin ? (activePeriodo!.fecha_fin | date:'dd/MM/yyyy') : '—' }}
+        </strong>
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-icon-wrap" style="--card-accent: #22C55E">
+        <i class="pi pi-list-check"></i>
+      </div>
+      <div class="summary-body">
+        <span class="summary-label">Total de periodos</span>
+        <strong class="summary-value">{{ periodos.length }}</strong>
+      </div>
     </article>
   </div>
 
+  <!-- Table Card -->
   <div class="table-card">
     <div class="table-header">
       <div>
-        <h2>Catálogo de periodos</h2>
-        <p>Ver, activar, eliminar y subir materias por periodo directamente desde el panel.</p>
+        <h2 class="table-card-title">
+          <i class="pi pi-table"></i> Catálogo de periodos
+        </h2>
+        <p class="table-card-desc">Ver, activar, editar y subir materias por periodo directamente desde el panel.</p>
       </div>
       <div class="table-meta">
-        <span *ngIf="lastUpdated">Última actualización: {{ lastUpdated | date:'short' }}</span>
+        @if (lastUpdated) {
+          <span class="last-updated">
+            <i class="pi pi-clock"></i>
+            Actualizado {{ lastUpdated | date:'HH:mm' }}
+          </span>
+        }
       </div>
     </div>
 
@@ -54,71 +101,90 @@
       [paginator]="true"
       [rows]="10"
       [loading]="loading"
-      currentPageReportTemplate="Mostrando {first} - {last} de {totalRecords}"
+      currentPageReportTemplate="Mostrando {first} – {last} de {totalRecords}"
       [rowsPerPageOptions]="[5, 10, 20]"
       [showCurrentPageReport]="true"
+      styleClass="p-datatable-sm"
     >
       <ng-template pTemplate="header">
         <tr>
           <th>Nombre</th>
+          <th>Fechas</th>
           <th>Estado</th>
-          <th>Materia(s)</th>
-          <th>Acciones</th>
+          <th class="th-count">Materias</th>
+          <th class="th-actions">Acciones</th>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="body" let-periodo>
         <tr>
-          <td>{{ periodo.nombre || '—' }}</td>
+          <td class="td-nombre">
+            <span class="periodo-nombre">{{ periodo.nombre || '—' }}</span>
+          </td>
+          <td class="td-fechas">
+            <span class="fecha-badge">
+              <i class="pi pi-calendar"></i>
+              {{ periodo.fecha_inicio | date:'dd/MM/yy' }} – {{ periodo.fecha_fin | date:'dd/MM/yy' }}
+            </span>
+          </td>
           <td>
             <p-tag
               [value]="getEstadoLabel(periodo.estado)"
               [severity]="getEstadoSeverity(periodo.estado)"
+              [rounded]="true"
             ></p-tag>
           </td>
-          <td>{{ periodo.materias?.length ?? '—' }}</td>
-          <td class="actions-cell">
+          <td class="td-count">
+            <span class="count-chip">{{ periodo.materias_count ?? periodo.materias?.length ?? 0 }}</span>
+          </td>
+          <td class="td-actions">
             <div class="action-buttons">
               <p-button
-                label="Detalles"
                 icon="pi pi-eye"
+                pTooltip="Ver detalles"
+                tooltipPosition="top"
                 (click)="viewPeriodoDetails(periodo)"
-                styleClass="p-button-sm"
+                styleClass="p-button-rounded p-button-text p-button-sm"
               ></p-button>
               <p-button
-                label="Editar"
                 icon="pi pi-pencil"
+                pTooltip="Editar periodo"
+                tooltipPosition="top"
                 (click)="openEditPeriodoDialog(periodo)"
-                styleClass="p-button-info p-button-sm"
+                styleClass="p-button-rounded p-button-text p-button-info p-button-sm"
               ></p-button>
               <p-button
-                label="Activar"
-                icon="pi pi-check"
+                icon="pi pi-check-circle"
+                pTooltip="Activar periodo"
+                tooltipPosition="top"
                 (click)="activatePeriodo(periodo)"
                 [disabled]="periodo.estado === 'activo'"
                 [loading]="actionLoading === periodo.id"
-                styleClass="p-button-sm"
+                styleClass="p-button-rounded p-button-text p-button-success p-button-sm"
               ></p-button>
               <p-button
-                label="Desactivar"
-                icon="pi pi-times"
+                icon="pi pi-ban"
+                pTooltip="Desactivar periodo"
+                tooltipPosition="top"
                 (click)="deactivatePeriodo(periodo)"
                 [disabled]="periodo.estado !== 'activo'"
                 [loading]="actionLoading === periodo.id"
-                styleClass="p-button-warning p-button-sm"
+                styleClass="p-button-rounded p-button-text p-button-warning p-button-sm"
               ></p-button>
               <p-button
-                label="Importar PDF"
                 icon="pi pi-upload"
+                pTooltip="Importar materias (PDF)"
+                tooltipPosition="top"
                 (click)="openImportDialog(periodo)"
-                styleClass="p-button-secondary p-button-sm"
+                styleClass="p-button-rounded p-button-text p-button-secondary p-button-sm"
               ></p-button>
               <p-button
-                label="Eliminar"
                 icon="pi pi-trash"
+                pTooltip="Eliminar periodo"
+                tooltipPosition="top"
                 (click)="deletePeriodo(periodo)"
                 [loading]="actionLoading === periodo.id"
-                styleClass="p-button-danger p-button-sm"
+                styleClass="p-button-rounded p-button-text p-button-danger p-button-sm"
               ></p-button>
             </div>
           </td>
@@ -127,41 +193,60 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="6" class="empty-state">No se encontraron periodos.</td>
+          <td colspan="5" class="empty-state">
+            <i class="pi pi-inbox"></i>
+            <span>No se encontraron periodos académicos.</span>
+          </td>
         </tr>
       </ng-template>
     </p-table>
 
-    <div *ngIf="successMessage" class="success-banner">
-      <i class="pi pi-check-circle"></i>
-      <span>{{ successMessage }}</span>
-    </div>
-    <div *ngIf="errorMessage" class="error-banner">
-      <i class="pi pi-exclamation-triangle"></i>
-      <span>{{ errorMessage }}</span>
-    </div>
-    <div *ngIf="uploadError" class="error-banner">
-      <i class="pi pi-exclamation-triangle"></i>
-      <span>{{ uploadError }}</span>
-    </div>
-    <div *ngIf="uploadSuccess" class="success-banner">
-      <i class="pi pi-check-circle"></i>
-      <span>{{ uploadSuccess }}</span>
-    </div>
+    @if (successMessage) {
+      <div class="success-banner">
+        <i class="pi pi-check-circle"></i>
+        <span>{{ successMessage }}</span>
+      </div>
+    }
+    @if (errorMessage) {
+      <div class="error-banner">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+    }
+    @if (uploadError) {
+      <div class="error-banner">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ uploadError }}</span>
+      </div>
+    }
+    @if (uploadSuccess) {
+      <div class="success-banner">
+        <i class="pi pi-check-circle"></i>
+        <span>{{ uploadSuccess }}</span>
+      </div>
+    }
   </div>
 
+  <!-- Import Dialog -->
   <div class="dialog-backdrop" *ngIf="importDialogOpened">
     <div class="dialog-panel">
       <div class="dialog-header">
-        <h3>Importar materias</h3>
-        <button type="button" class="close-btn" (click)="closeImportDialog()">×</button>
+        <div class="dialog-title-block">
+          <i class="pi pi-upload dialog-icon"></i>
+          <h3>Importar materias</h3>
+        </div>
+        <button type="button" class="close-btn" (click)="closeImportDialog()">
+          <i class="pi pi-times"></i>
+        </button>
       </div>
 
       <div class="import-dialog-body">
-        <p>Selecciona el PDF para importar materias del periodo <strong>{{ importTargetName }}</strong>.</p>
+        <p class="dialog-desc">
+          Selecciona el PDF del catálogo para el periodo <strong>{{ importTargetName }}</strong>.
+        </p>
 
         <label class="file-label">
-          Archivo PDF
+          <span>Archivo PDF</span>
           <input type="file" accept=".pdf" (change)="onFileChange($event, importTargetId || '')" />
         </label>
 
@@ -173,39 +258,48 @@
             styleClass="p-button-outlined"
           ></p-button>
           <p-button
-            label="Importar PDF"
+            label="Importar"
+            icon="pi pi-upload"
             type="button"
             (click)="uploadPdf()"
             [loading]="actionLoading === importTargetId"
           ></p-button>
         </div>
 
-        <div *ngIf="uploadError" class="error-banner">
-          <i class="pi pi-exclamation-triangle"></i>
-          <span>{{ uploadError }}</span>
-        </div>
+        @if (uploadError) {
+          <div class="error-banner">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ uploadError }}</span>
+          </div>
+        }
       </div>
     </div>
   </div>
 
+  <!-- Create Periodo Dialog -->
   <div class="dialog-backdrop" *ngIf="createDialog">
     <div class="dialog-panel">
       <div class="dialog-header">
-        <h3>Agregar nuevo periodo</h3>
-        <button type="button" class="close-btn" (click)="closeCreateDialog()">×</button>
+        <div class="dialog-title-block">
+          <i class="pi pi-plus-circle dialog-icon"></i>
+          <h3>Nuevo periodo</h3>
+        </div>
+        <button type="button" class="close-btn" (click)="closeCreateDialog()">
+          <i class="pi pi-times"></i>
+        </button>
       </div>
 
-      <form [formGroup]="periodoForm" (ngSubmit)="submitNewPeriodo()" class="create-form">
-        <label>
-          Nombre
-          <input pInputText formControlName="nombre" />
+      <form [formGroup]="periodoForm" (ngSubmit)="submitNewPeriodo()" class="dialog-form">
+        <label class="form-field">
+          <span>Nombre del periodo</span>
+          <input pInputText formControlName="nombre" placeholder="Ej. Primavera 2027" />
         </label>
-        <label>
-          Fecha inicio
+        <label class="form-field">
+          <span>Fecha de inicio</span>
           <input type="date" formControlName="fecha_inicio" />
         </label>
-        <label>
-          Fecha fin
+        <label class="form-field">
+          <span>Fecha de fin</span>
           <input type="date" formControlName="fecha_fin" />
         </label>
 
@@ -218,6 +312,7 @@
           ></p-button>
           <p-button
             label="Crear periodo"
+            icon="pi pi-plus"
             type="submit"
             [loading]="actionLoading === 'create'"
           ></p-button>
@@ -230,21 +325,26 @@
   <div class="dialog-backdrop" *ngIf="showEditPeriodoDialog">
     <div class="dialog-panel">
       <div class="dialog-header">
-        <h3>Editar periodo</h3>
-        <button type="button" class="close-btn" (click)="closeEditPeriodoDialog()">×</button>
+        <div class="dialog-title-block">
+          <i class="pi pi-pencil dialog-icon"></i>
+          <h3>Editar periodo</h3>
+        </div>
+        <button type="button" class="close-btn" (click)="closeEditPeriodoDialog()">
+          <i class="pi pi-times"></i>
+        </button>
       </div>
 
       <form [formGroup]="editPeriodoForm" (ngSubmit)="saveEditPeriodo()" class="dialog-form">
-        <label>
-          Nombre
+        <label class="form-field">
+          <span>Nombre del periodo</span>
           <input pInputText formControlName="nombre" />
         </label>
-        <label>
-          Fecha inicio
+        <label class="form-field">
+          <span>Fecha de inicio</span>
           <input type="date" formControlName="fecha_inicio" />
         </label>
-        <label>
-          Fecha fin
+        <label class="form-field">
+          <span>Fecha de fin</span>
           <input type="date" formControlName="fecha_fin" />
         </label>
 
@@ -257,6 +357,7 @@
           ></p-button>
           <p-button
             label="Guardar cambios"
+            icon="pi pi-check"
             type="submit"
             [loading]="actionLoading === editingPeriodo?.id"
           ></p-button>
@@ -264,4 +365,5 @@
       </form>
     </div>
   </div>
+
 </section>

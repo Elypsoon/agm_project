@@ -8,10 +8,16 @@
       <h1 class="page-title">Docentes</h1>
       <p class="page-subtitle">Gestión del personal docente activo</p>
     </div>
-    <button class="btn-primary" (click)="showCreateDialog = true">
-      <i class="pi pi-plus"></i>
-      <span>Nuevo Docente</span>
-    </button>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="openImportDialog()">
+        <i class="pi pi-upload"></i>
+        <span>Importar PDF</span>
+      </button>
+      <button class="btn-primary" (click)="openCreateDialog()">
+        <i class="pi pi-plus"></i>
+        <span>Nuevo Docente</span>
+      </button>
+    </div>
   </div>
 
   <!-- Tabla -->
@@ -20,11 +26,11 @@
     <div class="table-toolbar">
       <p-iconfield>
         <p-inputicon styleClass="pi pi-search" />
-        <input pInputText type="text" placeholder="Buscar por nombre, email o departamento…"
+        <input pInputText type="text" placeholder="Buscar por nombre, email o cubículo..."
                [(ngModel)]="searchValue" [ngModelOptions]="{standalone: true}"
                class="search-input" />
       </p-iconfield>
-      <span class="record-count">{{ docentes.length }} docentes</span>
+      <span class="record-count">{{ filteredDocentes.length }} docentes</span>
     </div>
 
     @if (loading) {
@@ -35,7 +41,7 @@
       </div>
     } @else {
       <p-table
-        [value]="docentes"
+        [value]="filteredDocentes"
         [paginator]="true"
         [rows]="10"
         styleClass="p-datatable-sm"
@@ -45,7 +51,7 @@
           <tr>
             <th>Docente</th>
             <th>Email</th>
-            <th>Departamento</th>
+            <th>Ubicación / Cubículo</th>
             <th class="text-center">Materias</th>
             <th class="text-center">Estado</th>
             <th class="text-center">Acciones</th>
@@ -79,10 +85,12 @@
                         (click)="openAssignDialog(doc)">
                   <i class="pi pi-book"></i>
                 </button>
-                <button class="icon-btn icon-btn--edit" pTooltip="Editar" tooltipPosition="top">
+                <button class="icon-btn icon-btn--edit" pTooltip="Editar" tooltipPosition="top"
+                        (click)="openEditDialog(doc)">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button class="icon-btn icon-btn--danger" pTooltip="Eliminar" tooltipPosition="top">
+                <button class="icon-btn icon-btn--danger" pTooltip="Eliminar" tooltipPosition="top"
+                        (click)="deleteDocente(doc)">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>
@@ -110,7 +118,7 @@
   [header]="'Asignar Materia — ' + (selectedDocente?.nombre || '')"
   [(visible)]="showAssignDialog"
   [modal]="true"
-  [style]="{ width: '440px' }"
+  [style]="{ width: '500px' }"
   [draggable]="false">
 
   <div class="assign-body">
@@ -121,7 +129,9 @@
       optionLabel="label"
       optionValue="value"
       placeholder="— Seleccionar materia —"
-      styleClass="w-full" />
+      styleClass="w-full"
+      [filter]="true"
+      filterPlaceholder="Buscar materia..." />
   </div>
 
   <ng-template pTemplate="footer">
@@ -132,9 +142,9 @@
   </ng-template>
 </p-dialog>
 
-<!-- ── Create Docente Dialog ── -->
+<!-- ── Create / Edit Docente Dialog ── -->
 <p-dialog
-  header="Nuevo Docente"
+  [header]="isEditMode ? 'Editar Docente' : 'Nuevo Docente'"
   [(visible)]="showCreateDialog"
   [modal]="true"
   [style]="{ width: '440px' }"
@@ -161,8 +171,12 @@
     </div>
 
     <div class="form-row">
-      <label class="form-label">Departamento <span class="required">*</span></label>
-      <input pInputText formControlName="departamento" placeholder="Ej. Ingeniería" />
+      <label class="form-label">Cubículo / Oficina <span class="required">*</span></label>
+      <input pInputText formControlName="departamento" placeholder="Ej. Cubículo 3, Edificio de Ingeniería"
+             [class.ng-invalid]="isInvalid('departamento')" [class.ng-dirty]="isInvalid('departamento')" />
+      @if (isInvalid('departamento')) {
+        <small class="p-error">El cubículo/oficina es obligatorio.</small>
+      }
     </div>
 
   </form>
@@ -170,7 +184,56 @@
   <ng-template pTemplate="footer">
     <button class="btn-secondary" (click)="showCreateDialog = false; createForm.reset()">Cancelar</button>
     <button class="btn-primary" (click)="submitCreate()">
-      <i class="pi pi-check"></i> Registrar
+      <i class="pi pi-check"></i> {{ isEditMode ? 'Guardar' : 'Registrar' }}
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ── Import Docentes PDF Dialog ── -->
+<p-dialog
+  header="Importar Docentes desde Directorio PDF"
+  [(visible)]="showImportDialog"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false">
+
+  <div class="import-dialog-body">
+    <div class="import-info">
+      <i class="pi pi-info-circle"></i>
+      <span>Se procesarán los docentes a partir del PDF del Directorio institucional de la Facultad.</span>
+    </div>
+
+    <div class="file-drop-zone" [class.has-file]="selectedFile">
+      <input type="file" id="doc-pdf-upload" accept=".pdf" (change)="onFileChange($event)" style="display:none" />
+      <label for="doc-pdf-upload" class="file-drop-label">
+        <i class="pi pi-file-pdf file-icon"></i>
+        @if (selectedFile) {
+          <span class="file-name">{{ selectedFile.name }}</span>
+        } @else {
+          <span>Haz clic o arrastra el archivo PDF aquí</span>
+        }
+      </label>
+    </div>
+
+    @if (uploadError) {
+      <div class="alert alert--error">
+        <i class="pi pi-times-circle"></i> {{ uploadError }}
+      </div>
+    }
+    @if (uploadSuccess) {
+      <div class="alert alert--success">
+        <i class="pi pi-check-circle"></i> {{ uploadSuccess }}
+      </div>
+    }
+    @if (importLoading) {
+      <p-progressBar mode="indeterminate" styleClass="import-progress" />
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button class="btn-secondary" (click)="showImportDialog = false" [disabled]="importLoading">Cancelar</button>
+    <button class="btn-primary" (click)="uploadPdf()" [disabled]="importLoading">
+      <i class="pi pi-upload"></i> Importar
     </button>
   </ng-template>
 </p-dialog>

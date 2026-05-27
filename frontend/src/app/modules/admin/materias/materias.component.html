@@ -6,16 +6,12 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Materias</h1>
-      <p class="page-subtitle">Gestión de materias del periodo activo</p>
+      <p class="page-subtitle">Materias y secciones académicas registradas</p>
     </div>
     <div class="header-actions">
-      <button class="btn-secondary" (click)="showImportDialog = true">
-        <i class="pi pi-upload"></i>
-        <span>Importar PDF</span>
-      </button>
-      <button class="btn-primary" (click)="showCreateDialog = true">
+      <button class="btn-primary" (click)="openCreateDialog()">
         <i class="pi pi-plus"></i>
-        <span>Nueva Materia</span>
+        <span>Nueva Sección</span>
       </button>
     </div>
   </div>
@@ -27,11 +23,11 @@
     <div class="table-toolbar">
       <p-iconfield>
         <p-inputicon styleClass="pi pi-search" />
-        <input pInputText type="text" placeholder="Buscar por NRC, nombre o docente…"
+        <input pInputText type="text" placeholder="Buscar por clave, nombre, plan o campus…"
                [(ngModel)]="searchValue" [ngModelOptions]="{standalone: true}"
                class="search-input" />
       </p-iconfield>
-      <span class="record-count">{{ materias.length }} materias</span>
+      <span class="record-count">{{ filteredMaterias.length }} materias únicas</span>
     </div>
 
     @if (loading) {
@@ -42,44 +38,134 @@
       </div>
     } @else {
       <p-table
-        [value]="materias"
+        [value]="filteredMaterias"
         [paginator]="true"
         [rows]="10"
-        [globalFilterFields]="['nrc','nombre','docente','horario']"
-        [filterDelay]="0"
+        dataKey="clave"
+        rowExpandMode="single"
         styleClass="p-datatable-sm"
-        [tableStyle]="{'min-width': '900px'}">
+        [tableStyle]="{'min-width': '950px'}">
 
         <ng-template pTemplate="header">
           <tr>
-            <th>NRC</th>
-            <th>Nombre</th>
-            <th>Docente</th>
-            <th>Horario</th>
-            <th>Aula</th>
-            <th class="text-center">Alumnos</th>
-            <th class="text-center">Acciones</th>
+            <th style="width: 3rem"></th>
+            <th>Clave</th>
+            <th>Materia</th>
+            <th>Plan</th>
+            <th>Campus</th>
+            <th>Periodo(s)</th>
+            <th class="text-center">Docentes</th>
+            <th class="text-center">Grupos</th>
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="body" let-mat>
+        <ng-template pTemplate="body" let-mat let-expanded="expanded">
           <tr>
-            <td><span class="mono-id nrc-badge">{{ mat.nrc }}</span></td>
+            <td>
+              <p-button 
+                type="button" 
+                [pRowToggler]="mat" 
+                [text]="true" 
+                [rounded]="true" 
+                severity="secondary" 
+                size="small"
+                [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+              </p-button>
+            </td>
+            <td><span class="mono-id nrc-badge">{{ mat.clave }}</span></td>
             <td><span class="mat-nombre">{{ mat.nombre }}</span></td>
-            <td><span class="docente-name">{{ mat.docente }}</span></td>
-            <td><span class="horario-text">{{ mat.horario }}</span></td>
-            <td><span class="aula-text">{{ mat.aula }}</span></td>
-            <td class="text-center">
-              <span class="alumno-count">{{ mat.alumnos }}</span>
+            <td><span class="plan-badge">{{ mat.plan_estudios }}</span></td>
+            <td>
+              <span class="campus-badge">
+                {{ mat.campus === 'CU2' ? 'Campus CU2' : 'Campus CU San Manuel' }}
+              </span>
+            </td>
+            <td>
+              <div class="period-chips">
+                @for (pName of mat.periodosNames; track pName) {
+                  <span class="period-mini-chip">{{ pName }}</span>
+                }
+              </div>
             </td>
             <td class="text-center">
-              <div class="action-btns">
-                <button class="icon-btn icon-btn--edit" pTooltip="Editar" tooltipPosition="top">
-                  <i class="pi pi-pencil"></i>
-                </button>
-                <button class="icon-btn icon-btn--danger" pTooltip="Eliminar" tooltipPosition="top">
-                  <i class="pi pi-trash"></i>
-                </button>
+              <span class="teachers-summary" [pTooltip]="mat.docentesNames.join(', ')" tooltipPosition="top">
+                {{ mat.docentesNames.length }} docente(s)
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="alumno-count">{{ mat.totalGrupos }}</span>
+            </td>
+          </tr>
+        </ng-template>
+
+        <!-- Detalle Expandido -->
+        <ng-template pTemplate="expandedrow" let-mat>
+          <tr>
+            <td colspan="8">
+              <div class="expanded-row-container">
+                <h4 class="expanded-section-title">
+                  <i class="pi pi-info-circle"></i>
+                  Grupos y Secciones de <strong>{{ mat.nombre }} ({{ mat.clave }})</strong>
+                </h4>
+                
+                <p-table [value]="mat.instancias" styleClass="p-datatable-sm inner-table">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>NRC</th>
+                      <th>Periodo Académico</th>
+                      <th>Docente Asignado</th>
+                      <th>Horario de Clase</th>
+                      <th>Aula / Salón</th>
+                      <th class="text-center">Estado</th>
+                      <th class="text-center" style="width: 100px">Acciones</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-inst>
+                    <tr>
+                      <td><span class="mono-id inner-nrc">{{ inst.nrc }}</span></td>
+                      <td><span class="inner-period">{{ inst.periodoNombre }}</span></td>
+                      <td>
+                        <span class="inner-docente" [class.por-asignar]="inst.docente === 'POR ASIGNAR'">
+                          <i class="pi pi-user"></i> {{ inst.docente }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="inner-horario">
+                          <i class="pi pi-clock"></i> {{ inst.horario }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="inner-aula">
+                          <i class="pi pi-map-marker"></i> {{ inst.aula }}
+                        </span>
+                      </td>
+                      <td class="text-center">
+                        @if (inst.estado === 'abierta') {
+                          <p-tag severity="success" value="Abierta" />
+                        } @else if (inst.estado === 'cerrada') {
+                          <p-tag severity="danger" value="Cerrada" />
+                        } @else {
+                          <p-tag severity="secondary" value="Finalizada" />
+                        }
+                      </td>
+                      <td class="text-center">
+                        <div class="action-btns">
+                          <button class="icon-btn icon-btn--danger" pTooltip="Eliminar grupo" tooltipPosition="top"
+                                  (click)="deleteMateriaInstance(inst, mat.nombre)">
+                            <i class="pi pi-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="emptymessage">
+                    <tr>
+                      <td colspan="7" class="inner-empty-state">
+                        No hay secciones registradas para este curso.
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
               </div>
             </td>
           </tr>
@@ -87,7 +173,7 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="7" class="empty-state">
+            <td colspan="8" class="empty-state">
               <i class="pi pi-book empty-icon"></i>
               <p>No se encontraron materias</p>
             </td>
@@ -100,76 +186,37 @@
 
 </div>
 
-<!-- ── Import Dialog ── -->
-<p-dialog
-  header="Importar Materias desde PDF"
-  [(visible)]="showImportDialog"
-  [modal]="true"
-  [style]="{ width: '480px' }"
-  [draggable]="false">
-
-  <div class="import-dialog-body">
-    <div class="import-info">
-      <i class="pi pi-info-circle"></i>
-      <span>Se importarán las materias del periodo <strong>{{ importTargetPeriodo }}</strong> desde el PDF de la oferta académica.</span>
-    </div>
-
-    <div class="file-drop-zone" [class.has-file]="selectedFile">
-      <input type="file" id="pdf-upload" accept=".pdf" (change)="onFileChange($event)" style="display:none" />
-      <label for="pdf-upload" class="file-drop-label">
-        <i class="pi pi-file-pdf file-icon"></i>
-        @if (selectedFile) {
-          <span class="file-name">{{ selectedFile.name }}</span>
-        } @else {
-          <span>Haz clic o arrastra el archivo PDF aquí</span>
-        }
-      </label>
-    </div>
-
-    @if (uploadError) {
-      <div class="alert alert--error">
-        <i class="pi pi-times-circle"></i>{{ uploadError }}
-      </div>
-    }
-    @if (uploadSuccess) {
-      <div class="alert alert--success">
-        <i class="pi pi-check-circle"></i>{{ uploadSuccess }}
-      </div>
-    }
-    @if (importLoading) {
-      <p-progressBar mode="indeterminate" styleClass="import-progress" />
-    }
-  </div>
-
-  <ng-template pTemplate="footer">
-    <button class="btn-secondary" (click)="showImportDialog = false">Cancelar</button>
-    <button class="btn-primary" (click)="uploadPdf()" [disabled]="importLoading">
-      <i class="pi pi-upload"></i> Importar
-    </button>
-  </ng-template>
-</p-dialog>
-
 <!-- ── Create Dialog ── -->
 <p-dialog
-  header="Nueva Materia"
+  header="Nueva Sección de Materia"
   [(visible)]="showCreateDialog"
   [modal]="true"
-  [style]="{ width: '480px' }"
+  [style]="{ width: '520px' }"
   [draggable]="false">
 
   <form [formGroup]="createForm" class="create-form" (ngSubmit)="submitCreate()">
 
-    <div class="form-row">
-      <label class="form-label">NRC <span class="required">*</span></label>
-      <input pInputText formControlName="nrc" placeholder="Ej. 12345"
-             [class.ng-invalid]="isInvalid('nrc')" [class.ng-dirty]="isInvalid('nrc')" />
-      @if (isInvalid('nrc')) {
-        <small class="p-error">NRC inválido — 5 dígitos.</small>
-      }
+    <div class="form-row-2col">
+      <div class="form-row">
+        <label class="form-label">NRC <span class="required">*</span></label>
+        <input pInputText formControlName="nrc" placeholder="Ej. 12345"
+               [class.ng-invalid]="isInvalid('nrc')" [class.ng-dirty]="isInvalid('nrc')" />
+        @if (isInvalid('nrc')) {
+          <small class="p-error">NRC debe tener 5 dígitos numéricos.</small>
+        }
+      </div>
+      <div class="form-row">
+        <label class="form-label">Clave <span class="required">*</span></label>
+        <input pInputText formControlName="clave" placeholder="Ej. ITIS 604"
+               [class.ng-invalid]="isInvalid('clave')" [class.ng-dirty]="isInvalid('clave')" />
+        @if (isInvalid('clave')) {
+          <small class="p-error">Formato de clave inválido (Ej. ITIS 604).</small>
+        }
+      </div>
     </div>
 
     <div class="form-row">
-      <label class="form-label">Nombre <span class="required">*</span></label>
+      <label class="form-label">Nombre de la Materia <span class="required">*</span></label>
       <input pInputText formControlName="nombre" placeholder="Ej. Servicios Web"
              [class.ng-invalid]="isInvalid('nombre')" [class.ng-dirty]="isInvalid('nombre')" />
       @if (isInvalid('nombre')) {
@@ -177,23 +224,49 @@
       }
     </div>
 
+    <div class="form-row-2col">
+      <div class="form-row">
+        <label class="form-label">Sección / Grupo <span class="required">*</span></label>
+        <input pInputText formControlName="seccion" placeholder="Ej. 001"
+               [class.ng-invalid]="isInvalid('seccion')" [class.ng-dirty]="isInvalid('seccion')" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Docente <span class="required">*</span></label>
+        <input pInputText formControlName="docente" placeholder="Nombre completo del docente" />
+      </div>
+    </div>
+
     <div class="form-row">
-      <label class="form-label">Docente <span class="required">*</span></label>
-      <input pInputText formControlName="docente" placeholder="Nombre del docente"
-             [class.ng-invalid]="isInvalid('docente')" [class.ng-dirty]="isInvalid('docente')" />
-      @if (isInvalid('docente')) {
-        <small class="p-error">El docente es obligatorio.</small>
+      <label class="form-label">Periodo Académico <span class="required">*</span></label>
+      <p-select
+        [options]="periodOptions"
+        formControlName="periodo"
+        placeholder="— Selecciona un periodo —"
+        styleClass="w-full"
+        [class.ng-invalid]="isInvalid('periodo')" />
+      @if (isInvalid('periodo')) {
+        <small class="p-error">Debes seleccionar un periodo académico.</small>
       }
     </div>
 
     <div class="form-row-2col">
       <div class="form-row">
-        <label class="form-label">Horario <span class="required">*</span></label>
-        <input pInputText formControlName="horario" placeholder="Lun-Mié 08:00-10:00" />
+        <label class="form-label">Plan de Estudios <span class="required">*</span></label>
+        <p-select
+          [options]="planOptions"
+          formControlName="plan"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full" />
       </div>
       <div class="form-row">
-        <label class="form-label">Aula <span class="required">*</span></label>
-        <input pInputText formControlName="aula" placeholder="Ej. A-301" />
+        <label class="form-label">Campus <span class="required">*</span></label>
+        <p-select
+          [options]="campusOptions"
+          formControlName="campus"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full" />
       </div>
     </div>
 
@@ -202,7 +275,7 @@
   <ng-template pTemplate="footer">
     <button class="btn-secondary" (click)="showCreateDialog = false; createForm.reset()">Cancelar</button>
     <button class="btn-primary" (click)="submitCreate()">
-      <i class="pi pi-check"></i> Crear Materia
+      <i class="pi pi-check"></i> Crear Sección
     </button>
   </ng-template>
 </p-dialog>

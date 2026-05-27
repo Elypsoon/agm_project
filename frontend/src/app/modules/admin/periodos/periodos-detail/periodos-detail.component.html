@@ -1,183 +1,273 @@
-<section class="periodos-detail-page">
-  <div class="detail-header">
-    <div>
-      <button type="button" class="back-button" (click)="goBack()">
-        <i class="pi pi-arrow-left"></i> Volver
+<section class="detail-page page-enter">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div class="page-title-block">
+      <button type="button" class="back-btn" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i> Volver a periodos
       </button>
-      <h1>Detalle del periodo</h1>
-      <p>Información detallada y materias asociadas del periodo seleccionado.</p>
+      <h1 class="page-title">
+        {{ periodo?.nombre || 'Detalle del periodo' }}
+      </h1>
+      <p class="page-subtitle">Información completa, materias y horarios del periodo académico.</p>
     </div>
-  </div>
 
-  <div *ngIf="loading" class="loading-state">Cargando periodo...</div>
-  <div *ngIf="errorMessage" class="error-banner">
-    <i class="pi pi-exclamation-triangle"></i>
-    <span>{{ errorMessage }}</span>
-  </div>
-
-  <div *ngIf="periodo" class="detail-content">
-    <div class="detail-cards">
-      <article class="detail-card">
-        <span>Nombre</span>
-        <strong>{{ periodo.nombre }}</strong>
-      </article>
-      <article class="detail-card">
-        <span>Estado</span>
+    @if (periodo) {
+      <div class="page-actions">
+        <p-button
+          icon="pi pi-sync"
+          pTooltip="Recargar datos"
+          tooltipPosition="bottom"
+          (click)="reloadPeriodo()"
+          [loading]="loading"
+          styleClass="p-button-outlined p-button-rounded"
+        ></p-button>
         <p-tag
           [value]="getEstadoLabel(periodo.estado)"
           [severity]="getEstadoSeverity(periodo.estado)"
+          [rounded]="true"
+          styleClass="estado-tag-lg"
         ></p-tag>
-      </article>
-      <article class="detail-card">
-        <span>Inicio</span>
-        <strong>{{ periodo.fecha_inicio | date:'dd/MM/yyyy' }}</strong>
-      </article>
-      <article class="detail-card">
-        <span>Fin</span>
-        <strong>{{ periodo.fecha_fin | date:'dd/MM/yyyy' }}</strong>
-      </article>
-    </div>
+      </div>
+    }
+  </div>
 
-    <div class="materias-table-card">
-      <div class="table-title">
-        <h2>Materias del periodo</h2>
-        <span>{{ filteredMaterias.length }} de {{ periodo.materias?.length ?? 0 }} materias</span>
+  <!-- Loading Skeleton -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spinner pi-spin"></i>
+      <span>Cargando periodo...</span>
+    </div>
+  }
+
+  <!-- Error Banner -->
+  @if (errorMessage) {
+    <div class="error-banner">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <!-- Main Content -->
+  @if (periodo && !loading) {
+    <div class="detail-content">
+
+      <!-- Summary Cards -->
+      <div class="summary-grid">
+        <article class="summary-card">
+          <div class="summary-icon-wrap" style="--card-accent: #4338CA">
+            <i class="pi pi-calendar-clock"></i>
+          </div>
+          <div class="summary-body">
+            <span class="summary-label">Periodo</span>
+            <strong class="summary-value">{{ periodo.nombre }}</strong>
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-icon-wrap" style="--card-accent: #06B6D4">
+            <i class="pi pi-calendar"></i>
+          </div>
+          <div class="summary-body">
+            <span class="summary-label">Inicio</span>
+            <strong class="summary-value">{{ periodo.fecha_inicio | date:'dd/MM/yyyy' }}</strong>
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-icon-wrap" style="--card-accent: #F59E0B">
+            <i class="pi pi-calendar-times"></i>
+          </div>
+          <div class="summary-body">
+            <span class="summary-label">Fin</span>
+            <strong class="summary-value">{{ periodo.fecha_fin | date:'dd/MM/yyyy' }}</strong>
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-icon-wrap" style="--card-accent: #22C55E">
+            <i class="pi pi-list-check"></i>
+          </div>
+          <div class="summary-body">
+            <span class="summary-label">Total materias</span>
+            <strong class="summary-value">{{ periodo.materias?.length ?? 0 }}</strong>
+          </div>
+        </article>
       </div>
 
-      <div class="filters-panel">
-        <div class="filter-search">
-          <i class="pi pi-search"></i>
-          <input
-            type="text"
-            pInputText
-            placeholder="Buscar por nombre, NRC o docente..."
-            [(ngModel)]="searchText"
-            class="search-input"
-          />
-        </div>
+      <!-- Materias Table Card -->
+      <div class="table-card">
+        <div class="table-header">
+          <div>
+            <h2 class="table-card-title">
+              <i class="pi pi-table"></i> Materias del periodo
+            </h2>
+            <p class="table-card-desc">
+              @if (searchText || selectedPlanEstudios || selectedCampus) {
+                Mostrando {{ filteredMaterias.length }} de {{ periodo.materias?.length ?? 0 }} materias
+              } @else {
+                Ver, editar y gestionar horarios de cada materia del periodo.
+              }
+            </p>
+          </div>
 
-        <div class="filter-controls">
-          <div class="filter-item">
-            <label for="plan-filter">Plan de estudios:</label>
-            <select id="plan-filter" [(ngModel)]="selectedPlanEstudios" class="filter-select">
-              <option [value]="null">Todos</option>
+          <!-- Filters -->
+          <div class="filters-row">
+            <div class="search-wrap">
+              <i class="pi pi-search search-icon"></i>
+              <input
+                type="text"
+                pInputText
+                placeholder="NRC, nombre o docente..."
+                [(ngModel)]="searchText"
+                class="search-input"
+              />
+            </div>
+            <select [(ngModel)]="selectedPlanEstudios" class="filter-select">
+              <option [value]="null">Todos los planes</option>
               <option value="ITI">{{ planEstudiosMap['ITI'] }}</option>
               <option value="LCC">{{ planEstudiosMap['LCC'] }}</option>
               <option value="ICC">{{ planEstudiosMap['ICC'] }}</option>
               <option value="ICD">{{ planEstudiosMap['ICD'] }}</option>
               <option value="ISC">{{ planEstudiosMap['ISC'] }}</option>
             </select>
-          </div>
-
-          <div class="filter-item">
-            <label for="campus-filter">Campus:</label>
-            <select id="campus-filter" [(ngModel)]="selectedCampus" class="filter-select">
-              <option [value]="null">Todos</option>
+            <select [(ngModel)]="selectedCampus" class="filter-select">
+              <option [value]="null">Todos los campus</option>
               <option value="CU2">Campus CU2</option>
-              <option value="SAN_MANUEL">Campus CU San Manuel</option>
+              <option value="SAN_MANUEL">Campus San Manuel</option>
             </select>
           </div>
         </div>
+
+        <p-table
+          [value]="filteredMaterias"
+          [paginator]="true"
+          [rows]="10"
+          [rowsPerPageOptions]="[10, 20, 50]"
+          currentPageReportTemplate="Mostrando {first} – {last} de {totalRecords}"
+          [showCurrentPageReport]="true"
+          styleClass="p-datatable-sm"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th class="th-nrc">NRC</th>
+              <th>Nombre</th>
+              <th>Sección</th>
+              <th>Plan</th>
+              <th>Campus</th>
+              <th>Docente</th>
+              <th>Estado</th>
+              <th class="th-actions">Acciones</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-materia>
+            <tr>
+              <td><span class="nrc-chip">{{ materia.nrc }}</span></td>
+              <td class="td-nombre">{{ materia.nombre }}</td>
+              <td>{{ materia.seccion || '—' }}</td>
+              <td><span class="plan-badge">{{ materia.plan_estudios || '—' }}</span></td>
+              <td>
+                <p-tag
+                  [value]="getCampusLabel(materia.campus)"
+                  [severity]="getCampusBadgeStyle(materia.campus)"
+                  [rounded]="true"
+                ></p-tag>
+              </td>
+              <td class="td-docente">{{ materia.docente_nombre || '—' }}</td>
+              <td>
+                <p-tag
+                  [value]="getMateriaEstadoLabel(materia.estado)"
+                  [severity]="getMateriaEstadoSeverity(materia.estado)"
+                  [rounded]="true"
+                ></p-tag>
+              </td>
+              <td class="td-actions">
+                <div class="action-buttons">
+                  <p-button
+                    icon="pi pi-calendar"
+                    pTooltip="Ver horario"
+                    tooltipPosition="top"
+                    (click)="toggleMateriaSchedule(materia.id)"
+                    [styleClass]="isMateriaExpanded(materia.id) ? 'p-button-rounded p-button-text p-button-sm p-button-info active-schedule-btn' : 'p-button-rounded p-button-text p-button-sm'"
+                  ></p-button>
+                  <p-button
+                    icon="pi pi-pencil"
+                    pTooltip="Editar materia"
+                    tooltipPosition="top"
+                    (click)="openEditModal(materia)"
+                    styleClass="p-button-rounded p-button-text p-button-info p-button-sm"
+                  ></p-button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="isMateriaExpanded(materia.id)" class="schedule-row">
+              <td colspan="8">
+                <div class="schedule-panel">
+                  <div class="schedule-panel-header">
+                    <i class="pi pi-calendar schedule-panel-icon"></i>
+                    <h3>Horario — {{ materia.nombre }}</h3>
+                  </div>
+                  @if (materia.horarios?.length) {
+                    <div class="schedule-chips">
+                      @for (horario of getOrderedHorarios(materia.horarios); track horario.dia) {
+                        <div class="schedule-chip">
+                          <span class="day-pill">{{ getDayName(horario.dia) }}</span>
+                          <span class="time-range">
+                            {{ formatHora(horario.hora_inicio) }} – {{ formatHora(horario.hora_fin) }}
+                          </span>
+                          <span class="salon-label">{{ horario.salon || 'Sin salón' }}</span>
+                          @if (horario.es_virtual) {
+                            <span class="virtual-badge"><i class="pi pi-video"></i> Virtual</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p class="no-horarios">Sin horarios registrados para esta materia.</p>
+                  }
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="8" class="empty-state">
+                <i class="pi pi-inbox"></i>
+                <span>
+                  @if (searchText || selectedPlanEstudios || selectedCampus) {
+                    No hay materias que coincidan con los filtros aplicados.
+                  } @else {
+                    No hay materias registradas en este periodo.
+                  }
+                </span>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
 
-      <p-table [value]="filteredMaterias" [paginator]="true" [rows]="10">
-        <ng-template pTemplate="header">
-          <tr>
-            <th>NRC</th>
-            <th>Nombre</th>
-            <th>Sección</th>
-            <th>Plan de estudios</th>
-            <th>Campus</th>
-            <th>Docente</th>
-            <th>Estado</th>
-            <th>Horario</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-materia>
-          <tr>
-            <td>{{ materia.nrc }}</td>
-            <td>{{ materia.nombre }}</td>
-            <td>{{ materia.seccion }}</td>
-            <td>{{ materia.plan_estudios || '—' }}</td>
-            <td>
-              <p-tag
-                [value]="getCampusLabel(materia.campus)"
-                [severity]="getCampusBadgeStyle(materia.campus)"
-              ></p-tag>
-            </td>
-            <td>{{ materia.docente_nombre || '—' }}</td>
-            <td>
-              <p-tag [value]="materia.estado" [severity]="materia.estado === 'ABIERTA' ? 'success' : 'warn'"></p-tag>
-            </td>
-            <td>
-              <p-button
-                label="Horario"
-                icon="pi pi-calendar"
-                styleClass="p-button-sm"
-                (click)="toggleMateriaSchedule(materia.id)"
-              ></p-button>
-              <p-button
-                label="Editar"
-                icon="pi pi-pencil"
-                styleClass="p-button-sm p-button-info"
-                (click)="openEditModal(materia)"
-              ></p-button>
-            </td>
-          </tr>
-          <tr *ngIf="isMateriaExpanded(materia.id)" class="schedule-row">
-            <td colspan="8">
-              <div class="schedule-panel">
-                <h3>Horario de {{ materia.nombre }}</h3>
-                <div *ngIf="materia.horarios?.length; else noSchedule">
-                  <table class="schedule-table">
-                    <thead>
-                      <tr>
-                        <th>Día</th>
-                        <th>Hora inicio</th>
-                        <th>Hora fin</th>
-                        <th>Salón</th>
-                        <th>Virtual</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let horario of getOrderedHorarios(materia.horarios)">
-                        <td>{{ getDayName(horario.dia) }}</td>
-                        <td>{{ horario.hora_inicio || '—' }}</td>
-                        <td>{{ horario.hora_fin || '—' }}</td>
-                        <td>{{ horario.salon || '—' }}</td>
-                        <td>{{ horario.es_virtual ? 'Sí' : 'No' }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <ng-template #noSchedule>
-                  <p class="empty-state">No hay horarios disponibles para esta materia.</p>
-                </ng-template>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="5" class="empty-state">No hay materias registradas en este periodo.</td>
-          </tr>
-        </ng-template>
-      </p-table>
     </div>
-  </div>
+  }
 
   <!-- Edit Materia Modal -->
-  <div class="edit-modal-backdrop" *ngIf="showEditModal && editingMateria">
+  <div class="dialog-backdrop" *ngIf="showEditModal && editingMateria">
     <div class="edit-modal-panel">
-      <div class="modal-header">
-        <h3>Editar materia: {{ editingMateria.nombre }}</h3>
-        <button type="button" class="close-btn" (click)="closeEditModal()">×</button>
+      <div class="dialog-header">
+        <div class="dialog-title-block">
+          <div class="dialog-icon"><i class="pi pi-pencil"></i></div>
+          <h3>Editar materia</h3>
+        </div>
+        <button type="button" class="close-btn" (click)="closeEditModal()">
+          <i class="pi pi-times"></i>
+        </button>
       </div>
 
-      <div class="modal-content">
-        <!-- Basic Materia Information -->
+      <div class="modal-body">
+        <!-- Basic Info -->
         <div class="form-section">
-          <h4>Información básica</h4>
+          <span class="section-label"><i class="pi pi-info-circle"></i> Información básica</span>
           <div class="form-grid">
             <div class="form-group">
               <label>Nombre</label>
@@ -189,7 +279,7 @@
             </div>
             <div class="form-group">
               <label>Clave</label>
-              <input type="text" [(ngModel)]="editingMateria.clave" placeholder="Clave (ej: ITIS 604)" />
+              <input type="text" [(ngModel)]="editingMateria.clave" placeholder="Ej: ITIS 604" />
             </div>
             <div class="form-group">
               <label>Sección</label>
@@ -215,7 +305,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Plan de Estudios</label>
+              <label>Plan de estudios</label>
               <select [(ngModel)]="editingMateria.plan_estudios">
                 <option value="ITI">{{ planEstudiosMap['ITI'] }}</option>
                 <option value="LCC">{{ planEstudiosMap['LCC'] }}</option>
@@ -227,9 +317,9 @@
           </div>
         </div>
 
-        <!-- Horarios Management -->
+        <!-- Horarios -->
         <div class="form-section">
-          <h4>Horarios</h4>
+          <span class="section-label"><i class="pi pi-clock"></i> Horarios</span>
           <div class="horarios-list">
             <div *ngFor="let horario of editingMateria.horarios; let i = index" class="horario-row">
               <div class="horario-controls">
@@ -242,9 +332,9 @@
                   <option value="S">Sábado</option>
                   <option value="D">Domingo</option>
                 </select>
-                <input type="text" [(ngModel)]="horario.hora_inicio" placeholder="Inicio (ej: 0800)" class="time-input" maxlength="4" />
-                <span class="time-separator">-</span>
-                <input type="text" [(ngModel)]="horario.hora_fin" placeholder="Fin (ej: 0859)" class="time-input" maxlength="4" />
+                <input type="text" [(ngModel)]="horario.hora_inicio" placeholder="0800" class="time-input" maxlength="4" />
+                <span class="time-sep">—</span>
+                <input type="text" [(ngModel)]="horario.hora_fin" placeholder="0859" class="time-input" maxlength="4" />
                 <input type="text" [(ngModel)]="horario.salon" placeholder="Salón" class="salon-input" />
                 <label class="checkbox-label">
                   <input type="checkbox" [(ngModel)]="horario.es_virtual" />
@@ -257,7 +347,7 @@
             </div>
 
             <button type="button" class="add-horario-btn" (click)="addHorario()">
-              <i class="pi pi-plus"></i> Añadir Horario
+              <i class="pi pi-plus"></i> Añadir horario
             </button>
           </div>
         </div>
@@ -268,15 +358,16 @@
           label="Cancelar"
           icon="pi pi-times"
           (click)="closeEditModal()"
-          styleClass="p-button-secondary"
+          styleClass="p-button-outlined"
         ></p-button>
         <p-button
-          label="Guardar Cambios"
+          label="Guardar cambios"
           icon="pi pi-check"
           (click)="saveMateria()"
-          styleClass="p-button-success"
+          [loading]="savingMateria"
         ></p-button>
       </div>
     </div>
   </div>
+
 </section>

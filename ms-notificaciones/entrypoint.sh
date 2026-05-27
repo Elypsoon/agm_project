@@ -1,9 +1,26 @@
-#!/bin/sh
-# 1. Iniciar el servidor gRPC en segundo plano
-python src/grpc/server.py &
+#!/bin/bash
+set -e
 
-# 2. Iniciar el servidor REST oficial de Django con Gunicorn en el puerto 3006
-gunicorn src.core.wsgi:application \
-    --bind 0.0.0.0:3006 \
-    --workers 3 \
-    --timeout 120
+# Si el comando es para iniciar el servicio (o viene de docker-compose)
+if [ "$#" -eq 0 ] || [ "$1" = "sh" ]; then
+    echo "Aplicando migraciones"
+    python manage.py migrate --noinput
+
+    echo "Iniciando servidor gRPC en segundo plano..."
+    PYTHONPATH=. python src/grpc/server.py &
+
+    echo "Iniciando Consumidor RabbitMQ en segundo plano..."
+    python manage.py run_consumer &
+
+    echo "Iniciando Gunicorn (REST :3006)"
+    gunicorn src.core.wsgi:application \
+        --config gunicorn.conf.py \
+        --bind 0.0.0.0:3006 \
+        --workers 2 \
+        --timeout 120 &
+
+    # Esperar a que terminen los procesos en segundo plano
+    wait
+else
+    exec "$@"
+fi

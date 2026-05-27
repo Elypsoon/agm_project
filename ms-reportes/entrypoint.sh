@@ -1,12 +1,18 @@
-#!/bin/sh
-# Aplicar migraciones de la base de datos automáticamente
+#!/bin/bash
+set -e
+
+echo "Aplicando migraciones"
 python manage.py migrate --noinput
 
-# Iniciar el servidor gRPC en segundo plano
-python -c "from src.grpc.server import serve; serve()" &
+echo "Iniciando servidor gRPC en segundo plano..."
+PYTHONPATH=. python src/grpc/server.py &
 
-# Iniciar el servidor REST oficial de Django en primer plano con Gunicorn
+echo "Iniciando Gunicorn (REST :3007)"
 gunicorn src.core.wsgi:application \
+    --config gunicorn.conf.py \
     --bind 0.0.0.0:3007 \
-    --workers 3 \
-    --timeout 120
+    --workers 2 \
+    --timeout 120 &
+
+# Esperar a que terminen los procesos en segundo plano
+wait

@@ -281,7 +281,7 @@ services:
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py run_consumer &
-             python manage.py runserver_with_grpc"
+             python manage.py run_with_grpc"
 
   # ---------------------------------------------------------------------------
   # MS-7: Reportes (Django + PostgreSQL)

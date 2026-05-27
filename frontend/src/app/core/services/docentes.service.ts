@@ -64,4 +64,16 @@ export class DocentesService {
     formData.append('archivo', archivo);
     return this.http.post<ImportResponse>(`${this.baseUrl}/importar/`, formData);
   }
+
+  createDocente(payload: { nombre_completo: string; correo_institucional: string; cubiculo: string }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/`, payload);
+  }
+
+  updateDocente(id: string, payload: Partial<{ nombre_completo: string; correo_institucional: string; cubiculo: string }>): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/${id}/`, payload);
+  }
+
+  deleteDocente(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/${id}/`);
+  }
 }

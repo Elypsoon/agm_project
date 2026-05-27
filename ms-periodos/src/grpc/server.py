@@ -31,20 +31,15 @@ def _ejecutar_evaluacion_periodos(hoy: date):
     ).first()
 
     if periodo_actual and periodo_actual.estado != EstadoPeriodo.ACTIVO:
-        # Finalize all other active periods
-        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).exclude(id=periodo_actual.id).update(
-            estado=EstadoPeriodo.FINALIZADA
-        )
+        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).exclude(id=periodo_actual.id).update(estado=EstadoPeriodo.FINALIZADA)
         
         periodo_actual.estado = EstadoPeriodo.ACTIVO
         periodo_actual.save()
         logger.info(f"Periodo de referencia global activado automáticamente: {periodo_actual.nombre}")
         
     elif not periodo_actual:
-        # Vacation days / gaps: Finalize any leftover hanging active statuses
+        # If today doesn't match any period bounds, ensure everything is turned off
         Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).update(estado=EstadoPeriodo.FINALIZADA)
-        logger.info("No active timeline matches today's date context. Systems cleared to pending/finalizada states.")
-
         
 async def cron_evaluador_periodos():
     """
@@ -200,7 +195,7 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
                 estado=periodo.estado, # "activo"
             )
         except Exception as e:
-            logger.error(f"Error in GetActivePeriodo: {str(e)}", exc_info=True)
+            logger.error(f"Error in GetPeriodoActivo: {str(e)}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details("Internal microservice server error")
             return periodos_pb2.PeriodoInfo()

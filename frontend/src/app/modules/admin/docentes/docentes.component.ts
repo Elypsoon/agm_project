@@ -12,7 +12,13 @@ import { ToastModule } from 'primeng/toast';
 import { SelectModule } from 'primeng/select';
 import { AvatarModule } from 'primeng/avatar';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { MessageService } from 'primeng/api';
+import { firstValueFrom } from 'rxjs';
+
+import { DocentesService } from '../../../core/services/docentes.service';
+import { PeriodosService } from '../periodos/periodos.service';
 
 export interface Docente {
   id: string;
@@ -21,7 +27,6 @@ export interface Docente {
   departamento: string;
   materias: number;
   estado: 'activo' | 'inactivo';
-  claveAcceso?: string;
 }
 
 @Component({
@@ -30,7 +35,8 @@ export interface Docente {
   imports: [
     CommonModule, ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, InputTextModule, IconFieldModule, InputIconModule,
-    TagModule, DialogModule, ToastModule, SelectModule, AvatarModule, SkeletonModule
+    TagModule, DialogModule, ToastModule, SelectModule, AvatarModule, SkeletonModule,
+    TooltipModule, ProgressBarModule
   ],
   providers: [MessageService],
   templateUrl: './docentes.component.html',
@@ -44,19 +50,26 @@ export class DocentesComponent implements OnInit {
 
   showCreateDialog = false;
   showAssignDialog = false;
+  showImportDialog = false;
+  isEditMode = false;
   selectedDocente: Docente | null = null;
 
-  materiaOptions = [
-    { label: 'Servicios Web (12345)', value: '1' },
-    { label: 'Ingeniería de Software (12346)', value: '2' },
-    { label: 'Redes de Computadoras (12347)', value: '3' },
-    { label: 'Base de Datos Avanzadas (12348)', value: '4' },
-  ];
+  materiaOptions: { label: string; value: string }[] = [];
   selectedMateria: string | null = null;
+
+  importLoading = false;
+  selectedFile: File | null = null;
+  uploadError = '';
+  uploadSuccess = '';
 
   createForm: FormGroup;
 
-  constructor(private fb: FormBuilder, private messageService: MessageService) {
+  constructor(
+    private fb: FormBuilder,
+    private messageService: MessageService,
+    private docentesService: DocentesService,
+    private periodosService: PeriodosService
+  ) {
     this.createForm = this.fb.group({
       nombre:       ['', [Validators.required, Validators.minLength(2)]],
       email:        ['', [Validators.required, Validators.email]],
@@ -65,16 +78,74 @@ export class DocentesComponent implements OnInit {
   }
 
   ngOnInit() {
-    setTimeout(() => {
-      this.docentes = [
-        { id: '1', nombre: 'Dr. Martínez López',  email: 'martinez@itson.edu.mx',  departamento: 'Ciencias Exactas', materias: 2, estado: 'activo' },
-        { id: '2', nombre: 'Mtra. García Ruiz',   email: 'garcia@itson.edu.mx',    departamento: 'Ingeniería',       materias: 3, estado: 'activo' },
-        { id: '3', nombre: 'Dr. López Sánchez',   email: 'lopez@itson.edu.mx',     departamento: 'Ciencias Exactas', materias: 1, estado: 'activo' },
-        { id: '4', nombre: 'Dr. Hernández Cruz',  email: 'hernandez@itson.edu.mx', departamento: 'Ingeniería',       materias: 2, estado: 'inactivo' },
-        { id: '5', nombre: 'Mtra. Torres Vega',   email: 'torres@itson.edu.mx',    departamento: 'Matemáticas',      materias: 1, estado: 'activo' },
-      ];
+    this.loadData();
+  }
+
+  get filteredDocentes(): Docente[] {
+    if (!this.searchValue) {
+      return this.docentes;
+    }
+    const search = this.searchValue.toLowerCase();
+    return this.docentes.filter(d =>
+      d.nombre.toLowerCase().includes(search) ||
+      d.email.toLowerCase().includes(search) ||
+      d.departamento.toLowerCase().includes(search)
+    );
+  }
+
+  async loadData() {
+    this.loading = true;
+    try {
+      // 1. Fetch all materias and periodos to calculate counts
+      const [materias, periodos] = await Promise.all([
+        this.periodosService.getAllMaterias(),
+        firstValueFrom(this.periodosService.getPeriodos())
+      ]);
+
+      const periodosMap = new Map<string, string>();
+      periodos.forEach(p => periodosMap.set(p.id, p.nombre));
+
+      // Populate assignment options
+      this.materiaOptions = materias.map(m => {
+        const periodName = periodosMap.get(m.periodo) || 'Periodo Desconocido';
+        return {
+          label: `${m.nombre} (${m.nrc}) — ${m.plan_estudios} (${periodName})`,
+          value: m.id
+        };
+      });
+
+      // 2. Fetch docentes from MS-Alumnos
+      this.docentesService.getDocentes({ limit: 1000 }).subscribe({
+        next: (res) => {
+          if (res.success && res.data && res.data.docentes) {
+            this.docentes = res.data.docentes.map(d => {
+              // Count materias assigned to this docente
+              const docenteMaterias = materias.filter(m =>
+                (m.docente_id && m.docente_id === d.id) ||
+                (!m.docente_id && m.docente_nombre && m.docente_nombre.trim().toLowerCase() === d.nombre_completo.trim().toLowerCase())
+              );
+              return {
+                id: d.id,
+                nombre: d.nombre_completo,
+                email: d.correo_institucional,
+                departamento: d.cubiculo || 'Sin cubículo',
+                materias: docenteMaterias.length,
+                estado: d.activo ? 'activo' : 'inactivo'
+              };
+            });
+          }
+          this.loading = false;
+        },
+        error: (err) => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los docentes.' });
+          this.loading = false;
+        }
+      });
+    } catch (error) {
+      console.error(error);
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error de comunicación con los servicios.' });
       this.loading = false;
-    }, 700);
+    }
   }
 
   getInitials(nombre: string): string {
@@ -91,17 +162,48 @@ export class DocentesComponent implements OnInit {
   }
 
   saveAssignment() {
-    if (!this.selectedMateria) {
+    if (!this.selectedMateria || !this.selectedDocente) {
       this.messageService.add({ severity: 'warn', summary: 'Selecciona una materia', detail: '' });
       return;
     }
-    const mat = this.materiaOptions.find(m => m.value === this.selectedMateria);
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Asignación guardada',
-      detail: `${mat?.label} asignada a ${this.selectedDocente?.nombre}.`
+    const materiaId = this.selectedMateria;
+    const docente = this.selectedDocente;
+
+    this.periodosService.updateMateria(materiaId, {
+      docente_id: docente.id,
+      docente_nombre: docente.nombre
+    }).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Asignación guardada',
+          detail: `Materia asignada con éxito a ${docente.nombre}.`
+        });
+        this.showAssignDialog = false;
+        this.loadData();
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo realizar la asignación.' });
+      }
     });
-    this.showAssignDialog = false;
+  }
+
+  openCreateDialog() {
+    this.isEditMode = false;
+    this.selectedDocente = null;
+    this.createForm.reset();
+    this.showCreateDialog = true;
+  }
+
+  openEditDialog(docente: Docente) {
+    this.selectedDocente = docente;
+    this.isEditMode = true;
+    this.createForm.patchValue({
+      nombre: docente.nombre,
+      email: docente.email,
+      departamento: docente.departamento === 'Sin cubículo' ? '' : docente.departamento
+    });
+    this.showCreateDialog = true;
   }
 
   submitCreate() {
@@ -109,9 +211,108 @@ export class DocentesComponent implements OnInit {
       this.createForm.markAllAsTouched();
       return;
     }
-    this.messageService.add({ severity: 'success', summary: 'Docente registrado', detail: this.createForm.value.nombre });
-    this.showCreateDialog = false;
-    this.createForm.reset();
+    const val = this.createForm.value;
+    const payload = {
+      nombre_completo: val.nombre,
+      correo_institucional: val.email,
+      cubiculo: val.departamento
+    };
+
+    if (this.isEditMode && this.selectedDocente) {
+      this.docentesService.updateDocente(this.selectedDocente.id, payload).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Docente actualizado', detail: val.nombre });
+          this.showCreateDialog = false;
+          this.createForm.reset();
+          this.loadData();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el docente.' });
+        }
+      });
+    } else {
+      this.docentesService.createDocente(payload).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Docente registrado', detail: val.nombre });
+          this.showCreateDialog = false;
+          this.createForm.reset();
+          this.loadData();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo registrar el docente.' });
+        }
+      });
+    }
+  }
+
+  deleteDocente(docente: Docente) {
+    if (confirm(`¿Estás seguro de que deseas eliminar al docente ${docente.nombre}?`)) {
+      this.docentesService.deleteDocente(docente.id).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Docente eliminado', detail: docente.nombre });
+          this.loadData();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el docente.' });
+        }
+      });
+    }
+  }
+
+  openImportDialog() {
+    this.selectedFile = null;
+    this.uploadError = '';
+    this.uploadSuccess = '';
+    this.showImportDialog = true;
+  }
+
+  onFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile = input.files?.[0] ?? null;
+    this.uploadError = '';
+    this.uploadSuccess = '';
+  }
+
+  uploadPdf() {
+    if (!this.selectedFile) {
+      this.uploadError = 'Selecciona un archivo PDF antes de continuar.';
+      return;
+    }
+    this.importLoading = true;
+    this.uploadError = '';
+    this.uploadSuccess = '';
+
+    this.docentesService.importarDocentes(this.selectedFile).subscribe({
+      next: (res) => {
+        this.importLoading = false;
+        if (res.success) {
+          this.uploadSuccess = res.message || 'PDF importado correctamente.';
+          this.selectedFile = null;
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Importación exitosa',
+            detail: res.message
+          });
+          this.loadData();
+          setTimeout(() => {
+            this.showImportDialog = false;
+            this.uploadSuccess = '';
+          }, 1500);
+        } else {
+          this.uploadError = res.message || 'Error al procesar el PDF.';
+        }
+      },
+      error: (err) => {
+        this.importLoading = false;
+        const msg = err.error?.detail || err.error?.message || 'Error al subir el archivo.';
+        this.uploadError = `Error: ${msg}`;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error de importación',
+          detail: msg
+        });
+      }
+    });
   }
 
   isInvalid(field: string): boolean {
