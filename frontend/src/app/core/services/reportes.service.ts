@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, from, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
+import { Observable, map, switchMap, from, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface EstadisticasDocenteMateria {
@@ -71,7 +70,18 @@ export interface EstadisticasAlumnoResponse {
   data: EstadisticasAlumnoMateria;
 }
 
-@Injectable({ providedIn: 'root' })
+export interface ReporteResponse {
+  isBlob?: boolean;
+  blob?: Blob;
+  filename?: string;
+  async?: boolean;
+  success?: boolean;
+  message?: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
 export class ReportesService {
   private http = inject(HttpClient);
   private baseUrl = environment.apiUrls.reportes;
@@ -101,7 +111,7 @@ export class ReportesService {
   /**
    * Descarga de calificaciones de una materia. Maneja descarga síncrona o flujo en background.
    */
-  descargarCalificaciones(materiaId: string, email: string, formato: string = 'pdf'): Observable<any> {
+  descargarCalificaciones(materiaId: string, email: string, formato: string = 'pdf'): Observable<ReporteResponse> {
     const url = `${this.baseUrl}/calificaciones/${materiaId}/`;
     let params = new HttpParams().set('formato', formato);
     if (email) {
@@ -113,36 +123,14 @@ export class ReportesService {
       responseType: 'blob',
       observe: 'response'
     }).pipe(
-      switchMap(response => {
-        const contentType = response.headers.get('content-type') || '';
-        const blob = response.body;
-
-        if (contentType.includes('application/json') && blob) {
-          // Si es un JSON, leemos su contenido textual y lo parseamos
-          return from(blob.text().then(text => JSON.parse(text)));
-        } else {
-          // Si es un archivo binario, lo empaquetamos
-          const contentDisposition = response.headers.get('content-disposition') || '';
-          let filename = `calificaciones_${materiaId}.${formato === 'xlsx' || formato === 'xls' ? 'xlsx' : 'pdf'}`;
-          const match = contentDisposition.match(/filename="(.+)"/);
-          if (match && match[1]) {
-            filename = match[1];
-          }
-          return of({
-            success: true,
-            isBlob: true,
-            blob,
-            filename
-          });
-        }
-      })
+      switchMap(response => this.parseResponse(response, `calificaciones_${materiaId}.${formato === 'xlsx' ? 'xlsx' : 'pdf'}`))
     );
   }
 
   /**
    * Descarga de asistencias de una materia. Maneja descarga síncrona o flujo en background.
    */
-  descargarAsistencias(materiaId: string, email: string, formato: string = 'pdf'): Observable<any> {
+  descargarAsistencias(materiaId: string, email: string, formato: string = 'pdf'): Observable<ReporteResponse> {
     const url = `${this.baseUrl}/asistencias/${materiaId}/`;
     let params = new HttpParams().set('formato', formato);
     if (email) {
@@ -154,27 +142,47 @@ export class ReportesService {
       responseType: 'blob',
       observe: 'response'
     }).pipe(
-      switchMap(response => {
-        const contentType = response.headers.get('content-type') || '';
-        const blob = response.body;
-
-        if (contentType.includes('application/json') && blob) {
-          return from(blob.text().then(text => JSON.parse(text)));
-        } else {
-          const contentDisposition = response.headers.get('content-disposition') || '';
-          let filename = `asistencias_${materiaId}.${formato === 'xlsx' || formato === 'xls' ? 'xlsx' : 'pdf'}`;
-          const match = contentDisposition.match(/filename="(.+)"/);
-          if (match && match[1]) {
-            filename = match[1];
-          }
-          return of({
-            success: true,
-            isBlob: true,
-            blob,
-            filename
-          });
-        }
-      })
+      switchMap(response => this.parseResponse(response, `asistencias_${materiaId}.${formato === 'xlsx' ? 'xlsx' : 'pdf'}`))
     );
+  }
+
+  private parseResponse(response: HttpResponse<Blob>, defaultFilename: string): Observable<ReporteResponse> {
+    const contentType = response.headers.get('content-type') || '';
+    const body = response.body;
+
+    if (!body) {
+      return of({ success: false, message: 'Cuerpo de respuesta vacío' });
+    }
+
+    if (contentType.includes('application/json')) {
+      return from(body.text()).pipe(
+        map(text => {
+          try {
+            const json = JSON.parse(text);
+            return {
+              success: json.success,
+              async: json.async,
+              message: json.message
+            };
+          } catch (e) {
+            return { success: false, message: 'Error al parsear la respuesta JSON' };
+          }
+        })
+      );
+    } else {
+      let filename = defaultFilename;
+      const disposition = response.headers.get('Content-Disposition');
+      if (disposition) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+        if (matches && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+      return of({
+        isBlob: true,
+        blob: body,
+        filename: filename
+      });
+    }
   }
 }

@@ -72,8 +72,8 @@
           <td>{{ periodo.nombre || '—' }}</td>
           <td>
             <p-tag
-              [value]="periodo.activo ? 'Activo' : 'Inactivo'"
-              [severity]="periodo.activo ? 'success' : 'warn'"
+              [value]="getEstadoLabel(periodo.estado)"
+              [severity]="getEstadoSeverity(periodo.estado)"
             ></p-tag>
           </td>
           <td>{{ periodo.materias?.length ?? '—' }}</td>
@@ -86,12 +86,32 @@
                 styleClass="p-button-sm"
               ></p-button>
               <p-button
+                label="Editar"
+                icon="pi pi-pencil"
+                (click)="openEditPeriodoDialog(periodo)"
+                styleClass="p-button-info p-button-sm"
+              ></p-button>
+              <p-button
                 label="Activar"
                 icon="pi pi-check"
                 (click)="activatePeriodo(periodo)"
-                [disabled]="periodo.activo"
+                [disabled]="periodo.estado === 'activo'"
                 [loading]="actionLoading === periodo.id"
                 styleClass="p-button-sm"
+              ></p-button>
+              <p-button
+                label="Desactivar"
+                icon="pi pi-times"
+                (click)="deactivatePeriodo(periodo)"
+                [disabled]="periodo.estado !== 'activo'"
+                [loading]="actionLoading === periodo.id"
+                styleClass="p-button-warning p-button-sm"
+              ></p-button>
+              <p-button
+                label="Importar PDF"
+                icon="pi pi-upload"
+                (click)="openImportDialog(periodo)"
+                styleClass="p-button-secondary p-button-sm"
               ></p-button>
               <p-button
                 label="Eliminar"
@@ -99,12 +119,6 @@
                 (click)="deletePeriodo(periodo)"
                 [loading]="actionLoading === periodo.id"
                 styleClass="p-button-danger p-button-sm"
-              ></p-button>
-              <p-button
-                label="Importar PDF"
-                icon="pi pi-upload"
-                (click)="openImportDialog(periodo)"
-                styleClass="p-button-secondary p-button-sm"
               ></p-button>
             </div>
           </td>
@@ -206,6 +220,45 @@
             label="Crear periodo"
             type="submit"
             [loading]="actionLoading === 'create'"
+          ></p-button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Periodo Dialog -->
+  <div class="dialog-backdrop" *ngIf="showEditPeriodoDialog">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <h3>Editar periodo</h3>
+        <button type="button" class="close-btn" (click)="closeEditPeriodoDialog()">×</button>
+      </div>
+
+      <form [formGroup]="editPeriodoForm" (ngSubmit)="saveEditPeriodo()" class="dialog-form">
+        <label>
+          Nombre
+          <input pInputText formControlName="nombre" />
+        </label>
+        <label>
+          Fecha inicio
+          <input type="date" formControlName="fecha_inicio" />
+        </label>
+        <label>
+          Fecha fin
+          <input type="date" formControlName="fecha_fin" />
+        </label>
+
+        <div class="dialog-actions">
+          <p-button
+            label="Cancelar"
+            type="button"
+            (click)="closeEditPeriodoDialog()"
+            styleClass="p-button-outlined"
+          ></p-button>
+          <p-button
+            label="Guardar cambios"
+            type="submit"
+            [loading]="actionLoading === editingPeriodo?.id"
           ></p-button>
         </div>
       </form>

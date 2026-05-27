@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from . import alumnos_pb2 as alumnos__pb2
+import alumnos_pb2 as alumnos__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
@@ -99,7 +99,7 @@ class AlumnosServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetDocenteByName(self, request, context):
-        """Buscar a un profesor por su nombre completo para obtener su UUID
+        """Obtener información de un docente por su nombre completo
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

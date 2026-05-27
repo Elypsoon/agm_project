@@ -6,7 +6,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
-import { PeriodosService, Periodo, Horario, Materia } from './periodos.service';
+import { PeriodosService, Periodo, Horario, Materia } from '../periodos.service';
 
 @Component({
   selector: 'agm-periodos-detail',
@@ -114,6 +114,37 @@ export class PeriodosDetailComponent implements OnInit {
     return campus;
   }
 
+  getDayName(dia: string): string {
+    const dayMap: { [key: string]: string } = {
+      'L': 'Lunes',
+      'A': 'Martes',
+      'M': 'Miércoles',
+      'J': 'Jueves',
+      'V': 'Viernes',
+      'S': 'Sábado',
+      'D': 'Domingo'
+    };
+    return dayMap[dia.toUpperCase()] || dia;
+  }
+
+  getEstadoLabel(estado: string): string {
+    const labels: { [key: string]: string } = {
+      'pendiente': 'Pendiente',
+      'activo': 'Activo',
+      'finalizada': 'Finalizada'
+    };
+    return labels[estado.toLowerCase()] || estado;
+  }
+
+  getEstadoSeverity(estado: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
+    const severity: { [key: string]: 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' } = {
+      'pendiente': 'warn',
+      'activo': 'success',
+      'finalizada': 'info'
+    };
+    return severity[estado.toLowerCase()] || 'secondary';
+  }
+
   get filteredMaterias(): Materia[] {
     if (!this.periodo?.materias) {
       return [];
@@ -173,17 +204,48 @@ export class PeriodosDetailComponent implements OnInit {
   saveMateria() {
     if (!this.editingMateria) return;
 
-    // Update the materia in the periodo's materias array
-    if (this.periodo?.materias) {
-      const index = this.periodo.materias.findIndex(m => m.id === this.editingMateria!.id);
-      if (index !== -1) {
-        this.periodo.materias[index] = this.editingMateria;
+    // Prepare the payload with nested horarios structure
+    const payload = {
+      nombre: this.editingMateria.nombre,
+      clave: this.editingMateria.clave,
+      seccion: this.editingMateria.seccion,
+      docente_nombre: this.editingMateria.docente_nombre,
+      campus: this.editingMateria.campus,
+      plan_estudios: this.editingMateria.plan_estudios,
+      estado: this.editingMateria.estado,
+      nrc: this.editingMateria.nrc,
+      horarios: (this.editingMateria.horarios || []).map((horario) => {
+        const horarioPayload: any = {
+          dia: horario.dia,
+          hora_inicio: horario.hora_inicio,
+          hora_fin: horario.hora_fin,
+          salon: horario.salon,
+          es_virtual: horario.es_virtual
+        };
+        // Include the ID only if it already exists (for updates)
+        if (horario.id) {
+          horarioPayload.id = horario.id;
+        }
+        return horarioPayload;
+      })
+    };
+
+    // Call API to update materia on backend
+    this.periodosService.updateMateria(this.editingMateria.id, payload).subscribe({
+      next: (updatedMateria) => {
+        // Update the materia in the periodo's materias array
+        if (this.periodo?.materias) {
+          const index = this.periodo.materias.findIndex(m => m.id === this.editingMateria!.id);
+          if (index !== -1) {
+            this.periodo.materias[index] = updatedMateria;
+          }
+        }
+        this.closeEditModal();
+      },
+      error: (err) => {
+        console.error('Error updating materia:', err);
+        alert('Error al actualizar la asignatura: ' + (err?.error?.detail || err?.message || 'Error desconocido'));
       }
-    }
-
-    // TODO: Call API to update materia on backend
-    // this.periodosService.updateMateria(this.editingMateria).subscribe(...)
-
-    this.closeEditModal();
+    });
   }
 }

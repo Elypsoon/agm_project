@@ -100,7 +100,7 @@ export class HistorialComponent implements OnInit {
   cargarHistorial(id: string) {
     this.loading.set(true);
     this.reportesService.obtenerEstadisticasDocente(id).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         if (res.success && res.data && res.data.length > 0) {
           this.historialCompleto.set(res.data);
           this.procesarPeriodos(res.data);
@@ -109,7 +109,7 @@ export class HistorialComponent implements OnInit {
         }
         this.loading.set(false);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('[-] Error al obtener historial de reportes:', err);
         // Fallback robusto a datos Mock interactivos si el backend no está disponible
         this.cargarMockCompleto();

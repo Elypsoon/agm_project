@@ -12,6 +12,7 @@ import os
 import django
 from datetime import date
 from django.db.models import Q
+from asgiref.sync import sync_to_async
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -50,7 +51,7 @@ async def cron_evaluador_periodos():
         await asyncio.sleep(2)
         hoy = date.today()
         logger.info(f"Ejecutando verificación inicial de calendario para: {hoy}")
-        _ejecutar_evaluacion_periodos(hoy)
+        await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
     except Exception as e:
         logger.error(f"Error en la verificación inicial de periodos: {e}", exc_info=True)
 
@@ -60,7 +61,7 @@ async def cron_evaluador_periodos():
             
             hoy = date.today()
             logger.info(f"Evaluación de rutina: {hoy}")
-            _ejecutar_evaluacion_periodos(hoy)
+            await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
 
         except Exception as e:
             logger.error(f"Error al revisar: {e}", exc_info=True)
