@@ -17,6 +17,7 @@ import { forkJoin, Observable } from 'rxjs';
 import { ReportesService } from '../../../core/services/reportes.service';
 
 import { AuthService } from '../../../core/services/auth.service';
+import { DocentesService } from '../../../core/services/docentes.service';
 import { 
   CalificacionesService, 
   ConcentradoResponse, 
@@ -48,6 +49,7 @@ export class CalificacionesComponent implements OnInit {
   private authService = inject(AuthService);
   private calificacionesService = inject(CalificacionesService);
   private reportesService = inject(ReportesService);
+  private docentesService = inject(DocentesService);
 
   loading = signal(false);
   editedRows = signal<Set<string>>(new Set());
@@ -134,7 +136,7 @@ export class CalificacionesComponent implements OnInit {
     this.calificacionesService.getPeriodoActivo().subscribe({
       next: (periodo) => {
         this.periodoActivo.set(periodo);
-        const docenteId = this.authService.currentUser()?.id;
+        const email = this.authService.currentUser()?.email;
 
         // 2. Obtener materias asociadas a este docente en el periodo activo
         this.calificacionesService.getMaterias({
@@ -143,7 +145,9 @@ export class CalificacionesComponent implements OnInit {
         }).subscribe({
           next: (res) => {
             const list = res.results || res || [];
-            this.materiaOptions.set(list.map((m: any) => ({
+            // Filtrar localmente en el frontend para mostrar únicamente las materias asociadas a este docente
+            const filteredList = list.filter((m: any) => !docenteId || m.docente_id === docenteId);
+            this.materiaOptions.set(filteredList.map((m: any) => ({
               id: m.id,
               nombre: `${m.nombre} (NRC ${m.nrc})`
             })));
