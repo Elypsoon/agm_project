@@ -14,7 +14,6 @@ from src.generators.excel_generator import (
     generate_calificaciones_excel,
     generate_asistencias_excel,
     generate_rendimiento_excel,
-    generate_consolidated_excel,
 )
 from src.generators.pdf_generator import (
     generate_calificaciones_pdf,
@@ -55,59 +54,151 @@ def _enriquecer_con_asistencia(alumnos, materia_id):
 import logging
 logger = logging.getLogger(__name__)
 
-def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext):
+def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_reporte):
     try:
-        datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
-        if not datos_materia or not datos_materia.get('alumnos'):
-            logger.error(f"[-] Error en reporte asíncrono para materia {materia_id}: No hay calificaciones.")
-            return
+        expiration_time = None
+        # 1. Comprobar si ya existe un reporte válido en el caché
+        try:
+            cache_activo = ReporteCache.objects.filter(
+                materia_id=materia_id,
+                tipo=tipo_reporte if tipo_reporte == 'calificaciones' else 'asistencia',
+                formato=formato,
+                valido_hasta__gt=timezone.now()
+            ).first()
+        except Exception as e:
+            logger.warning(f"[-] Database error while reading cache in background thread: {e}")
+            cache_activo = None
 
-        if ext == 'xlsx':
-            datos_asistencias = []
-            for al in datos_materia['alumnos']:
-                asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
-                    alumno_id=al['alumno_id'],
-                    materia_id=materia_id,
-                )
-                if asistencia:
-                    datos_asistencias.append(asistencia)
-                else:
-                    datos_asistencias.append({
-                        "alumno_id": al['alumno_id'],
-                        "materia_id": materia_id,
-                        "asistencias": []
-                    })
-            
+        if cache_activo and os.path.exists(cache_activo.archivo_path):
+            logger.info(f"[+] Hilo asíncrono (tipo: {tipo_reporte}) - Cache Hit para materia {materia_id}")
+            with open(cache_activo.archivo_path, 'rb') as f:
+                archivo_bytes = f.read()
+            archivo_nombre = os.path.basename(cache_activo.archivo_path)
+            expiration_time = cache_activo.valido_hasta
+        else:
+            logger.info(f"[+] Hilo asíncrono (tipo: {tipo_reporte}) - Cache Miss para materia {materia_id}")
+            datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+            if not datos_materia or not datos_materia.get('alumnos'):
+                logger.error(f"[-] Error en reporte asíncrono para materia {materia_id}: No hay calificaciones.")
+                return
+
             periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
             periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
             docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
-            
-            archivo_bytes = generate_consolidated_excel(
-                materia_id=materia_id,
-                datos_calificaciones=datos_materia,
-                datos_asistencias=datos_asistencias,
-                periodo_nombre=periodo_nombre,
-                docente_nombre=docente_nombre
-            )
+
+            if tipo_reporte == 'calificaciones':
+                if ext == 'xlsx':
+                    archivo_bytes = generate_calificaciones_excel(
+                        materia_id=materia_id,
+                        datos_calificaciones=datos_materia,
+                        periodo_nombre=periodo_nombre,
+                        docente_nombre=docente_nombre
+                    )
+                else:
+                    alumnos_calif = _enriquecer_con_asistencia(datos_materia['alumnos'], materia_id)
+                    archivo_bytes = generate_calificaciones_pdf(materia_id, alumnos_calif)
+                archivo_nombre = f"calificaciones_{materia_id}.{ext}"
+            else:  # asistencias
+                datos_asistencias = []
+                for al in datos_materia['alumnos']:
+                    asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
+                        alumno_id=al['alumno_id'],
+                        materia_id=materia_id,
+                    )
+                    if asistencia:
+                        datos_asistencias.append(asistencia)
+                    else:
+                        datos_asistencias.append({
+                            "alumno_id": al['alumno_id'],
+                            "materia_id": materia_id,
+                            "asistencias": []
+                        })
+                if ext == 'xlsx':
+                    archivo_bytes = generate_asistencias_excel(
+                        materia_id=materia_id,
+                        datos_calificaciones=datos_materia,
+                        datos_asistencias=datos_asistencias,
+                        periodo_nombre=periodo_nombre,
+                        docente_nombre=docente_nombre
+                    )
+                else:
+                    datos_agregados = []
+                    for al in datos_materia['alumnos']:
+                        asist_sum = None
+                        for sa in datos_asistencias:
+                            if str(sa.get("alumno_id")) == str(al['alumno_id']):
+                                asist_sum = sa
+                                break
+                        datos_agregados.append({
+                            "matricula": al.get('matricula', 'N/A'),
+                            "nombre": al.get('alumno_nombre', 'Desconocido'),
+                            "presentes": asist_sum.get('total_presentes', 0) if asist_sum else 0,
+                            "retardos": asist_sum.get('total_retardos', 0) if asist_sum else 0,
+                            "faltas": asist_sum.get('total_ausentes', 0) if asist_sum else 0,
+                        })
+                    archivo_bytes = generate_asistencias_pdf(materia_id, datos_agregados)
+                archivo_nombre = f"asistencias_{materia_id}.{ext}"
+
+            # Guardar en caché local por 24 horas (timedelta(days=1))
+            prefix_val = "agm_calif_" if tipo_reporte == 'calificaciones' else "agm_asist_"
+            fd, filepath = tempfile.mkstemp(suffix=f".{ext}", prefix=f"{prefix_val}{materia_id}_")
+            with os.fdopen(fd, 'wb') as f:
+                f.write(archivo_bytes)
+
+            valido_hasta = timezone.now() + timedelta(days=1)
+            try:
+                ReporteCache.objects.create(
+                    materia_id=materia_id,
+                    tipo=tipo_reporte if tipo_reporte == 'calificaciones' else 'asistencia',
+                    formato=formato,
+                    archivo_path=filepath,
+                    valido_hasta=valido_hasta, # Válido por 24 horas (1 día)
+                )
+            except Exception as e:
+                logger.warning(f"[-] Database error while writing cache in background thread: {e}")
+            archivo_nombre = os.path.basename(filepath)
+            expiration_time = valido_hasta
+
+        # Formatear la fecha y hora local de expiración
+        if expiration_time:
+            try:
+                from django.utils.timezone import localtime
+                local_exp = localtime(expiration_time)
+                fecha_expiracion_str = local_exp.strftime("%d/%m/%Y a las %H:%M")
+            except Exception:
+                fecha_expiracion_str = expiration_time.strftime("%d/%m/%Y a las %H:%M")
         else:
-            alumnos_calif = _enriquecer_con_asistencia(datos_materia['alumnos'], materia_id)
-            archivo_bytes = generate_calificaciones_pdf(materia_id, alumnos_calif)
+            try:
+                from django.utils.timezone import localtime
+                fecha_expiracion_str = (localtime(timezone.now()) + timedelta(days=1)).strftime("%d/%m/%Y a las %H:%M")
+            except Exception:
+                fecha_expiracion_str = (timezone.now() + timedelta(days=1)).strftime("%d/%m/%Y a las %H:%M")
 
         # Codificar los bytes a base64
         archivo_base64 = base64.b64encode(archivo_bytes).decode('utf-8')
         
-        materia_nombre = datos_materia.get('materia_nombre', 'Materia Desconocida').upper()
+        materia_nombre = "Materia Desconocida"
+        try:
+            datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+            if datos_materia:
+                materia_nombre = datos_materia.get('materia_nombre', 'Materia Desconocida')
+        except Exception:
+            pass
+
+        materia_nombre = materia_nombre.upper()
+        formato_display = f"{formato.upper()} DE {tipo_reporte.upper()}"
         payload = {
             "email": dest_email,
             "materia_nombre": materia_nombre,
-            "formato": formato.upper(),
+            "formato": formato_display,
             "archivo_base64": archivo_base64,
-            "archivo_nombre": f"reporte_final_{materia_id}.{ext}"
+            "archivo_nombre": archivo_nombre,
+            "fecha_expiracion": fecha_expiracion_str
         }
         
         success = publish_event('reporte.finalizado', payload)
         if success:
-            logger.info(f"[+] Evento 'reporte.finalizado' encolado para {dest_email}")
+            logger.info(f"[+] Evento 'reporte.finalizado' (tipo: {tipo_reporte}) encolado para {dest_email}")
         else:
             logger.error(f"[-] Falló encolado de evento 'reporte.finalizado' para {dest_email}")
             
@@ -130,20 +221,24 @@ def descargar_calificaciones(request, materia_id):
         # Lanzar un hilo en segundo plano para no bloquear la petición REST
         threading.Thread(
             target=generar_y_enviar_reporte_async,
-            args=(materia_id, dest_email, formato, ext)
+            args=(materia_id, dest_email, formato, ext, 'calificaciones')
         ).start()
         
         return Response({
             "success": True,
-            "message": f"La generación del reporte en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
+            "message": f"La generación del reporte de calificaciones en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
         })
 
-    cache_activo = ReporteCache.objects.filter(
-        materia_id=materia_id,
-        tipo='calificaciones',
-        formato=formato,
-        valido_hasta__gt=timezone.now()
-    ).first()
+    try:
+        cache_activo = ReporteCache.objects.filter(
+            materia_id=materia_id,
+            tipo='calificaciones',
+            formato=formato,
+            valido_hasta__gt=timezone.now()
+        ).first()
+    except Exception as e:
+        logger.warning(f"[-] Database error while reading cache: {e}")
+        cache_activo = None
 
     if cache_activo and os.path.exists(cache_activo.archivo_path):
         with open(cache_activo.archivo_path, 'rb') as f:
@@ -159,30 +254,13 @@ def descargar_calificaciones(request, materia_id):
     alumnos_calif = _enriquecer_con_asistencia(datos_materia['alumnos'], materia_id)
 
     if ext == 'xlsx':
-        # Obtener asistencias de todos los alumnos de la materia para la segunda pestaña
-        datos_asistencias = []
-        for al in datos_materia['alumnos']:
-            asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
-                alumno_id=al['alumno_id'],
-                materia_id=materia_id,
-            )
-            if asistencia:
-                datos_asistencias.append(asistencia)
-            else:
-                datos_asistencias.append({
-                    "alumno_id": al['alumno_id'],
-                    "materia_id": materia_id,
-                    "asistencias": []
-                })
-        
         periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
         periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
         docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
         
-        archivo_bytes = generate_consolidated_excel(
+        archivo_bytes = generate_calificaciones_excel(
             materia_id=materia_id,
             datos_calificaciones=datos_materia,
-            datos_asistencias=datos_asistencias,
             periodo_nombre=periodo_nombre,
             docente_nombre=docente_nombre
         )
@@ -193,13 +271,16 @@ def descargar_calificaciones(request, materia_id):
     with os.fdopen(fd, 'wb') as f:
         f.write(archivo_bytes)
 
-    ReporteCache.objects.create(
-        materia_id=materia_id,
-        tipo='calificaciones',
-        formato=formato,
-        archivo_path=filepath,
-        valido_hasta=timezone.now() + timedelta(hours=1),
-    )
+    try:
+        ReporteCache.objects.create(
+            materia_id=materia_id,
+            tipo='calificaciones',
+            formato=formato,
+            archivo_path=filepath,
+            valido_hasta=timezone.now() + timedelta(days=1), # Expira en exactamente 24 horas
+        )
+    except Exception as e:
+        logger.warning(f"[-] Database error while writing cache: {e}")
 
     response = HttpResponse(archivo_bytes, content_type=content_type)
     response['Content-Disposition'] = f'inline; filename="calificaciones_{materia_id}.{ext}"'
@@ -213,49 +294,103 @@ def descargar_asistencias(request, materia_id):
     ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
     content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
 
-    alumnos = AlumnosGRPCClient.obtener_alumnos_materia(materia_id)
-    if alumnos is None:
-        cache_fallback = ReporteCache.objects.filter(
+    # Soporte para procesamiento asíncrono
+    is_async = request.GET.get('async', 'false').lower() == 'true'
+    dest_email = request.GET.get('email')
+
+    if is_async and dest_email:
+        # Lanzar un hilo en segundo plano para no bloquear la petición REST
+        threading.Thread(
+            target=generar_y_enviar_reporte_async,
+            args=(materia_id, dest_email, formato, ext, 'asistencias')
+        ).start()
+        
+        return Response({
+            "success": True,
+            "message": f"La generación del reporte de asistencias en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
+        })
+
+    try:
+        cache_activo = ReporteCache.objects.filter(
             materia_id=materia_id,
             tipo='asistencia',
             formato=formato,
-            valido_hasta__gt=timezone.now(),
+            valido_hasta__gt=timezone.now()
         ).first()
-        if cache_fallback and os.path.exists(cache_fallback.archivo_path):
-            with open(cache_fallback.archivo_path, 'rb') as f:
-                return HttpResponse(f.read(), content_type=content_type)
-        return Response({"error": "No se pudo obtener la lista de alumnos."}, status=503)
+    except Exception as e:
+        logger.warning(f"[-] Database error while reading cache: {e}")
+        cache_activo = None
 
-    datos_agregados = []
-    for alumno in alumnos:
+    if cache_activo and os.path.exists(cache_activo.archivo_path):
+        with open(cache_activo.archivo_path, 'rb') as f:
+            archivo_bytes = f.read()
+        response = HttpResponse(archivo_bytes, content_type=content_type)
+        response['Content-Disposition'] = f'inline; filename="asistencias_{materia_id}_cached.{ext}"'
+        return response
+
+    datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+    if not datos_materia or not datos_materia.get('alumnos'):
+        return Response({"error": "No hay calificaciones o alumnos registrados para obtener asistencias."}, status=404)
+
+    # Obtener asistencias de todos los alumnos de la materia
+    datos_asistencias = []
+    for al in datos_materia['alumnos']:
         asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
-            alumno_id=alumno['id'],
+            alumno_id=al['alumno_id'],
             materia_id=materia_id,
         )
-        datos_agregados.append({
-            "matricula": alumno.get('matricula', 'N/A'),
-            "nombre": alumno.get('nombre', 'Desconocido'),
-            "presentes": asistencia.get('total_presentes', 0) if asistencia else 0,
-            "retardos": asistencia.get('total_retardos', 0) if asistencia else 0,
-            "faltas": asistencia.get('total_ausentes', 0) if asistencia else 0,
-        })
+        if asistencia:
+            datos_asistencias.append(asistencia)
+        else:
+            datos_asistencias.append({
+                "alumno_id": al['alumno_id'],
+                "materia_id": materia_id,
+                "asistencias": []
+            })
+
+    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+    periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+    docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
 
     if ext == 'xlsx':
-        archivo_bytes = generate_asistencias_excel(materia_id, datos_agregados)
+        archivo_bytes = generate_asistencias_excel(
+            materia_id=materia_id,
+            datos_calificaciones=datos_materia,
+            datos_asistencias=datos_asistencias,
+            periodo_nombre=periodo_nombre,
+            docente_nombre=docente_nombre
+        )
     else:
+        datos_agregados = []
+        for al in datos_materia['alumnos']:
+            asist_sum = None
+            for sa in datos_asistencias:
+                if str(sa.get("alumno_id")) == str(al['alumno_id']):
+                    asist_sum = sa
+                    break
+            datos_agregados.append({
+                "matricula": al.get('matricula', 'N/A'),
+                "nombre": al.get('alumno_nombre', 'Desconocido'),
+                "presentes": asist_sum.get('total_presentes', 0) if asist_sum else 0,
+                "retardos": asist_sum.get('total_retardos', 0) if asist_sum else 0,
+                "faltas": asist_sum.get('total_ausentes', 0) if asist_sum else 0,
+            })
         archivo_bytes = generate_asistencias_pdf(materia_id, datos_agregados)
 
     fd, filepath = tempfile.mkstemp(suffix=f".{ext}", prefix=f"agm_asist_{materia_id}_")
     with os.fdopen(fd, 'wb') as f:
         f.write(archivo_bytes)
 
-    ReporteCache.objects.create(
-        materia_id=materia_id,
-        tipo='asistencia',
-        formato=formato,
-        archivo_path=filepath,
-        valido_hasta=timezone.now() + timedelta(hours=1),
-    )
+    try:
+        ReporteCache.objects.create(
+            materia_id=materia_id,
+            tipo='asistencia',
+            formato=formato,
+            archivo_path=filepath,
+            valido_hasta=timezone.now() + timedelta(days=1),
+        )
+    except Exception as e:
+        logger.warning(f"[-] Database error while writing cache: {e}")
 
     response = HttpResponse(archivo_bytes, content_type=content_type)
     response['Content-Disposition'] = f'inline; filename="asistencias_{materia_id}.{ext}"'
@@ -299,13 +434,16 @@ def descargar_rendimiento(request, materia_id):
     with os.fdopen(fd, 'wb') as f:
         f.write(archivo_bytes)
 
-    ReporteCache.objects.create(
-        materia_id=materia_id,
-        tipo='rendimiento',
-        formato=formato,
-        archivo_path=filepath,
-        valido_hasta=timezone.now() + timedelta(hours=1),
-    )
+    try:
+        ReporteCache.objects.create(
+            materia_id=materia_id,
+            tipo='rendimiento',
+            formato=formato,
+            archivo_path=filepath,
+            valido_hasta=timezone.now() + timedelta(days=1),
+        )
+    except Exception as e:
+        logger.warning(f"[-] Database error while writing cache: {e}")
 
     response = HttpResponse(archivo_bytes, content_type=content_type)
     response['Content-Disposition'] = f'inline; filename="rendimiento_{materia_id}.{ext}"'
