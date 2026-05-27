@@ -70,8 +70,9 @@
       <div class="empty-state page-enter">
         <i class="pi pi-percentage empty-icon" style="color: var(--primary-color)"></i>
         <h3>Materia sin Esquema de Ponderación</h3>
-        <p>Esta materia aún no cuenta con una estructura de criterios de evaluación (Exámenes, Tareas, Proyectos, etc.).</p>
-        <p-button label="Configurar Criterios ahora" icon="pi pi-cog" (onClick)="abrirPonderacionesModal()" />
+        <p>Para poder registrar actividades y evaluar a los estudiantes, primero debes configurar la estructura de criterios de evaluación de esta materia.</p>
+        <p class="empty-subtitle">Crea las categorías necesarias (como Exámenes, Tareas, Proyectos, etc.) y asigna sus porcentajes para sumar el 100%.</p>
+        <p-button label="Configurar Criterios ahora" icon="pi pi-cog" (onClick)="abrirPonderacionesModal()" styleClass="mt-2" />
       </div>
     } @else if (allActividades().length === 0) {
       <!-- Estado vacío: sin actividades registradas -->
