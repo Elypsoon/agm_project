@@ -161,12 +161,24 @@ class AlumnosServiceServicer:
         from src.grpc import alumnos_pb2
 
         try:
-            nombre = request.nombre_completo.strip()
-            docente = Docente.objects.filter(nombre_completo__iexact=nombre).first()
+            raw_nombre = request.nombre_completo.strip()
+            
+            tokens = [t for t in raw_nombre.split(" ") if t.strip()]
+
+            if not tokens:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("El nombre proporcionado está vacío.")
+                return alumnos_pb2.DocenteInfo()
+
+            query = Docente.objects.all()
+            for token in tokens:
+                query = query.filter(nombre_completo__unaccent__icontains=token)
+
+            docente = query.first()
 
             if not docente:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("Docente no encontrado por nombre")
+                context.set_details(f"Docente no encontrado por tokens de nombre: {tokens}")
                 return alumnos_pb2.DocenteInfo()
 
             return alumnos_pb2.DocenteInfo(

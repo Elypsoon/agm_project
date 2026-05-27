@@ -12,34 +12,39 @@ import os
 import django
 from datetime import date
 from django.db.models import Q
+from asgiref.sync import sync_to_async
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from src.grpc import periodos_pb2, periodos_pb2_grpc
-from api.models import Materia, Periodo, Horario
+from api.models import Materia, Periodo, EstadoPeriodo
 
 logger = logging.getLogger(__name__)
 
-
 def _ejecutar_evaluacion_periodos(hoy: date):
-    """Helper method to run strict single-active-period evaluations."""
+    """Helper method to run strict single-active-period evaluations using enum states."""
     periodo_actual = Periodo.objects.filter(
         fecha_inicio__lte=hoy,
         fecha_fin__gte=hoy
     ).first()
 
-    if periodo_actual and not periodo_actual.activo:
-        Periodo.objects.filter(activo=True).exclude(id=periodo_actual.id).update(activo=False)
+    if periodo_actual and periodo_actual.estado != EstadoPeriodo.ACTIVO:
+        # Finalize all other active periods
+        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).exclude(id=periodo_actual.id).update(
+            estado=EstadoPeriodo.FINALIZADA
+        )
         
-        periodo_actual.activo = True
+        periodo_actual.estado = EstadoPeriodo.ACTIVO
         periodo_actual.save()
-        logger.info(f"Periodo de referencia global activado: {periodo_actual.nombre}")
+        logger.info(f"Periodo de referencia global activado automáticamente: {periodo_actual.nombre}")
         
     elif not periodo_actual:
-        # If today doesn't match any period bounds, ensure everything is turned off
-        Periodo.objects.filter(activo=True).update(activo=False)
+        # Vacation days / gaps: Finalize any leftover hanging active statuses
+        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).update(estado=EstadoPeriodo.FINALIZADA)
+        logger.info("No active timeline matches today's date context. Systems cleared to pending/finalizada states.")
+
         
 async def cron_evaluador_periodos():
     """
@@ -50,22 +55,22 @@ async def cron_evaluador_periodos():
         await asyncio.sleep(2)
         hoy = date.today()
         logger.info(f"Ejecutando verificación inicial de calendario para: {hoy}")
-        _ejecutar_evaluacion_periodos(hoy)
+        
+        await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
     except Exception as e:
         logger.error(f"Error en la verificación inicial de periodos: {e}", exc_info=True)
 
     while True:
         try:
-            await asyncio.sleep(86400) 
+            await asyncio.sleep(86400)
             
             hoy = date.today()
-            logger.info(f"Evaluación de rutina: {hoy}")
-            _ejecutar_evaluacion_periodos(hoy)
+            logger.info(f"Evaluación de rutina de calendario: {hoy}")
+            
+            await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
 
         except Exception as e:
-            logger.error(f"Error al revisar: {e}", exc_info=True)
-
-
+            logger.error(f"Error en evaluación de rutina: {e}", exc_info=True)
 class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
     """gRPC service implementation for Periodos microservice."""
 
@@ -168,7 +173,7 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
             context.set_details("Internal server error")
             return periodos_pb2.MateriasListResponse()
 
-    def GetActivePeriodo(self, request: periodos_pb2.Empty, context):
+    def GetPeriodoActivo(self, request: periodos_pb2.Empty, context):
         """Get the primary active academic periodo."""
         try:
             # Pull the first available active period layout as reference context

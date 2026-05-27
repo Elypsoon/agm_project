@@ -3,7 +3,7 @@
 import django.db.models.deletion
 import uuid
 from django.db import migrations, models
-
+from django.contrib.postgres.operations import UnaccentExtension
 
 class Migration(migrations.Migration):
 
@@ -62,4 +62,5 @@ class Migration(migrations.Migration):
                 'db_table': 'inscripciones',
             },
         ),
+        UnaccentExtension(),
     ]
