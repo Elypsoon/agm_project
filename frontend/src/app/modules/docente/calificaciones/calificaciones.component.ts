@@ -143,7 +143,9 @@ export class CalificacionesComponent implements OnInit {
         }).subscribe({
           next: (res) => {
             const list = res.results || res || [];
-            this.materiaOptions.set(list.map((m: any) => ({
+            // Filtrar localmente en el frontend para mostrar únicamente las materias asociadas a este docente
+            const filteredList = list.filter((m: any) => !docenteId || m.docente_id === docenteId);
+            this.materiaOptions.set(filteredList.map((m: any) => ({
               id: m.id,
               nombre: `${m.nombre} (NRC ${m.nrc})`
             })));
