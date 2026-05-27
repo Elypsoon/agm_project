@@ -26,7 +26,6 @@
   .scanner-layout { grid-template-columns: 1fr; }
 }
 
-/* Camera Panel */
 .camera-panel {
   display: flex;
   flex-direction: column;
@@ -70,7 +69,6 @@
   object-fit: cover;
 }
 
-/* Scan Overlay */
 .scan-overlay {
   position: absolute; inset: 0;
   pointer-events: none;
@@ -106,7 +104,6 @@
   100% { top: 20%; }
 }
 
-/* Result overlay */
 .result-overlay {
   position: absolute; inset: 0;
   display: flex;
@@ -130,7 +127,6 @@
 
 .camera-controls { display: flex; justify-content: center; }
 
-/* History Panel */
 .history-panel {
   background: #fff;
   border-radius: 16px;
