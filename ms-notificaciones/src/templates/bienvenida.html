@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Inscripción Exitosa - AGM</title>
+    <title>Bienvenido(a) - AGM</title>
 </head>
 <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; margin: 0; -webkit-font-smoothing: antialiased;">
     <div style="max-width: 600px; background: white; border: 1px solid #e2e8f0; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
@@ -12,25 +12,36 @@
         </div>
         
         <div style="padding: 30px 25px;">
-            <h3 style="color: #004b93; margin-top: 0; font-size: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">¡Bienvenido(a) al curso!</h3>
+            <h3 style="color: #004b93; margin-top: 0; font-size: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">
+                ¡Bienvenido(a) a la plataforma!
+            </h3>
             
-            <p style="color: #4a5568; line-height: 1.6;">Hola <strong>{{ nombre_alumno }}</strong>,</p>
-            <p style="color: #4a5568; line-height: 1.6;">Te informamos que has sido inscrito(a) exitosamente en la materia:</p>
+            <p style="color: #4a5568; line-height: 1.6;">Hola <strong>{{ nombre_usuario }}</strong>,</p>
             
-            <div style="background-color: #f7fafc; border-left: 4px solid #004b93; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                <p style="margin: 0; font-size: 15px; color: #2d3748;"><strong>Materia:</strong> {{ materia_nombre }}</p>
-            </div>
+            {% if rol == 'docente' %}
+                <p style="color: #4a5568; line-height: 1.6;">
+                    Te damos la más cordial bienvenida al Sistema Académico en tu rol de <strong>Docente</strong>. 
+                    A partir de este momento, podrás gestionar tus grupos, registrar asistencias mediante códigos QR y asentar calificaciones definitivas.
+                </p>
+            {% else %}
+                <p style="color: #4a5568; line-height: 1.6;">
+                    Te informamos que has sido inscrito(a) exitosamente en la materia:
+                </p>
+                <div style="background-color: #f7fafc; border-left: 4px solid #004b93; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 15px; color: #2d3748;"><strong>Materia:</strong> {{ materia_nombre }}</p>
+                </div>
+            {% endif %}
             
             {% if clave_temporal %}
-                <p style="color: #4a5568; line-height: 1.6;">Al ser tu primer ingreso a la plataforma, el sistema te ha asignado una **contraseña temporal** de seguridad:</p>
+                <p style="color: #4a5568; line-height: 1.6;">Al ser tu primer ingreso a la plataforma, el sistema te ha asignado una <strong>contraseña temporal</strong> de seguridad:</p>
                 
                 <div style="background-color: #f7fafc; padding: 15px; text-align: center; font-size: 22px; font-weight: bold; letter-spacing: 3px; color: #004b93; border-radius: 6px; border: 1px dashed #cbd5e0; margin: 20px 0; font-family: monospace;">
                     {{ clave_temporal }}
                 </div>
                 
-                <p style="color: #4a5568; line-height: 1.6; font-size: 13px; font-style: italic;">Nota: Te recomendamos cambiar esta contraseña temporal desde tu perfil tan pronto como inicies sesión por primera vez.</p>
+                <p style="color: #4a5568; line-height: 1.6; font-size: 13px; font-style: italic;">Nota: Te recomendamos iniciar sesión y cambiar esta contraseña desde la configuración de tu perfil por motivos de seguridad.</p>
             {% else %}
-                <p style="color: #4a5568; line-height: 1.6;">Puedes acceder a la plataforma con tus credenciales habituales para consultar los detalles de tu nuevo curso.</p>
+                <p style="color: #4a5568; line-height: 1.6;">Puedes acceder a la plataforma con tus credenciales habituales para consultar los detalles de tu cuenta.</p>
             {% endif %}
             
             <div style="margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 20px;">

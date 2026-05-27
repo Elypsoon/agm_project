@@ -109,4 +109,12 @@ export class AsistenciasService {
     );
   }
 
+  getSesionActiva(materia_id: string): Observable<ApiResponse<Sesion>> {
+    const params = new HttpParams().set('materia_id', materia_id);
+    return this.http.get<ApiResponse<Sesion>>(
+      `${this.baseUrl}/sesiones/activa`,
+      { params }
+    );
+  }
+
 }

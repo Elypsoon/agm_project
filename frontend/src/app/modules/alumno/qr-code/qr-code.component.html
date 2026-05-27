@@ -6,18 +6,65 @@
     <p class="page-subtitle">Presenta este código al docente para registrar tu asistencia</p>
   </div>
 
-  <!-- Ingresar sesión -->
+  <!-- Seleccionar materia o ingresar sesión -->
   <div class="card mb-4" *ngIf="!sesionActiva()">
-    <div class="flex gap-2">
+
+    <!-- Cargando materias -->
+    <div *ngIf="cargandoMaterias()" class="flex items-center gap-2 text-gray-400">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando materias...</span>
+    </div>
+
+    <!-- Dropdown de materias -->
+    <div *ngIf="!cargandoMaterias() && !modoManual()" class="flex gap-2">
+      <p-select
+        [options]="materias()"
+        [(ngModel)]="materiaSeleccionada"
+        (ngModelChange)="materiaSeleccionada.set($event)"
+        optionLabel="nombre"
+        placeholder="Selecciona una materia"
+        class="flex-1"
+        [style]="{'width': '100%'}"
+      >
+        <ng-template pTemplate="item" let-materia>
+          <div class="flex flex-col">
+            <span class="font-medium">{{ materia.nombre }}</span>
+            <span class="text-xs text-gray-400">NRC: {{ materia.nrc }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+      <p-button
+        [label]="buscandoSesion() ? 'Buscando...' : 'Generar QR'"
+        icon="pi pi-qrcode"
+        [loading]="buscandoSesion()"
+        (onClick)="activarSesion()"
+      />
+      <p-button
+        icon="pi pi-pencil"
+        severity="secondary"
+        pTooltip="Ingresar UUID manualmente"
+        (onClick)="modoManual.set(true)"
+      />
+    </div>
+
+    <!-- Fallback: input manual -->
+    <div *ngIf="!cargandoMaterias() && modoManual()" class="flex gap-2">
       <input
         pInputText
         type="text"
         placeholder="ID de sesión (UUID)"
-        [ngModel]="sesionId()"
-        (ngModelChange)="sesionId.set($event)"
+        [ngModel]="sesionIdManual()"
+        (ngModelChange)="sesionIdManual.set($event)"
         class="flex-1"
       />
       <p-button label="Generar QR" icon="pi pi-qrcode" (onClick)="activarSesion()" />
+      <p-button
+        *ngIf="materias().length > 0"
+        icon="pi pi-list"
+        severity="secondary"
+        pTooltip="Volver al selector"
+        (onClick)="modoManual.set(false)"
+      />
     </div>
   </div>
 
@@ -74,15 +121,23 @@
         </div>
       </div>
 
-      <!-- Botón renovar -->
-      <p-button
-        class="refresh-btn"
-        label="Renovar ahora"
-        icon="pi pi-refresh"
-        [text]="true"
-        (onClick)="refreshQr()"
-      />
-
+      <!-- Botones -->
+      <div class="flex gap-2 w-full">
+        <p-button
+          label="Renovar QR"
+          icon="pi pi-refresh"
+          [text]="true"
+          (onClick)="refreshQr()"
+          class="flex-1"
+        />
+        <p-button
+          label="Salir"
+          icon="pi pi-sign-out"
+          severity="danger"
+          [text]="true"
+          (onClick)="desactivar()"
+        />
+      </div>
     </div>
 
     <!-- Info panel -->
@@ -93,8 +148,8 @@
           <div class="step">
             <div class="step-num">1</div>
             <div class="step-content">
-              <span class="step-title">Abre esta pantalla</span>
-              <span class="step-desc">Navega a "Mi QR" en el menú lateral</span>
+              <span class="step-title">Selecciona tu materia</span>
+              <span class="step-desc">Elige la materia en la que quieres registrar asistencia</span>
             </div>
           </div>
           <div class="step">
@@ -131,21 +186,6 @@
           </div>
         </div>
       </div>
-
-      <div>
-        <p class="mat-info-title">Materias con asistencia hoy</p>
-        <div class="mat-info-item">
-          <div class="mat-dot" style="background: #F59E0B"></div>
-          <span>Desarrollo de Sistemas Distribuidos</span>
-          <span class="mat-hora">08:00</span>
-        </div>
-        <div class="mat-info-item">
-          <div class="mat-dot" style="background: #06B6D4"></div>
-          <span>Redes de Computadoras</span>
-          <span class="mat-hora">10:00</span>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>
