@@ -62,8 +62,8 @@ class PeriodosGRPCClient:
                     "nombre": response.nombre,
                     "clave": response.clave,
                     "seccion": response.seccion,
-                    "docente_id": response.docente_id,
-                    "docente_nombre": response.docente_nombre,
+                    "docente_id": getattr(response, "docente_id", ""),
+                    "docente_nombre": getattr(response, "docente_nombre", ""),
                     "periodo_id": response.periodo_id,
                     "estado": response.estado,
                 }

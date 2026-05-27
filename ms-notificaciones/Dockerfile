@@ -27,4 +27,5 @@ EXPOSE  50056
 
 # El CMD se define en el docker-compose.yml maestro para correr ambos servidores (REST y gRPC)
 RUN chmod +x entrypoint.sh
-CMD ["./entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:3006"]
