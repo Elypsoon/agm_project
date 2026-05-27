@@ -9,6 +9,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { CommonModule } from '@angular/common';
 import { passwordMatchValidator } from '../auth-validators';
+import { extractErrorMessage } from '../../../core/utils/error-utils';
 
 @Component({
   selector: 'app-reset-password',
@@ -82,7 +83,7 @@ export class ResetPasswordComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.message || 'Error al restablecer la contraseña. El enlace puede haber expirado.');
+        this.errorMessage.set(extractErrorMessage(err, 'Error al restablecer la contraseña. El enlace puede haber expirado.'));
       }
     });
   }
