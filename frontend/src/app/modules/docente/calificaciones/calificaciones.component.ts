@@ -51,6 +51,9 @@ export class CalificacionesComponent implements OnInit {
   loading = signal(false);
   editedRows = signal<Set<string>>(new Set());
 
+  // Formato de exportacion elegido por el usuario (pdf o xlsx)
+  formatoExportar = signal<'pdf' | 'xlsx'>('xlsx');
+
   // Materias y Periodos
   periodoActivo = signal<any>(null);
   selectedMateriaId: string | null = null;
@@ -604,7 +607,7 @@ export class CalificacionesComponent implements OnInit {
       life: 2000
     });
 
-    this.reportesService.descargarCalificaciones(this.selectedMateriaId, email, 'xlsx').subscribe({
+    this.reportesService.descargarCalificaciones(this.selectedMateriaId, email, this.formatoExportar()).subscribe({
       next: (res: any) => {
         if (res.isBlob) {
           const blob = res.blob!;
@@ -656,7 +659,7 @@ export class CalificacionesComponent implements OnInit {
       life: 2000
     });
 
-    this.reportesService.descargarAsistencias(this.selectedMateriaId, email, 'xlsx').subscribe({
+    this.reportesService.descargarAsistencias(this.selectedMateriaId, email, this.formatoExportar()).subscribe({
       next: (res: any) => {
         if (res.isBlob) {
           const blob = res.blob!;

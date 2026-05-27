@@ -139,7 +139,10 @@ class Command(BaseCommand):
                         file_name = payload.get('archivo_nombre', 'reporte_final.xlsx')
                         file_base64 = payload.get('archivo_base64', '')
                         
+                        print(f"[RabbitMQ] Evento 'reporte.finalizado' recibido para: {email_destinatario}. Archivo: {file_name}, Base64 length: {len(file_base64)}", flush=True)
+                        
                         file_bytes = base64.b64decode(file_base64.encode('utf-8'))
+                        print(f"[RabbitMQ] Archivo decodificado a binario con éxito. Size: {len(file_bytes)} bytes", flush=True)
                         
                         # Determinar tipo mime correcto
                         ext = file_name.split('.')[-1].lower()
