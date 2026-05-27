@@ -16,17 +16,43 @@ message AlumnoMateriaRequest {
   string materia_id = 2;
 }
 
+// Identifica una actividad evaluable dentro de una categoría de ponderación.
+message ActividadInfo {
+  string actividad_id = 1;
+  string actividad_nombre = 2;
+}
+
+// Calificación obtenida por un alumno en una actividad específica.
+message CalificacionActividad {
+  string actividad_id = 1;
+  double valor = 2;
+}
+
+// Categoría de ponderación con su peso y lista de actividades evaluables.
+// La estructura es idéntica para todos los alumnos del mismo grupo.
+message CategoriaPonderacion {
+  string nombre_categoria = 1;
+  double porcentaje = 2;
+  repeated ActividadInfo actividades = 3;
+}
+
+// Datos de calificación de un alumno: promedios y notas por actividad.
 message AlumnoCalif {
   string alumno_id = 1;
   string alumno_nombre = 2;
   double promedio_real = 3;
   int32 promedio_redondeado = 4;
+  repeated CalificacionActividad calificaciones = 5;
+  string alumno_matricula = 6;
 }
 
+// Respuesta completa del concentrado: jerarquía de categorías (una vez)
+// y los datos individuales de cada alumno.
 message ConcentradoResponse {
   string materia_id = 1;
   string materia_nombre = 2;
-  repeated AlumnoCalif alumnos = 3;
+  repeated CategoriaPonderacion categorias = 3;
+  repeated AlumnoCalif alumnos = 4;
 }
 
 message PromedioResponse {

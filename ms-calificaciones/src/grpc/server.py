@@ -1,16 +1,36 @@
 import os
 import logging
+import threading
 from concurrent import futures
+
 import grpc
 
 logger = logging.getLogger(__name__)
 
+
 def _ensure_django():
+    """Garantiza la inicialización de Django.
+
+    Configura e inicia las variables de entorno necesarias para poder utilizar el ORM y 
+    los modelos de Django de manera standalone, fuera del servidor web de desarrollo usual.
+    """
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.config.settings')
     import django
     django.setup()
 
+
 def crear_servidor_grpc(port):
+    """Crea y configura una nueva instancia del servidor gRPC.
+
+    Instancia el pool de hilos, asocia la clase servidora CalificacionesServicer 
+    al servidor gRPC y expone el socket TCP en el puerto determinado.
+
+    Args:
+        port (int / str): Puerto TCP en donde escuchará el servidor gRPC.
+
+    Returns:
+        grpc.Server: Servidor gRPC configurado listo para iniciar.
+    """
     from src.grpc import calificaciones_pb2_grpc
     from src.grpc.handlers.calificaciones_handler import CalificacionesServicer
 
@@ -21,12 +41,42 @@ def crear_servidor_grpc(port):
     server.add_insecure_port(f'0.0.0.0:{port}')
     return server
 
+
+def start_grpc_in_background(port=None):
+    """Arranca el servidor gRPC en un hilo secundario del proceso maestro.
+
+    Evita que el proceso principal de Django/Gunicorn se bloquee en la escucha de sockets,
+    permitiendo la concurrencia nativa e integración con hooks web de producción.
+
+    Args:
+        port (int, opcional): Puerto TCP del servidor. Si se omite, se evalúa GRPC_PORT (50054).
+
+    Returns:
+        grpc.Server: Instancia en ejecución del servidor gRPC.
+    """
+    if port is None:
+        port = int(os.getenv('GRPC_PORT', 50054))
+
+    server = crear_servidor_grpc(port)
+    server.start()
+    logger.info('[gRPC] Servidor de calificaciones iniciado en :%s', port)
+
+    hilo = threading.Thread(
+        target=server.wait_for_termination,
+        name='grpc-server',
+        daemon=True,
+    )
+    hilo.start()
+    return server
+
+
 if __name__ == '__main__':
+    # Ejecución directa para desarrollo sin Gunicorn.
     _ensure_django()
 
     port = int(os.getenv('GRPC_PORT', 50054))
     server = crear_servidor_grpc(port)
     server.start()
-    logger.info(f'Servidor gRPC de calificaciones iniciado en :{port}')
+    logger.info('[gRPC] Servidor escuchando en :%s (modo standalone)', port)
     print(f'[gRPC] Servidor escuchando en puerto {port}')
     server.wait_for_termination()

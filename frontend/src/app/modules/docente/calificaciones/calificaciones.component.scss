@@ -1,0 +1,86 @@
+.page-enter { animation: fadeInUp .25s ease forwards; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 4px;
+}
+
+.page-subtitle { color: #64748B; font-size: 14px; }
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .materia-select {
+  min-width: 280px;
+}
+
+.stats-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &--success { background: rgba(34,197,94,0.1); color: #16A34A; }
+  &--danger  { background: rgba(239,68,68,0.1);  color: #DC2626; }
+  &--info    { background: rgba(59,130,246,0.1); color: #2563EB; }
+}
+
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row-num { color: #94A3B8; font-size: 12px; text-align: center; }
+
+.mono-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.low-grade { color: #EF4444; font-weight: 600; }
+
+:host ::ng-deep .cal-input {
+  width: 70px;
+  .p-inputnumber-input { text-align: center; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 64px 24px;
+  color: #94A3B8;
+
+  .empty-icon { font-size: 48px; display: block; margin-bottom: 16px; }
+  h3 { font-family: 'Outfit', sans-serif; font-size: 18px; color: #475569; margin-bottom: 8px; }
+  p { font-size: 14px; }
+}

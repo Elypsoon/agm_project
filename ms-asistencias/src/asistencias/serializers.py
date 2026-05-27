@@ -48,4 +48,4 @@ class RegistrarAsistenciaSerializer(serializers.Serializer):
 
 
 class IniciarSesionSerializer(serializers.Serializer):
-    materia_id = serializers.IntegerField(required=True)
+    materia_id = serializers.UUIDField(required=True)

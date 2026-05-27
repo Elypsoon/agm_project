@@ -1,0 +1,101 @@
+<div class="page-enter">
+
+  <!-- Header con saludo -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">¡Hola, {{ firstName() }}! 👋</h1>
+      <p class="page-subtitle">{{ todayLabel }} — Semestre Primavera 2026</p>
+    </div>
+    <a routerLink="/alumno/qr-code" class="qr-cta">
+      <i class="pi pi-qrcode"></i>
+      <span>Mi QR de asistencia</span>
+    </a>
+  </div>
+
+  <!-- Metric Cards -->
+  @if (loading()) {
+    <div class="metrics-grid">
+      @for (i of [1,2,3,4]; track i) {
+        <p-skeleton height="110px" borderRadius="14px" />
+      }
+    </div>
+  } @else {
+    <div class="metrics-grid">
+      @for (card of metricCards; track card.label) {
+        <div class="metric-card" [style.--accent]="card.color">
+          <div class="metric-icon-wrap">
+            <i class="pi {{ card.icon }}"></i>
+          </div>
+          <div class="metric-body">
+            <span class="metric-value">{{ card.value }}</span>
+            <span class="metric-label">{{ card.label }}</span>
+          </div>
+          <div class="metric-badge" [style.background]="card.badgeBg" [style.color]="card.color">
+            {{ card.badge }}
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+
+    <!-- Radar Chart -->
+    <div class="chart-card chart-wide">
+      <div class="chart-card-header">
+        <h2 class="chart-title"><i class="pi pi-chart-line"></i> Rendimiento por Materia</h2>
+        <p-tag value="Semestre actual" severity="secondary" />
+      </div>
+      @if (loading()) {
+        <p-skeleton height="240px" borderRadius="8px" />
+      } @else {
+        <p-chart type="radar" [data]="radarData" [options]="radarOptions" height="240px" />
+      }
+    </div>
+
+    <!-- Quick Info -->
+    <div class="chart-card chart-narrow">
+      <div class="chart-card-header">
+        <h2 class="chart-title"><i class="pi pi-star"></i> Mi Semestre</h2>
+      </div>
+
+      <div class="info-list">
+        @for (item of semesterInfo; track item.label) {
+          <div class="info-item">
+            <div class="info-icon" [style.background]="item.bg">
+              <i class="pi {{ item.icon }}" [style.color]="item.color"></i>
+            </div>
+            <div class="info-text">
+              <span class="info-value">{{ item.value }}</span>
+              <span class="info-label">{{ item.label }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <a routerLink="/alumno/materias" class="view-more">
+        Ver mis materias <i class="pi pi-arrow-right"></i>
+      </a>
+    </div>
+
+  </div>
+
+  <!-- Próximas actividades -->
+  <div class="activity-section">
+    <h2 class="section-title">Próximas Actividades</h2>
+    <div class="activity-list">
+      @for (act of activities; track act.title) {
+        <div class="activity-item">
+          <div class="activity-dot" [style.background]="act.color"></div>
+          <div class="activity-content">
+            <span class="activity-title">{{ act.title }}</span>
+            <span class="activity-meta">{{ act.meta }}</span>
+          </div>
+          <p-tag [value]="act.type" [severity]="act.severity" />
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

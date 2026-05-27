@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from . import calificaciones_pb2 as calificaciones__pb2
+from src.grpc import calificaciones_pb2 as calificaciones__pb2
 
 GRPC_GENERATED_VERSION = '1.64.1'
 GRPC_VERSION = grpc.__version__

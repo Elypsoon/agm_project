@@ -7,7 +7,7 @@ from src.models.notification_log import NotificationLog
 
 logger = logging.getLogger(__name__)
 
-def send_academic_email(tipo_notificacion=None, context=None, destinatario_email=None, asunto=None, template_name=None, tipo=None, to_email=None, subject=None):
+def send_academic_email(tipo_notificacion=None, context=None, destinatario_email=None, asunto=None, template_name=None, tipo=None, to_email=None, subject=None, attachments=None):
     """
     Renderiza una plantilla HTML y envía un correo electrónico, 
     registrando el resultado en la base de datos (NotificationLog).
@@ -34,6 +34,11 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
         )
         email.attach_alternative(html_content, "text/html")
         
+        # Adjuntar archivos opcionales si se suministran
+        if attachments:
+            for file_name, file_content, mime_type in attachments:
+                email.attach(file_name, file_content, mime_type)
+                
         # 3. Intentar enviar el correo
         email.send(fail_silently=False)
         estado = 'enviado'
@@ -49,14 +54,17 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
 
     finally:
         # 4. Guardar el registro en la base de datos (PostgreSQL vía Django ORM)
-        NotificationLog.objects.create(
-            tipo=tipo_notificacion,
-            destinatario_email=destinatario_email,
-            destinatario_id=context.get('alumno_id') or context.get('docente_id'),
-            asunto=asunto,
-            contenido=html_content,
-            estado=estado,
-            error_detalle=error_detalle,
-            metadata=context
-        )
+        try:
+            NotificationLog.objects.create(
+                tipo=tipo_notificacion,
+                destinatario_email=destinatario_email,
+                destinatario_id=(context or {}).get('alumno_id') or (context or {}).get('docente_id'),
+                asunto=asunto,
+                contenido=html_content,
+                estado=estado,
+                error_detalle=error_detalle,
+                metadata=context or {}
+            )
+        except Exception as db_err:
+            logger.warning(f"[-] Database error while logging notification entry: {db_err}")
     return ret_val

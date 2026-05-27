@@ -1,4 +1,7 @@
 #!/bin/sh
+# Aplicar migraciones de la base de datos automáticamente
+python manage.py migrate --noinput
+
 # Iniciar el servidor gRPC en segundo plano
 python -c "from src.grpc.server import serve; serve()" &
 

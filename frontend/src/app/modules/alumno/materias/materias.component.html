@@ -1,0 +1,76 @@
+<p-toast position="top-right" />
+
+<div class="page-enter">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Mis Materias</h1>
+      <p class="page-subtitle">Materias inscritas — Primavera 2026</p>
+    </div>
+    <p-tag [value]="materias().length + ' inscritas'" severity="warn" />
+  </div>
+
+  @if (loading()) {
+    <div class="materias-grid">
+      @for (i of [1,2,3,4,5]; track i) {
+        <p-skeleton height="220px" borderRadius="16px" />
+      }
+    </div>
+  } @else {
+    <div class="materias-grid">
+      @for (m of materias(); track m.id) {
+        <div class="mat-card" [style.--mat-c]="m.color">
+          <div class="mat-card-inner">
+
+            <!-- Header colorido -->
+            <div class="mat-header">
+              <div class="mat-icon-wrap">
+                <i class="pi pi-book"></i>
+              </div>
+              <p-tag [value]="m.estado === 'activa' ? 'Activa' : 'Cerrada'"
+                     [severity]="m.estado === 'activa' ? 'success' : 'secondary'" />
+            </div>
+
+            <!-- Nombre -->
+            <h3 class="mat-nombre">{{ m.nombre }}</h3>
+
+            <!-- Meta -->
+            <div class="mat-meta">
+              <div class="mat-meta-item">
+                <i class="pi pi-user"></i>
+                <span>{{ m.docente }}</span>
+              </div>
+              <div class="mat-meta-item">
+                <i class="pi pi-clock"></i>
+                <span>{{ m.horario }}</span>
+              </div>
+              <div class="mat-meta-item">
+                <i class="pi pi-map-marker"></i>
+                <span>{{ m.aula }}</span>
+              </div>
+            </div>
+
+            <!-- Progreso del semestre -->
+            <div class="mat-footer">
+              <div class="progreso-label">
+                <span>Progreso del semestre</span>
+                <span>{{ m.progreso }}%</span>
+              </div>
+              <div class="progreso-bar">
+                <div class="progreso-fill" [style.width.%]="m.progreso"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (materias().length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-book empty-icon"></i>
+        <h3>Sin materias inscritas</h3>
+        <p>No tienes materias activas en el periodo actual.</p>
+      </div>
+    }
+  }
+</div>
