@@ -21,18 +21,11 @@
         <p-button label="Añadir Actividad" icon="pi pi-plus" severity="secondary" styleClass="mr-2" (onClick)="abrirActividadModal()" />
       }
       @if (selectedMateriaId) {
-        <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);">
-          <span style="font-size: 11px; font-weight: 600; color: #a0aec0; letter-spacing: 0.5px;">FORMATO:</span>
-          <p-select
-            [options]="[{label: 'PDF', value: 'pdf'}, {label: 'Excel', value: 'xlsx'}]"
-            optionLabel="label"
-            optionValue="value"
-            [(ngModel)]="formatoExportar"
-            styleClass="formato-select-inline"
-            [style]="{ width: '95px', height: '32px', display: 'inline-flex', alignItems: 'center' }" />
-        </div>
-        <p-button [label]="'Exportar Calificaciones'" [icon]="formatoExportar() === 'xlsx' ? 'pi pi-file-excel' : 'pi pi-file-pdf'" severity="info" [outlined]="true" (onClick)="exportarCalificaciones()" />
-        <p-button [label]="'Exportar Asistencias'" [icon]="formatoExportar() === 'xlsx' ? 'pi pi-file-excel' : 'pi pi-file-pdf'" severity="success" [outlined]="true" (onClick)="exportarAsistencias()" />
+        <p-button label="Exportar Calificaciones" icon="pi pi-download" severity="info" [outlined]="true" (onClick)="menuCalif.toggle($event)" />
+        <p-menu #menuCalif [model]="itemsCalificaciones" [popup]="true" />
+
+        <p-button label="Exportar Asistencias" icon="pi pi-calendar" severity="success" [outlined]="true" (onClick)="menuAsist.toggle($event)" />
+        <p-menu #menuAsist [model]="itemsAsistencias" [popup]="true" />
       }
       <p-button label="Guardar cambios" icon="pi pi-save"
         [disabled]="!editedRows().size"

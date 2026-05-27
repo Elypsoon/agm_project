@@ -11,6 +11,7 @@ import { ToastModule } from 'primeng/toast';
 import { SkeletonModule } from 'primeng/skeleton';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { MenuModule } from 'primeng/menu';
 import { MessageService } from 'primeng/api';
 import { forkJoin, Observable } from 'rxjs';
 import { ReportesService } from '../../../core/services/reportes.service';
@@ -36,7 +37,7 @@ interface MateriaOption {
   imports: [
     CommonModule, FormsModule, TableModule, SelectModule, TagModule,
     ButtonModule, InputNumberModule, InputTextModule, ToastModule, 
-    SkeletonModule, DialogModule, TooltipModule
+    SkeletonModule, DialogModule, TooltipModule, MenuModule
   ],
   providers: [MessageService],
   templateUrl: './calificaciones.component.html',
@@ -51,8 +52,16 @@ export class CalificacionesComponent implements OnInit {
   loading = signal(false);
   editedRows = signal<Set<string>>(new Set());
 
-  // Formato de exportacion elegido por el usuario (pdf o xlsx)
-  formatoExportar = signal<'pdf' | 'xlsx'>('xlsx');
+  // Modelos de menu popup para las opciones de exportacion
+  itemsCalificaciones = [
+    { label: 'Exportar a PDF', icon: 'pi pi-file-pdf', command: () => this.exportarCalificaciones('pdf') },
+    { label: 'Exportar a Excel (XLSX)', icon: 'pi pi-file-excel', command: () => this.exportarCalificaciones('xlsx') }
+  ];
+
+  itemsAsistencias = [
+    { label: 'Exportar a PDF', icon: 'pi pi-file-pdf', command: () => this.exportarAsistencias('pdf') },
+    { label: 'Exportar a Excel (XLSX)', icon: 'pi pi-file-excel', command: () => this.exportarAsistencias('xlsx') }
+  ];
 
   // Materias y Periodos
   periodoActivo = signal<any>(null);
@@ -595,7 +604,7 @@ export class CalificacionesComponent implements OnInit {
     return row.promedio_redondeado >= 6 ? 'success' : 'danger';
   }
 
-  exportarCalificaciones() {
+  exportarCalificaciones(formato: 'pdf' | 'xlsx') {
     if (!this.selectedMateriaId) return;
     
     const email = this.authService.currentUser()?.email || 'docente@buap.mx';
@@ -603,11 +612,11 @@ export class CalificacionesComponent implements OnInit {
     this.messageService.add({
       severity: 'info',
       summary: 'Exportando',
-      detail: 'Iniciando la exportación de calificaciones...',
+      detail: `Iniciando la exportación de calificaciones a ${formato.toUpperCase()}...`,
       life: 2000
     });
 
-    this.reportesService.descargarCalificaciones(this.selectedMateriaId, email, this.formatoExportar()).subscribe({
+    this.reportesService.descargarCalificaciones(this.selectedMateriaId, email, formato).subscribe({
       next: (res: any) => {
         if (res.isBlob) {
           const blob = res.blob!;
@@ -647,7 +656,7 @@ export class CalificacionesComponent implements OnInit {
     });
   }
 
-  exportarAsistencias() {
+  exportarAsistencias(formato: 'pdf' | 'xlsx') {
     if (!this.selectedMateriaId) return;
     
     const email = this.authService.currentUser()?.email || 'docente@buap.mx';
@@ -655,11 +664,11 @@ export class CalificacionesComponent implements OnInit {
     this.messageService.add({
       severity: 'info',
       summary: 'Exportando',
-      detail: 'Iniciando la exportación de asistencias...',
+      detail: `Iniciando la exportación de asistencias a ${formato.toUpperCase()}...`,
       life: 2000
     });
 
-    this.reportesService.descargarAsistencias(this.selectedMateriaId, email, this.formatoExportar()).subscribe({
+    this.reportesService.descargarAsistencias(this.selectedMateriaId, email, formato).subscribe({
       next: (res: any) => {
         if (res.isBlob) {
           const blob = res.blob!;

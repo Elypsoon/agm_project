@@ -80,7 +80,17 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
         # Consultar datos dinámicos de la materia y período vía gRPC
         materia_info = PeriodosGRPCClient.obtener_materia_por_id(materia_id) or {}
         materia_nombre = materia_info.get("nombre", "Materia Desconocida")
-        docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
+        
+        # Intentar obtener el nombre del docente desde ms-alumnos como fuente de verdad
+        docente_id = materia_info.get("docente_id")
+        docente_nombre = None
+        if docente_id:
+            docente_info = AlumnosGRPCClient.obtener_docente_por_id(docente_id)
+            if docente_info and docente_info.get("nombre_completo"):
+                docente_nombre = docente_info["nombre_completo"]
+        
+        if not docente_nombre:
+            docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
         
         periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
         periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
@@ -235,7 +245,17 @@ def descargar_calificaciones(request, materia_id):
     # Consultar datos dinámicos de la materia y período vía gRPC
     materia_info = PeriodosGRPCClient.obtener_materia_por_id(materia_id) or {}
     materia_nombre = materia_info.get("nombre", "Materia Desconocida")
-    docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
+    
+    # Intentar obtener el nombre del docente desde ms-alumnos como fuente de verdad
+    docente_id = materia_info.get("docente_id")
+    docente_nombre = None
+    if docente_id:
+        docente_info = AlumnosGRPCClient.obtener_docente_por_id(docente_id)
+        if docente_info and docente_info.get("nombre_completo"):
+            docente_nombre = docente_info["nombre_completo"]
+            
+    if not docente_nombre:
+        docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
     
     periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
     periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
@@ -331,7 +351,17 @@ def descargar_asistencias(request, materia_id):
     # Consultar datos dinámicos de la materia y período vía gRPC
     materia_info = PeriodosGRPCClient.obtener_materia_por_id(materia_id) or {}
     materia_nombre = materia_info.get("nombre", "Materia Desconocida")
-    docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
+    
+    # Intentar obtener el nombre del docente desde ms-alumnos como fuente de verdad
+    docente_id = materia_info.get("docente_id")
+    docente_nombre = None
+    if docente_id:
+        docente_info = AlumnosGRPCClient.obtener_docente_por_id(docente_id)
+        if docente_info and docente_info.get("nombre_completo"):
+            docente_nombre = docente_info["nombre_completo"]
+            
+    if not docente_nombre:
+        docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
     
     periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
     periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")

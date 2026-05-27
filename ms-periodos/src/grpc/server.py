@@ -19,26 +19,27 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from src.grpc import periodos_pb2, periodos_pb2_grpc
-from api.models import Materia, Periodo, Horario, EstadoPeriodo
+from api.models import Materia, Periodo, EstadoPeriodo
 
 logger = logging.getLogger(__name__)
 
-
 def _ejecutar_evaluacion_periodos(hoy: date):
-    """Helper method to run strict single-active-period evaluations."""
+    """Helper method to run strict single-active-period evaluations using enum states."""
     periodo_actual = Periodo.objects.filter(
         fecha_inicio__lte=hoy,
         fecha_fin__gte=hoy
     ).first()
 
-    if periodo_actual and periodo_actual.estado != EstadoPeriodo.ACTIVO:
-        periodo_actual.estado = EstadoPeriodo.ACTIVO
+    if periodo_actual and not periodo_actual.activo:
+        Periodo.objects.filter(activo=True).exclude(id=periodo_actual.id).update(activo=False)
+        
+        periodo_actual.activo = True
         periodo_actual.save()
-        logger.info(f"Periodo de referencia global activado: {periodo_actual.nombre}")
+        logger.info(f"Periodo de referencia global activado automáticamente: {periodo_actual.nombre}")
         
     elif not periodo_actual:
         # If today doesn't match any period bounds, ensure everything is turned off
-        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).update(estado=EstadoPeriodo.FINALIZADA)
+        Periodo.objects.filter(activo=True).update(activo=False)
         
 async def cron_evaluador_periodos():
     """
@@ -49,22 +50,22 @@ async def cron_evaluador_periodos():
         await asyncio.sleep(2)
         hoy = date.today()
         logger.info(f"Ejecutando verificación inicial de calendario para: {hoy}")
+        
         await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
     except Exception as e:
         logger.error(f"Error en la verificación inicial de periodos: {e}", exc_info=True)
 
     while True:
         try:
-            await asyncio.sleep(86400) 
+            await asyncio.sleep(86400)
             
             hoy = date.today()
-            logger.info(f"Evaluación de rutina: {hoy}")
+            logger.info(f"Evaluación de rutina de calendario: {hoy}")
+            
             await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
 
         except Exception as e:
-            logger.error(f"Error al revisar: {e}", exc_info=True)
-
-
+            logger.error(f"Error en evaluación de rutina: {e}", exc_info=True)
 class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
     """gRPC service implementation for Periodos microservice."""
 
