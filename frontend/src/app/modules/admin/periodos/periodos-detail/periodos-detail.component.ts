@@ -1,10 +1,11 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { PeriodosService, Periodo, Horario, Materia } from '../periodos.service';
 
@@ -14,10 +15,10 @@ import { PeriodosService, Periodo, Horario, Materia } from '../periodos.service'
   imports: [
     CommonModule,
     FormsModule,
-    RouterModule,
     TableModule,
     ButtonModule,
     TagModule,
+    TooltipModule,
     InputTextModule
   ],
   templateUrl: './periodos-detail.component.html',
@@ -28,35 +29,43 @@ export class PeriodosDetailComponent implements OnInit {
   private router = inject(Router);
   private periodosService = inject(PeriodosService);
 
+  periodoId: string | null = null;
   periodo: Periodo | null = null;
   loading = true;
   errorMessage = '';
-  expandedMateriaId: string | null = null;
+  savingMateria = false;
 
+  expandedMateriaId: string | null = null;
   searchText = '';
   selectedPlanEstudios: string | null = null;
   selectedCampus: string | null = null;
 
-  planEstudiosMap = {
-    'ITI': 'Ingeniería en Tecnologías de la Información',
-    'LCC': 'Licenciatura en Ciencias de la Computación',
-    'ICC': 'Ingeniería en Ciencias de la Computación',
-    'ICD': 'Ingeniería en Ciencia de Datos',
-    'ISC': 'Ingeniería en Ciberseguridad'
+  planEstudiosMap: { [key: string]: string } = {
+    'ITI': 'Ing. en Tecnologías de la Información',
+    'LCC': 'Lic. en Ciencias de la Computación',
+    'ICC': 'Ing. en Ciencias de la Computación',
+    'ICD': 'Ing. en Ciencia de Datos',
+    'ISC': 'Ing. en Ciberseguridad'
   };
 
   editingMateria: Materia | null = null;
   showEditModal = false;
 
   ngOnInit() {
-    const periodoId = this.route.snapshot.paramMap.get('id');
-    if (!periodoId) {
-      this.errorMessage = 'Periodo no encontrado.';
+    this.periodoId = this.route.snapshot.paramMap.get('id');
+    if (!this.periodoId) {
+      this.errorMessage = 'ID de periodo no encontrado en la URL.';
       this.loading = false;
       return;
     }
+    this.loadPeriodo();
+  }
 
-    this.periodosService.getPeriodoById(periodoId).subscribe({
+  loadPeriodo() {
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.periodosService.getPeriodoById(this.periodoId!).subscribe({
       next: (periodo) => {
         this.periodo = periodo;
         this.loading = false;
@@ -68,94 +77,32 @@ export class PeriodosDetailComponent implements OnInit {
     });
   }
 
+  reloadPeriodo() {
+    this.loadPeriodo();
+  }
+
+  // ─── Horario Toggle ───────────────────────────────────────────
+
   toggleMateriaSchedule(materiaId: string) {
     this.expandedMateriaId = this.expandedMateriaId === materiaId ? null : materiaId;
   }
 
-  isMateriaExpanded(materiaId: string) {
+  isMateriaExpanded(materiaId: string): boolean {
     return this.expandedMateriaId === materiaId;
   }
 
-  getOrderedHorarios(horarios: Horario[]) {
-    const order = ['L', 'A', 'M', 'J', 'V', 'S', 'D'];
-    return [...horarios].sort((a, b) => {
-      const idxA = order.indexOf(a.dia.toUpperCase());
-      const idxB = order.indexOf(b.dia.toUpperCase());
-      if (idxA === -1 && idxB === -1) {
-        return a.dia.localeCompare(b.dia);
-      }
-      if (idxA === -1) {
-        return 1;
-      }
-      if (idxB === -1) {
-        return -1;
-      }
-      return idxA - idxB;
-    });
-  }
-
-  getCampusBadgeStyle(campus: string) {
-    if (campus === 'CU2') {
-      return 'success';
-    }
-    if (campus === 'SAN_MANUEL') {
-      return 'info';
-    }
-    return 'secondary';
-  }
-
-  getCampusLabel(campus: string) {
-    if (campus === 'CU2') {
-      return 'CU2';
-    }
-    if (campus === 'SAN_MANUEL') {
-      return 'San Manuel';
-    }
-    return campus;
-  }
-
-  getDayName(dia: string): string {
-    const dayMap: { [key: string]: string } = {
-      'L': 'Lunes',
-      'A': 'Martes',
-      'M': 'Miércoles',
-      'J': 'Jueves',
-      'V': 'Viernes',
-      'S': 'Sábado',
-      'D': 'Domingo'
-    };
-    return dayMap[dia.toUpperCase()] || dia;
-  }
-
-  getEstadoLabel(estado: string): string {
-    const labels: { [key: string]: string } = {
-      'pendiente': 'Pendiente',
-      'activo': 'Activo',
-      'finalizada': 'Finalizada'
-    };
-    return labels[estado.toLowerCase()] || estado;
-  }
-
-  getEstadoSeverity(estado: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
-    const severity: { [key: string]: 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' } = {
-      'pendiente': 'warn',
-      'activo': 'success',
-      'finalizada': 'info'
-    };
-    return severity[estado.toLowerCase()] || 'secondary';
-  }
+  // ─── Filters ──────────────────────────────────────────────────
 
   get filteredMaterias(): Materia[] {
-    if (!this.periodo?.materias) {
-      return [];
-    }
+    if (!this.periodo?.materias) return [];
 
-    return this.periodo.materias.filter((materia) => {
+    return this.periodo.materias.filter(materia => {
+      const q = this.searchText.toLowerCase();
       const matchesSearch =
-        !this.searchText ||
-        materia.nombre.toLowerCase().includes(this.searchText.toLowerCase()) ||
-        materia.nrc.toLowerCase().includes(this.searchText.toLowerCase()) ||
-        (materia.docente_nombre?.toLowerCase() || '').includes(this.searchText.toLowerCase());
+        !q ||
+        materia.nombre.toLowerCase().includes(q) ||
+        materia.nrc.toLowerCase().includes(q) ||
+        (materia.docente_nombre?.toLowerCase() || '').includes(q);
 
       const matchesPlan = !this.selectedPlanEstudios || materia.plan_estudios === this.selectedPlanEstudios;
       const matchesCampus = !this.selectedCampus || materia.campus === this.selectedCampus;
@@ -164,12 +111,92 @@ export class PeriodosDetailComponent implements OnInit {
     });
   }
 
+  // ─── Helpers ──────────────────────────────────────────────────
+
+  formatHora(hora: string | null): string {
+    if (!hora) return '—';
+    // Convert "0800" → "08:00"
+    if (hora.length === 4) {
+      return `${hora.slice(0, 2)}:${hora.slice(2)}`;
+    }
+    return hora;
+  }
+
+  getOrderedHorarios(horarios: Horario[]): Horario[] {
+    const order = ['L', 'A', 'M', 'J', 'V', 'S', 'D'];
+    return [...horarios].sort((a, b) => {
+      const idxA = order.indexOf(a.dia.toUpperCase());
+      const idxB = order.indexOf(b.dia.toUpperCase());
+      if (idxA === -1 && idxB === -1) return a.dia.localeCompare(b.dia);
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    });
+  }
+
+  getDayName(dia: string): string {
+    const dayMap: { [key: string]: string } = {
+      'L': 'Lunes', 'A': 'Martes', 'M': 'Miérc.',
+      'J': 'Jueves', 'V': 'Viernes', 'S': 'Sábado', 'D': 'Domingo'
+    };
+    return dayMap[dia.toUpperCase()] || dia;
+  }
+
+  getCampusBadgeStyle(campus: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
+    if (campus === 'CU2') return 'success';
+    if (campus === 'SAN_MANUEL') return 'info';
+    return 'secondary';
+  }
+
+  getCampusLabel(campus: string): string {
+    if (campus === 'CU2') return 'CU2';
+    if (campus === 'SAN_MANUEL') return 'San Manuel';
+    return campus;
+  }
+
+  getEstadoLabel(estado: string): string {
+    const labels: { [key: string]: string } = {
+      'pendiente': 'Pendiente',
+      'activo': 'Activo',
+      'finalizada': 'Finalizada'
+    };
+    return labels[estado?.toLowerCase()] || estado;
+  }
+
+  getEstadoSeverity(estado: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
+    const map: { [key: string]: 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' } = {
+      'pendiente': 'warn',
+      'activo': 'success',
+      'finalizada': 'info'
+    };
+    return map[estado?.toLowerCase()] || 'secondary';
+  }
+
+  getMateriaEstadoLabel(estado: string): string {
+    const labels: { [key: string]: string } = {
+      'abierta': 'Abierta',
+      'cerrada': 'Cerrada',
+      'finalizada': 'Finalizada'
+    };
+    return labels[estado?.toLowerCase()] || estado;
+  }
+
+  getMateriaEstadoSeverity(estado: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
+    const map: { [key: string]: 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' } = {
+      'abierta': 'success',
+      'cerrada': 'warn',
+      'finalizada': 'info'
+    };
+    return map[estado?.toLowerCase()] || 'secondary';
+  }
+
   goBack() {
     this.router.navigate(['/admin/periodos']);
   }
 
+  // ─── Edit Modal ───────────────────────────────────────────────
+
   openEditModal(materia: Materia) {
-    // Create a deep copy to avoid modifying the original
     this.editingMateria = JSON.parse(JSON.stringify(materia));
     this.showEditModal = true;
   }
@@ -177,22 +204,14 @@ export class PeriodosDetailComponent implements OnInit {
   closeEditModal() {
     this.editingMateria = null;
     this.showEditModal = false;
+    this.savingMateria = false;
   }
 
   addHorario() {
     if (!this.editingMateria) return;
-
-    if (!this.editingMateria.horarios) {
-      this.editingMateria.horarios = [];
-    }
-
+    if (!this.editingMateria.horarios) this.editingMateria.horarios = [];
     this.editingMateria.horarios.push({
-      id: '',
-      dia: 'L',
-      hora_inicio: '',
-      hora_fin: '',
-      salon: '',
-      es_virtual: false
+      id: '', dia: 'L', hora_inicio: '', hora_fin: '', salon: '', es_virtual: false
     });
   }
 
@@ -204,7 +223,8 @@ export class PeriodosDetailComponent implements OnInit {
   saveMateria() {
     if (!this.editingMateria) return;
 
-    // Prepare the payload with nested horarios structure
+    this.savingMateria = true;
+
     const payload = {
       nombre: this.editingMateria.nombre,
       clave: this.editingMateria.clave,
@@ -214,37 +234,30 @@ export class PeriodosDetailComponent implements OnInit {
       plan_estudios: this.editingMateria.plan_estudios,
       estado: this.editingMateria.estado,
       nrc: this.editingMateria.nrc,
-      horarios: (this.editingMateria.horarios || []).map((horario) => {
-        const horarioPayload: any = {
+      horarios: (this.editingMateria.horarios || []).map(horario => {
+        const h: any = {
           dia: horario.dia,
           hora_inicio: horario.hora_inicio,
           hora_fin: horario.hora_fin,
           salon: horario.salon,
           es_virtual: horario.es_virtual
         };
-        // Include the ID only if it already exists (for updates)
-        if (horario.id) {
-          horarioPayload.id = horario.id;
-        }
-        return horarioPayload;
+        if (horario.id) h.id = horario.id;
+        return h;
       })
     };
 
-    // Call API to update materia on backend
     this.periodosService.updateMateria(this.editingMateria.id, payload).subscribe({
       next: (updatedMateria) => {
-        // Update the materia in the periodo's materias array
         if (this.periodo?.materias) {
-          const index = this.periodo.materias.findIndex(m => m.id === this.editingMateria!.id);
-          if (index !== -1) {
-            this.periodo.materias[index] = updatedMateria;
-          }
+          const idx = this.periodo.materias.findIndex(m => m.id === this.editingMateria!.id);
+          if (idx !== -1) this.periodo.materias[idx] = updatedMateria;
         }
         this.closeEditModal();
       },
       error: (err) => {
-        console.error('Error updating materia:', err);
-        alert('Error al actualizar la asignatura: ' + (err?.error?.detail || err?.message || 'Error desconocido'));
+        this.savingMateria = false;
+        alert('Error al actualizar la materia: ' + (err?.error?.detail || err?.message || 'Error desconocido'));
       }
     });
   }

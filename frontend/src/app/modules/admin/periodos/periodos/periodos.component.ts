@@ -5,12 +5,13 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import { PeriodosService, Periodo } from '../periodos.service';
 
 @Component({
   selector: 'agm-admin-periodos',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TableModule, TagModule, ButtonModule],
+  imports: [CommonModule, ReactiveFormsModule, TableModule, TagModule, ButtonModule, TooltipModule],
   templateUrl: './periodos.component.html',
   styleUrls: ['./periodos.component.scss']
 })

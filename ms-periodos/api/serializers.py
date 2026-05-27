@@ -42,13 +42,17 @@ class MateriaCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 class PeriodoSerializer(serializers.ModelSerializer):
-    """Serializer para periodos"""
-    
+    """Serializer para periodos (lista). Incluye conteo de materias."""
+    materias_count = serializers.SerializerMethodField()
+
+    def get_materias_count(self, obj):
+        return obj.materias.count()
+
     class Meta:
         model = Periodo
         fields = [
             'id', 'nombre', 'fecha_inicio', 'fecha_fin',
-            'estado', 'created_at', 'updated_at'
+            'estado', 'materias_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

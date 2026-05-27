@@ -31,7 +31,8 @@ export interface Periodo {
   fecha_inicio: string;
   fecha_fin: string;
   estado: 'pendiente' | 'activo' | 'finalizada';
-  materias?: Materia[];
+  materias_count?: number;   // returned by list endpoint
+  materias?: Materia[];       // returned by retrieve (detail) endpoint
 }
 
 interface PaginatedPeriodosResponse {
