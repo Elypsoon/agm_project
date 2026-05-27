@@ -37,45 +37,34 @@
       id="tabla-calificaciones-alumno"
       [value]="calificaciones()"
       styleClass="p-datatable-sm"
+      dataKey="materia"
       [tableStyle]="{'min-width': '600px'}">
 
-      <ng-template #header>
+      <ng-template pTemplate="header">
         <tr>
+          <th style="width: 3rem"></th>
           <th>Materia</th>
           <th>Docente</th>
-          <th style="text-align:center">Parcial 1</th>
-          <th style="text-align:center">Parcial 2</th>
-          <th style="text-align:center">Parcial 3</th>
           <th style="text-align:center">Promedio</th>
           <th style="text-align:center">Estado</th>
         </tr>
       </ng-template>
 
-      <ng-template #body let-row>
+      <ng-template pTemplate="body" let-row let-expanded="expanded">
         <tr>
+          <td>
+            <p-button 
+              type="button" 
+              [pRowToggler]="row" 
+              [text]="true" 
+              [rounded]="true" 
+              severity="secondary" 
+              size="small"
+              [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+            </p-button>
+          </td>
           <td class="materia-cell">{{ row.materia }}</td>
           <td class="docente-cell">{{ row.docente }}</td>
-          <td style="text-align:center">
-            <span [class.grade-ok]="row.parcial1 !== null && row.parcial1 >= 6"
-                  [class.grade-fail]="row.parcial1 !== null && row.parcial1 < 6"
-                  [class.grade-pending]="row.parcial1 === null">
-              {{ row.parcial1 !== null ? (row.parcial1 | number:'1.1-1') : '—' }}
-            </span>
-          </td>
-          <td style="text-align:center">
-            <span [class.grade-ok]="row.parcial2 !== null && row.parcial2 >= 6"
-                  [class.grade-fail]="row.parcial2 !== null && row.parcial2 < 6"
-                  [class.grade-pending]="row.parcial2 === null">
-              {{ row.parcial2 !== null ? (row.parcial2 | number:'1.1-1') : '—' }}
-            </span>
-          </td>
-          <td style="text-align:center">
-            <span [class.grade-ok]="row.parcial3 !== null && row.parcial3 >= 6"
-                  [class.grade-fail]="row.parcial3 !== null && row.parcial3 < 6"
-                  [class.grade-pending]="row.parcial3 === null">
-              {{ row.parcial3 !== null ? (row.parcial3 | number:'1.1-1') : '—' }}
-            </span>
-          </td>
           <td style="text-align:center">
             <strong [class.grade-ok]="row.promedio !== null && row.promedio >= 6"
                     [class.grade-fail]="row.promedio !== null && row.promedio < 6"
@@ -85,6 +74,59 @@
           </td>
           <td style="text-align:center">
             <p-tag [value]="estadoLabel(row.estado)" [severity]="estadoSeverity(row.estado)" />
+          </td>
+        </tr>
+      </ng-template>
+
+      <!-- Fila de Expansión con Categorías y Actividades Reales -->
+      <ng-template pTemplate="expandedrow" let-row>
+        <tr>
+          <td colspan="5">
+            <div class="expansion-container">
+              <h4 class="expansion-title">
+                <i class="pi pi-list"></i>
+                Desglose de Calificaciones y Actividades — {{ row.materia }}
+              </h4>
+              
+              <div class="categorias-grid">
+                @for (cat of row.desglose; track cat.ponderacion) {
+                  <div class="card-categoria">
+                    <div>
+                      <div class="card-cat-header">
+                        <span class="cat-name">{{ cat.ponderacion }}</span>
+                        <span class="cat-pct">{{ cat.porcentaje }}%</span>
+                      </div>
+                      
+                      <ul class="actividades-list">
+                        @for (calif of cat.calificaciones; track calif.actividad) {
+                          <li class="actividad-item">
+                            <span class="act-name">{{ calif.actividad }}</span>
+                            <span class="act-val">{{ calif.valor / 10 | number:'1.1-1' }}</span>
+                          </li>
+                        } @empty {
+                          <li class="empty-activities-item">
+                            Sin actividades evaluadas
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                    
+                    <div class="card-cat-footer">
+                      <span class="promedio-cat-label">Promedio Categoría</span>
+                      <span class="promedio-cat-val"
+                            [class.promedio-cat-val--ok]="cat.promedio_categoria >= 60"
+                            [class.promedio-cat-val--fail]="cat.promedio_categoria < 60">
+                        {{ cat.promedio_categoria / 10 | number:'1.1-1' }}
+                      </span>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="empty-categories-card">
+                    <i class="pi pi-info-circle text-amber-500"></i> El docente aún no ha configurado ponderaciones para esta materia.
+                  </div>
+                }
+              </div>
+            </div>
           </td>
         </tr>
       </ng-template>

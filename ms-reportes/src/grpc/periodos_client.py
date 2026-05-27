@@ -43,9 +43,30 @@ class PeriodosGRPCClient:
                     "nombre": response.nombre,
                     "fecha_inicio": response.fecha_inicio,
                     "fecha_fin": response.fecha_fin,
-                    "plan_estudios": response.plan_estudios,
-                    "activo": response.activo,
+                    "estado": response.estado,
                 }
             except grpc.RpcError as e:
                 print(f"[-] Error al solicitar periodo activo a MS-2: {e.details()}")
+                return None
+
+    @staticmethod
+    def obtener_materia_por_id(materia_id):
+        with grpc.insecure_channel(PeriodosGRPCClient.get_target()) as channel:
+            stub = periodos_pb2_grpc.PeriodosServiceStub(channel)
+            request = periodos_pb2.MateriaIdRequest(materia_id=materia_id)
+            try:
+                response = stub.GetMateriaById(request, timeout=3)
+                return {
+                    "id": response.id,
+                    "nrc": response.nrc,
+                    "nombre": response.nombre,
+                    "clave": response.clave,
+                    "seccion": response.seccion,
+                    "docente_id": response.docente_id,
+                    "docente_nombre": response.docente_nombre,
+                    "periodo_id": response.periodo_id,
+                    "estado": response.estado,
+                }
+            except grpc.RpcError as e:
+                print(f"[-] Error al obtener materia por ID: {e.details()}")
                 return None

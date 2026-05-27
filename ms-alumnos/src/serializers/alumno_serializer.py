@@ -10,6 +10,24 @@ class InscripcionSerializer(serializers.ModelSerializer):
         model = Inscripcion
         fields = ["id", "materia_id", "activo", "fecha_baja", "created_at"]
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        materia_nombre = "Materia"
+        docente_nombre = "Por asignar"
+        try:
+            import httpx
+            # Query ms-periodos at internal port 3002
+            response = httpx.get(f"http://ms-periodos:3002/api/materias/{instance.materia_id}/", timeout=1.0)
+            if response.status_code == 200:
+                data = response.json()
+                materia_nombre = data.get("nombre", "Materia")
+                docente_nombre = data.get("docente_nombre", "Por asignar")
+        except Exception:
+            pass
+        representation["materia_nombre"] = materia_nombre
+        representation["docente_nombre"] = docente_nombre
+        return representation
+
 
 class AlumnoSerializer(serializers.ModelSerializer):
     class Meta:

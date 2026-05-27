@@ -24,6 +24,8 @@ urlpatterns = [
     # Admin
     path("admin/", admin.site.urls),
     # API
+    path("api/docentes/", include("src.views.docente_urls")),
+    path("api/alumnos/", include("src.views.alumno_urls")),
     path("docentes/", include("src.views.docente_urls")),
     path("alumnos/", include("src.views.alumno_urls")),
     # Health
