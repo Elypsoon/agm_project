@@ -284,7 +284,7 @@ class MateriaViewSet(viewsets.ModelViewSet):
                     skipped_count += 1
 
                 for horario_data in item.get('horarios', []):
-                    hora_raw = Carney_raw = horario_data.get('hora', '')
+                    hora_raw = horario_data.get('hora', '')
                     hora_parts = hora_raw.split('-') if '-' in hora_raw else [None, None]
                     
                     Horario.objects.get_or_create(

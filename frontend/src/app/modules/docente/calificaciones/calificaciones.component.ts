@@ -138,31 +138,60 @@ export class CalificacionesComponent implements OnInit {
         this.periodoActivo.set(periodo);
         const email = this.authService.currentUser()?.email;
 
-        // 2. Obtener materias asociadas a este docente en el periodo activo
-        this.calificacionesService.getMaterias({
-          periodo_id: periodo.id,
-          docente_id: docenteId
-        }).subscribe({
-          next: (res) => {
-            const list = res.results || res || [];
-            // Filtrar localmente en el frontend para mostrar únicamente las materias asociadas a este docente
-            const filteredList = list.filter((m: any) => !docenteId || m.docente_id === docenteId);
-            this.materiaOptions.set(filteredList.map((m: any) => ({
-              id: m.id,
-              nombre: `${m.nombre} (NRC ${m.nrc})`
-            })));
-            this.loading.set(false);
-          },
-          error: () => {
-            this.loading.set(false);
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: 'No se pudieron cargar las materias del docente.',
-              life: 4000
-            });
-          }
-        });
+        if (email) {
+          // 2. Obtener el perfil del docente para conseguir el docente_id real (ms-alumnos)
+          this.docentesService.getDocentes({ search: email }).subscribe({
+            next: (docentesRes) => {
+              const docente = docentesRes.data?.docentes?.find(d => d.correo_institucional === email);
+              if (docente) {
+                // 3. Obtener materias asociadas a este docente en el periodo activo
+                this.calificacionesService.getMaterias({
+                  periodo_id: periodo.id,
+                  docente_id: docente.id
+                }).subscribe({
+                  next: (res) => {
+                    const list = (res.results || res || []).filter(
+                      (m: any) => m.docente_id === docente.id
+                    );
+                    this.materiaOptions.set(list.map((m: any) => ({
+                      id: m.id,
+                      nombre: `${m.nombre} (NRC ${m.nrc})`
+                    })));
+                    this.loading.set(false);
+                  },
+                  error: () => {
+                    this.loading.set(false);
+                    this.messageService.add({
+                      severity: 'error',
+                      summary: 'Error',
+                      detail: 'No se pudieron cargar las materias del docente.',
+                      life: 4000
+                    });
+                  }
+                });
+              } else {
+                this.loading.set(false);
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se encontró el perfil de docente correspondiente al usuario.',
+                  life: 4000
+                });
+              }
+            },
+            error: () => {
+              this.loading.set(false);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'No se pudo validar el perfil de docente en alumnos.',
+                life: 4000
+              });
+            }
+          });
+        } else {
+          this.loading.set(false);
+        }
       },
       error: () => {
         this.loading.set(false);
