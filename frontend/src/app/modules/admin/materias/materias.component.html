@@ -1,0 +1,208 @@
+<p-toast position="top-right" />
+
+<div class="materias-page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Materias</h1>
+      <p class="page-subtitle">Gestión de materias del periodo activo</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="showImportDialog = true">
+        <i class="pi pi-upload"></i>
+        <span>Importar PDF</span>
+      </button>
+      <button class="btn-primary" (click)="showCreateDialog = true">
+        <i class="pi pi-plus"></i>
+        <span>Nueva Materia</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-card">
+
+    <!-- Search bar -->
+    <div class="table-toolbar">
+      <p-iconfield>
+        <p-inputicon styleClass="pi pi-search" />
+        <input pInputText type="text" placeholder="Buscar por NRC, nombre o docente…"
+               [(ngModel)]="searchValue" [ngModelOptions]="{standalone: true}"
+               class="search-input" />
+      </p-iconfield>
+      <span class="record-count">{{ materias.length }} materias</span>
+    </div>
+
+    @if (loading) {
+      <div class="skeleton-rows">
+        @for (i of [1,2,3,4,5]; track i) {
+          <p-skeleton height="52px" borderRadius="8px" />
+        }
+      </div>
+    } @else {
+      <p-table
+        [value]="materias"
+        [paginator]="true"
+        [rows]="10"
+        [globalFilterFields]="['nrc','nombre','docente','horario']"
+        [filterDelay]="0"
+        styleClass="p-datatable-sm"
+        [tableStyle]="{'min-width': '900px'}">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th>NRC</th>
+            <th>Nombre</th>
+            <th>Docente</th>
+            <th>Horario</th>
+            <th>Aula</th>
+            <th class="text-center">Alumnos</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-mat>
+          <tr>
+            <td><span class="mono-id nrc-badge">{{ mat.nrc }}</span></td>
+            <td><span class="mat-nombre">{{ mat.nombre }}</span></td>
+            <td><span class="docente-name">{{ mat.docente }}</span></td>
+            <td><span class="horario-text">{{ mat.horario }}</span></td>
+            <td><span class="aula-text">{{ mat.aula }}</span></td>
+            <td class="text-center">
+              <span class="alumno-count">{{ mat.alumnos }}</span>
+            </td>
+            <td class="text-center">
+              <div class="action-btns">
+                <button class="icon-btn icon-btn--edit" pTooltip="Editar" tooltipPosition="top">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button class="icon-btn icon-btn--danger" pTooltip="Eliminar" tooltipPosition="top">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="7" class="empty-state">
+              <i class="pi pi-book empty-icon"></i>
+              <p>No se encontraron materias</p>
+            </td>
+          </tr>
+        </ng-template>
+
+      </p-table>
+    }
+  </div>
+
+</div>
+
+<!-- ── Import Dialog ── -->
+<p-dialog
+  header="Importar Materias desde PDF"
+  [(visible)]="showImportDialog"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false">
+
+  <div class="import-dialog-body">
+    <div class="import-info">
+      <i class="pi pi-info-circle"></i>
+      <span>Se importarán las materias del periodo <strong>{{ importTargetPeriodo }}</strong> desde el PDF de la oferta académica.</span>
+    </div>
+
+    <div class="file-drop-zone" [class.has-file]="selectedFile">
+      <input type="file" id="pdf-upload" accept=".pdf" (change)="onFileChange($event)" style="display:none" />
+      <label for="pdf-upload" class="file-drop-label">
+        <i class="pi pi-file-pdf file-icon"></i>
+        @if (selectedFile) {
+          <span class="file-name">{{ selectedFile.name }}</span>
+        } @else {
+          <span>Haz clic o arrastra el archivo PDF aquí</span>
+        }
+      </label>
+    </div>
+
+    @if (uploadError) {
+      <div class="alert alert--error">
+        <i class="pi pi-times-circle"></i>{{ uploadError }}
+      </div>
+    }
+    @if (uploadSuccess) {
+      <div class="alert alert--success">
+        <i class="pi pi-check-circle"></i>{{ uploadSuccess }}
+      </div>
+    }
+    @if (importLoading) {
+      <p-progressBar mode="indeterminate" styleClass="import-progress" />
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button class="btn-secondary" (click)="showImportDialog = false">Cancelar</button>
+    <button class="btn-primary" (click)="uploadPdf()" [disabled]="importLoading">
+      <i class="pi pi-upload"></i> Importar
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ── Create Dialog ── -->
+<p-dialog
+  header="Nueva Materia"
+  [(visible)]="showCreateDialog"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false">
+
+  <form [formGroup]="createForm" class="create-form" (ngSubmit)="submitCreate()">
+
+    <div class="form-row">
+      <label class="form-label">NRC <span class="required">*</span></label>
+      <input pInputText formControlName="nrc" placeholder="Ej. 12345"
+             [class.ng-invalid]="isInvalid('nrc')" [class.ng-dirty]="isInvalid('nrc')" />
+      @if (isInvalid('nrc')) {
+        <small class="p-error">NRC inválido — 5 dígitos.</small>
+      }
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Nombre <span class="required">*</span></label>
+      <input pInputText formControlName="nombre" placeholder="Ej. Servicios Web"
+             [class.ng-invalid]="isInvalid('nombre')" [class.ng-dirty]="isInvalid('nombre')" />
+      @if (isInvalid('nombre')) {
+        <small class="p-error">El nombre es obligatorio.</small>
+      }
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Docente <span class="required">*</span></label>
+      <input pInputText formControlName="docente" placeholder="Nombre del docente"
+             [class.ng-invalid]="isInvalid('docente')" [class.ng-dirty]="isInvalid('docente')" />
+      @if (isInvalid('docente')) {
+        <small class="p-error">El docente es obligatorio.</small>
+      }
+    </div>
+
+    <div class="form-row-2col">
+      <div class="form-row">
+        <label class="form-label">Horario <span class="required">*</span></label>
+        <input pInputText formControlName="horario" placeholder="Lun-Mié 08:00-10:00" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Aula <span class="required">*</span></label>
+        <input pInputText formControlName="aula" placeholder="Ej. A-301" />
+      </div>
+    </div>
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button class="btn-secondary" (click)="showCreateDialog = false; createForm.reset()">Cancelar</button>
+    <button class="btn-primary" (click)="submitCreate()">
+      <i class="pi pi-check"></i> Crear Materia
+    </button>
+  </ng-template>
+</p-dialog>
