@@ -26,6 +26,7 @@ urlpatterns = [
     
     # Incluimos el archivo central de rutas del microservicio
     path('reportes/', include('src.routes.api')),
+    path('api/', include('src.routes.api')),
     path('', include('src.routes.api')),
     
     # Endpoints para la documentación interactiva

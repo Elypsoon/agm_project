@@ -245,7 +245,7 @@ def descargar_calificaciones(request, materia_id):
         return Response({
             "success": True,
             "async": True,
-            "message": f"La generación del reporte de calificaciones en formato {formato.upper()} ha comenzado en segundo plano debido a un cache-miss. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
+            "message": f"La generación del reporte de calificaciones ha comenzado. Recibirás un correo en {dest_email} cuanto esté listo."
         })
 
     # 3. Si no se proporcionó correo (descarga síncrona clásica del navegador)
@@ -328,7 +328,7 @@ def descargar_asistencias(request, materia_id):
         return Response({
             "success": True,
             "async": True,
-            "message": f"La generación del reporte de asistencias en formato {formato.upper()} ha comenzado en segundo plano debido a un cache-miss. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
+            "message": f"La generación del reporte de asistencias ha comenzado. Recibirás un correo en {dest_email} cuanto esté listo."
         })
 
     # 3. Si no se proporcionó correo (descarga síncrona clásica del navegador)
