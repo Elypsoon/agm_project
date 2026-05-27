@@ -40,7 +40,7 @@
       dataKey="materia"
       [tableStyle]="{'min-width': '600px'}">
 
-      <ng-template #header>
+      <ng-template pTemplate="header">
         <tr>
           <th style="width: 3rem"></th>
           <th>Materia</th>
@@ -50,17 +50,18 @@
         </tr>
       </ng-template>
 
-      <ng-template #body let-row let-expanded="expanded">
+      <ng-template pTemplate="body" let-row let-expanded="expanded">
         <tr>
           <td>
-            <button 
+            <p-button 
               type="button" 
-              pButton 
-              pRipple 
               [pRowToggler]="row" 
-              class="p-button-text p-button-rounded p-button-plain p-button-sm" 
+              [text]="true" 
+              [rounded]="true" 
+              severity="secondary" 
+              size="small"
               [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
-            </button>
+            </p-button>
           </td>
           <td class="materia-cell">{{ row.materia }}</td>
           <td class="docente-cell">{{ row.docente }}</td>
@@ -78,49 +79,49 @@
       </ng-template>
 
       <!-- Fila de Expansión con Categorías y Actividades Reales -->
-      <ng-template #rowexpansion let-row>
+      <ng-template pTemplate="expandedrow" let-row>
         <tr>
           <td colspan="5">
-            <div class="expansion-container p-4 bg-slate-50/50 border-y border-slate-100">
-              <h4 class="expansion-title mb-3 flex items-center gap-2 text-slate-700 font-semibold">
-                <i class="pi pi-list text-amber-500"></i>
+            <div class="expansion-container">
+              <h4 class="expansion-title">
+                <i class="pi pi-list"></i>
                 Desglose de Calificaciones y Actividades — {{ row.materia }}
               </h4>
               
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="categorias-grid">
                 @for (cat of row.desglose; track cat.ponderacion) {
-                  <div class="card-categoria p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                  <div class="card-categoria">
                     <div>
-                      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-                        <span class="cat-name font-medium text-slate-800">{{ cat.ponderacion }}</span>
-                        <span class="cat-pct text-xs font-semibold px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-full">{{ cat.porcentaje }}%</span>
+                      <div class="card-cat-header">
+                        <span class="cat-name">{{ cat.ponderacion }}</span>
+                        <span class="cat-pct">{{ cat.porcentaje }}%</span>
                       </div>
                       
-                      <ul class="actividades-list space-y-2 mb-4">
+                      <ul class="actividades-list">
                         @for (calif of cat.calificaciones; track calif.actividad) {
-                          <li class="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg border border-slate-100">
-                            <span class="text-slate-600 font-medium">{{ calif.actividad }}</span>
-                            <span class="font-bold text-slate-700">{{ calif.valor / 10 | number:'1.1-1' }}</span>
+                          <li class="actividad-item">
+                            <span class="act-name">{{ calif.actividad }}</span>
+                            <span class="act-val">{{ calif.valor / 10 | number:'1.1-1' }}</span>
                           </li>
                         } @empty {
-                          <li class="text-xs text-slate-400 italic py-2 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                          <li class="empty-activities-item">
                             Sin actividades evaluadas
                           </li>
                         }
                       </ul>
                     </div>
                     
-                    <div class="flex justify-between items-center pt-2.5 border-t border-slate-100 mt-auto">
-                      <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Promedio Categoría</span>
-                      <span class="font-bold text-lg"
-                            [class.text-green-600]="cat.promedio_categoria >= 60"
-                            [class.text-red-500]="cat.promedio_categoria < 60">
+                    <div class="card-cat-footer">
+                      <span class="promedio-cat-label">Promedio Categoría</span>
+                      <span class="promedio-cat-val"
+                            [class.promedio-cat-val--ok]="cat.promedio_categoria >= 60"
+                            [class.promedio-cat-val--fail]="cat.promedio_categoria < 60">
                         {{ cat.promedio_categoria / 10 | number:'1.1-1' }}
                       </span>
                     </div>
                   </div>
                 } @empty {
-                  <div class="col-span-3 text-sm text-slate-400 italic p-4 flex items-center justify-center gap-2 bg-white rounded-xl border border-dashed border-slate-200">
+                  <div class="empty-categories-card">
                     <i class="pi pi-info-circle text-amber-500"></i> El docente aún no ha configurado ponderaciones para esta materia.
                   </div>
                 }
