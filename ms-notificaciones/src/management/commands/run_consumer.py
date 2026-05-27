@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import logging
+import base64
 from django.core.management.base import BaseCommand
 from django.db import close_old_connections
 
@@ -38,13 +39,21 @@ class Command(BaseCommand):
             queue_name = 'ms_notificaciones_queue'
             channel.queue_declare(queue=queue_name, durable=True)
 
-            # ENLAZAR LA COLA A LOS EVENTOS DE LA UNIVERSIDAD
-            eventos = ['alumno.inscrito', 'student.registered', 'alumno.baja', 'materia.cerrada', 'usuario.reset', 'reporte.finalizado']
+            # ENLAZAR LA COLA A TODOS LOS EVENTOS DEL ECOSISTEMA
+            eventos = [
+                'alumno.inscrito', 
+                'student.registered', 
+                'teacher.registered', 
+                'alumno.baja', 
+                'materia.cerrada', 
+                'usuario.reset', 
+                'reporte.finalizado'
+            ]
             for evento in eventos:
                 channel.queue_bind(exchange='agm.events', queue=queue_name, routing_key=evento)
 
             def callback(ch, method, properties, body):
-                # Asegurar conexiones de base de datos frescas para procesos persistentes (evitar timeout/OperationalError)
+                # Asegurar conexiones de base de datos frescas para evitar el error 'MySQL has gone away'
                 close_old_connections()
                 
                 routing_key = method.routing_key
@@ -61,33 +70,49 @@ class Command(BaseCommand):
                     success = False
 
                     # ==========================================
-                    # 1. BIENVENIDA / INSCRIPCIÓN (Desde MS-3)
+                    # 1. BIENVENIDA ALUMNO (Desde MS-3)
                     # ==========================================
                     if routing_key in ('alumno.inscrito', 'student.registered'):
-                        # Atrapamos todas las llaves posibles para compatibilidad
                         clave = payload.get('clave_temporal') or payload.get('password')
                         materia = payload.get('materia_nombre') or 'tu nueva materia'
                         nombre_alumno = payload.get('nombre_alumno') or payload.get('nombre', 'Alumno')
-                        materia_id = payload.get('materia_id', 'Desconocido') # Para logs
                         
-                        print(f"Procesando inscripción: {nombre_alumno} en materia {materia_id}", flush=True)
-
                         asunto = '¡Tu acceso y nueva materia en AGM! 🎓' if clave else f'Nueva Inscripción: {materia}'
                         
                         success = send_academic_email(
                             template_name='bienvenida',
                             context={
+                                'rol': 'alumno',
+                                'nombre_usuario': nombre_alumno,
                                 'materia_nombre': materia,
-                                'clave_temporal': clave, # Cambiado a clave_temporal para que coincida con tu {% if %}
-                                'nombre_alumno': nombre_alumno
+                                'clave_temporal': clave
                             },
                             to_email=email_destinatario,
                             subject=asunto,
-                            tipo='bienvenida'
+                            tipo='bienvenida_alumno'
                         )
 
                     # ==========================================
-                    # 2. BAJA DE ALUMNO (Desde MS-3)
+                    # 2. BIENVENIDA DOCENTE (Desde MS-3)
+                    # ==========================================
+                    elif routing_key == 'teacher.registered':
+                        clave = payload.get('password')
+                        nombre_docente = payload.get('nombre', 'Docente')
+                        
+                        success = send_academic_email(
+                            template_name='bienvenida',
+                            context={
+                                'rol': 'docente',
+                                'nombre_usuario': nombre_docente,
+                                'clave_temporal': clave
+                            },
+                            to_email=email_destinatario,
+                            subject='¡Bienvenido al Sistema AGM como Docente! 🎓',
+                            tipo='bienvenida_docente'
+                        )
+
+                    # ==========================================
+                    # 3. BAJA DE ALUMNO (Desde MS-3)
                     # ==========================================
                     elif routing_key == 'alumno.baja':
                         success = send_academic_email(
@@ -96,13 +121,13 @@ class Command(BaseCommand):
                                 'nombre_alumno': payload.get('nombre_alumno', 'Un alumno'),
                                 'nombre_docente': payload.get('nombre_docente', 'Docente')
                             },
-                            to_email=email_destinatario, # Aquí el destinatario es el maestro
+                            to_email=email_destinatario,
                             subject='Aviso Automático: Baja de Alumno',
                             tipo='baja'
                         )
 
                     # ==========================================
-                    # 3. CIERRE DE MATERIA (Desde MS-4)
+                    # 4. CIERRE DE MATERIA (Desde MS-4)
                     # ==========================================
                     elif routing_key == 'materia.cerrada':
                         materia = payload.get('materia_nombre', 'Materia sin nombre')
@@ -118,7 +143,7 @@ class Command(BaseCommand):
                         )
 
                     # ==========================================
-                    # 4. RESET DE CONTRASEÑA (Desde MS-1)
+                    # 5. RESET DE CONTRASEÑA (Desde MS-1)
                     # ==========================================
                     elif routing_key == 'usuario.reset':
                         success = send_academic_email(
@@ -132,19 +157,14 @@ class Command(BaseCommand):
                         )
 
                     # ==========================================
-                    # 5. REPORTE ASÍNCRONO FINALIZADO (Desde MS-7)
+                    # 6. REPORTE ASÍNCRONO FINALIZADO (Desde MS-7)
                     # ==========================================
                     elif routing_key == 'reporte.finalizado':
-                        import base64
                         file_name = payload.get('archivo_nombre', 'reporte_final.xlsx')
                         file_base64 = payload.get('archivo_base64', '')
                         
-                        print(f"[RabbitMQ] Evento 'reporte.finalizado' recibido para: {email_destinatario}. Archivo: {file_name}, Base64 length: {len(file_base64)}", flush=True)
-                        
                         file_bytes = base64.b64decode(file_base64.encode('utf-8'))
-                        print(f"[RabbitMQ] Archivo decodificado a binario con éxito. Size: {len(file_bytes)} bytes", flush=True)
                         
-                        # Determinar tipo mime correcto
                         ext = file_name.split('.')[-1].lower()
                         mime_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
                         
@@ -173,7 +193,7 @@ class Command(BaseCommand):
 
                 except Exception as e:
                     print(f"[RabbitMQ] Error procesando notificación [{routing_key}]: {e}", flush=True)
-                    # Si explota por un error de código, lo devolvemos a la cola para no perderlo
+                    # Si falla por un error interno, se rechaza y se vuelve a encolar para no perder la petición
                     ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
             channel.basic_qos(prefetch_count=1)

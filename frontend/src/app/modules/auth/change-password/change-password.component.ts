@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { extractErrorMessage } from '../../../core/utils/error-utils';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { FloatLabelModule } from 'primeng/floatlabel';
@@ -65,7 +66,7 @@ export class ChangePasswordComponent {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.message || 'Error al cambiar la contraseña. Verifica tu contraseña actual.');
+        this.errorMessage.set(extractErrorMessage(err, 'Error al cambiar la contraseña. Verifica tu contraseña actual.'));
       }
     });
   }

@@ -7,12 +7,14 @@ from .views import (
     HistorialAsistenciasView,
     GenerarQRView,
     MisMateriasSesionView,
+    SesionActivaView,
 )
 
 urlpatterns = [
     # Sesiones
     path('sesiones/iniciar', IniciarSesionView.as_view(), name='iniciar-sesion'),
     path('sesiones/<uuid:sesion_id>/cerrar', CerrarSesionView.as_view(), name='cerrar-sesion'),
+    path('sesiones/activa', SesionActivaView.as_view(), name='sesion-activa'),
 
     # QR — debe ir ANTES de las rutas con <uuid:materia_id>
     path('asistencias/qr/generar', GenerarQRView.as_view(), name='generar-qr'),

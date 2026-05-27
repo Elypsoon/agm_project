@@ -6,23 +6,7 @@
     <p class="page-subtitle">Presenta este código al docente para registrar tu asistencia</p>
   </div>
 
-  <!-- Ingresar sesión -->
-  <div class="card mb-4" *ngIf="!sesionActiva()">
-    <div class="flex gap-2">
-      <input
-        pInputText
-        type="text"
-        placeholder="ID de sesión (UUID)"
-        [ngModel]="sesionId()"
-        (ngModelChange)="sesionId.set($event)"
-        class="flex-1"
-      />
-      <p-button label="Generar QR" icon="pi pi-qrcode" (onClick)="activarSesion()" />
-    </div>
-  </div>
-
-  <!-- QR activo -->
-  <div *ngIf="sesionActiva()" class="qr-layout">
+  <div class="qr-layout">
 
     <!-- QR Card -->
     <div class="qr-card" [class.expiring]="secondsLeft() <= 10">
@@ -32,9 +16,8 @@
         <div class="qr-avatar">{{ avatarLabel() }}</div>
         <div class="qr-user-info">
           <span class="qr-user-name">{{ userName() }}</span>
-          <span class="qr-user-id mono-id">{{ sesionId().substring(0, 12) }}...</span>
+          <p-tag value="Activo" severity="success" />
         </div>
-        <p-tag value="Activo" severity="success" />
       </div>
 
       <!-- QR Code -->
@@ -76,13 +59,11 @@
 
       <!-- Botón renovar -->
       <p-button
-        class="refresh-btn"
-        label="Renovar ahora"
+        label="Renovar QR"
         icon="pi pi-refresh"
         [text]="true"
         (onClick)="refreshQr()"
       />
-
     </div>
 
     <!-- Info panel -->
@@ -131,21 +112,6 @@
           </div>
         </div>
       </div>
-
-      <div>
-        <p class="mat-info-title">Materias con asistencia hoy</p>
-        <div class="mat-info-item">
-          <div class="mat-dot" style="background: #F59E0B"></div>
-          <span>Desarrollo de Sistemas Distribuidos</span>
-          <span class="mat-hora">08:00</span>
-        </div>
-        <div class="mat-info-item">
-          <div class="mat-dot" style="background: #06B6D4"></div>
-          <span>Redes de Computadoras</span>
-          <span class="mat-hora">10:00</span>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>

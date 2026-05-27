@@ -69,6 +69,18 @@
               </div>
               <span class="cap-text">Cap. 45</span>
             </div>
+            
+            <div class="materia-actions" style="margin-top: 12px; display: flex; justify-content: flex-end;">
+              <p-button 
+                type="button"
+                label="Importar Alumnos" 
+                icon="pi pi-upload" 
+                [text]="true"
+                size="small"
+                [style]="{'border-color': 'var(--mat-color)', 'color': 'var(--mat-color)', 'font-size': '12px', 'padding': '4px 8px'}"
+                (onClick)="openImportDialog(materia)">
+              </p-button>
+            </div>
           </div>
         </div>
       }
@@ -83,3 +95,50 @@
     }
   }
 </div>
+
+<!-- ── Import Alumnos PDF Dialog ── -->
+<p-dialog
+  [header]="'Importar Alumnos — ' + (materiaParaImportar?.nombre || '')"
+  [(visible)]="showImportDialog"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false">
+
+  <div class="import-dialog-body">
+    <div class="import-info">
+      <i class="pi pi-info-circle"></i>
+      <span>Se procesarán los alumnos a partir del archivo PDF del listado oficial de Banner (BUAP).</span>
+    </div>
+
+    <div class="file-drop-zone" [class.has-file]="selectedFile">
+      <input type="file" id="alumno-pdf-upload" accept=".pdf" (change)="onFileChange($event)" style="display:none" />
+      <label for="alumno-pdf-upload" class="file-drop-label">
+        <i class="pi pi-file-pdf file-icon"></i>
+        @if (selectedFile) {
+          <span class="file-name">{{ selectedFile.name }}</span>
+        } @else {
+          <span>Haz clic o arrastra el archivo PDF aquí</span>
+        }
+      </label>
+    </div>
+
+    @if (uploadError) {
+      <div class="alert alert--error">
+        <i class="pi pi-times-circle"></i> {{ uploadError }}
+      </div>
+    }
+    @if (uploadSuccess) {
+      <div class="alert alert--success">
+        <i class="pi pi-check-circle"></i> {{ uploadSuccess }}
+      </div>
+    }
+    @if (importLoading) {
+      <p-progressBar mode="indeterminate" styleClass="import-progress" />
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" icon="pi pi-times" [text]="true" (onClick)="showImportDialog = false" [disabled]="importLoading" />
+    <p-button label="Importar" icon="pi pi-upload" [disabled]="importLoading || !selectedFile" (onClick)="uploadPdf()" />
+  </ng-template>
+</p-dialog>

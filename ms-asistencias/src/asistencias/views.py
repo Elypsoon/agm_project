@@ -131,9 +131,6 @@ class RegistrarAsistenciaView(APIView):
         if Asistencia.objects.filter(qr_token_hash=token_hash).exists():
             return _response_error("Este código QR ya fue utilizado.", status.HTTP_409_CONFLICT)
 
-        if qr_data['sesion_id'] != sesion_id:
-            return _response_error("El QR no corresponde a esta sesión.", status.HTTP_400_BAD_REQUEST)
-
         alumno_id = uuid.UUID(str(qr_data['alumno_id']))
         matricula = qr_data['matricula']
 
@@ -236,20 +233,13 @@ class HistorialAsistenciasView(APIView):
 class GenerarQRView(APIView):
     """
     Genera un token QR cifrado para que el alumno lo muestre en pantalla.
-    El frontend llama a este endpoint cada 30 segundos para rotar el QR.
+    El QR contiene alumno_id, matricula y timestamp.
+    No requiere sesion_id — el alumno solo necesita mostrar su QR.
+    El frontend lo rota cada 30 segundos automáticamente.
     """
     permission_classes = [EsAlumno]
 
     def get(self, request):
-        sesion_id = request.query_params.get('sesion_id')
-        if not sesion_id:
-            return _response_error("Se requiere sesion_id.", status.HTTP_400_BAD_REQUEST)
-
-        # Verificar que la sesión exista y esté activa
-        sesion = Sesion.objects.filter(id=sesion_id, estado='activa').first()
-        if not sesion:
-            return _response_error("La sesión no existe o ya fue cerrada.", status.HTTP_404_NOT_FOUND)
-
         alumno_id = str(request.user.user_id)
         matricula = request.user.matricula if hasattr(request.user, 'matricula') else 'SIN-MATRICULA'
 
@@ -257,14 +247,12 @@ class GenerarQRView(APIView):
             token = encrypt_qr_payload(
                 alumno_id=alumno_id,
                 matricula=matricula,
-                sesion_id=sesion_id,
             )
         except RuntimeError as e:
             return _response_error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return _response_ok({
             'qr_token': token,
-            'sesion_id': sesion_id,
             'expira_en_segundos': 30,
         }, "Token QR generado correctamente.")
     
@@ -300,4 +288,48 @@ class MisMateriasSesionView(APIView):
         return _response_ok(
             [],
             "MS-2 no disponible y sin caché, use UUID manual."
+        )
+    
+class SesionActivaView(APIView):
+    """
+    Retorna la sesión activa para una materia.
+    El alumno la usa para generar su QR sin necesitar el UUID de la sesión.
+    """
+    permission_classes = [EsDocenteOAlumno]
+
+    def get(self, request):
+        materia_id = request.query_params.get('materia_id')
+        if not materia_id:
+            return _response_error("Se requiere materia_id.", status.HTTP_400_BAD_REQUEST)
+
+        try:
+            materia_uuid = uuid.UUID(materia_id)
+        except ValueError:
+            return _response_error("materia_id inválido.", status.HTTP_400_BAD_REQUEST)
+
+        sesion = Sesion.objects.filter(
+            materia_id=materia_uuid,
+            estado='activa'
+        ).first()
+
+        if not sesion:
+            return _response_error(
+                "No hay sesión activa para esta materia.",
+                status.HTTP_404_NOT_FOUND
+            )
+
+        elapsed = (timezone.now() - sesion.hora_inicio).total_seconds()
+        if elapsed > sesion.duracion_segundos:
+            sesion.estado = 'cerrada'
+            sesion.hora_fin = timezone.now()
+            sesion.save(update_fields=['estado', 'hora_fin'])
+            cache.delete(_sesion_redis_key(str(sesion.id)))
+            return _response_error(
+                "La sesión expiró.",
+                status.HTTP_404_NOT_FOUND
+            )
+
+        return _response_ok(
+            SesionSerializer(sesion).data,
+            "Sesión activa encontrada."
         )

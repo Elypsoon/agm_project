@@ -118,7 +118,7 @@ class MateriaViewSet(viewsets.ModelViewSet):
         return MateriaSerializer
 
     def get_queryset(self):
-        """Filter materias by periodo if specified"""
+        """Filter materias by periodo or docente if specified"""
         queryset = super().get_queryset().prefetch_related('horarios')
         periodo_id = self.request.query_params.get('periodo_id')
         search_param = self.request.query_params.get('search', '').strip()
@@ -131,6 +131,12 @@ class MateriaViewSet(viewsets.ModelViewSet):
             for token in tokens:
                 queryset = queryset.filter(docente_nombre__icontains=token)
                 
+        docente_id = self.request.query_params.get('docente_id')
+        if periodo_id:
+            queryset = queryset.filter(periodo_id=periodo_id)
+        docente_id = self.request.query_params.get('docente_id')
+        if docente_id:
+            queryset = queryset.filter(docente_id=docente_id)
         return queryset
 
     def update(self, request, *args, **kwargs):

@@ -10,12 +10,13 @@ import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { AvatarModule } from 'primeng/avatar';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { MessageService } from 'primeng/api';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
 
 import { DocentesService } from '../../../core/services/docentes.service';
 import { PeriodosService } from '../periodos/periodos.service';
@@ -35,7 +36,7 @@ export interface Docente {
   imports: [
     CommonModule, ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, InputTextModule, IconFieldModule, InputIconModule,
-    TagModule, DialogModule, ToastModule, SelectModule, AvatarModule, SkeletonModule,
+    TagModule, DialogModule, ToastModule, SelectModule, MultiSelectModule, AvatarModule, SkeletonModule,
     TooltipModule, ProgressBarModule
   ],
   providers: [MessageService],
@@ -55,7 +56,7 @@ export class DocentesComponent implements OnInit {
   selectedDocente: Docente | null = null;
 
   materiaOptions: { label: string; value: string }[] = [];
-  selectedMateria: string | null = null;
+  selectedMaterias: string[] = [];
 
   importLoading = false;
   selectedFile: File | null = null;
@@ -157,33 +158,38 @@ export class DocentesComponent implements OnInit {
 
   openAssignDialog(docente: Docente) {
     this.selectedDocente = docente;
-    this.selectedMateria = null;
+    this.selectedMaterias = [];
     this.showAssignDialog = true;
   }
 
   saveAssignment() {
-    if (!this.selectedMateria || !this.selectedDocente) {
-      this.messageService.add({ severity: 'warn', summary: 'Selecciona una materia', detail: '' });
+    if (!this.selectedMaterias || this.selectedMaterias.length === 0 || !this.selectedDocente) {
+      this.messageService.add({ severity: 'warn', summary: 'Selecciona al menos una materia', detail: '' });
       return;
     }
-    const materiaId = this.selectedMateria;
     const docente = this.selectedDocente;
+    const requests = this.selectedMaterias.map(materiaId => 
+      this.periodosService.updateMateria(materiaId, {
+        docente_id: docente.id,
+        docente_nombre: docente.nombre
+      })
+    );
 
-    this.periodosService.updateMateria(materiaId, {
-      docente_id: docente.id,
-      docente_nombre: docente.nombre
-    }).subscribe({
+    this.loading = true;
+    forkJoin(requests).subscribe({
       next: () => {
         this.messageService.add({
           severity: 'success',
-          summary: 'Asignación guardada',
-          detail: `Materia asignada con éxito a ${docente.nombre}.`
+          summary: 'Asignaciones guardadas',
+          detail: `Materias asignadas con éxito a ${docente.nombre}.`
         });
         this.showAssignDialog = false;
         this.loadData();
       },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo realizar la asignación.' });
+      error: (err) => {
+        console.error(err);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron realizar algunas asignaciones.' });
+        this.loading = false;
       }
     });
   }
