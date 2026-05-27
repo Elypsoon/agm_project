@@ -45,7 +45,7 @@ class CalificacionesGRPCClient:
                     alumnos.append({
                         "alumno_id": a.alumno_id,
                         "alumno_nombre": a.alumno_nombre,
-                        "matricula": a.matricula or "N/A",
+                        "matricula": a.alumno_matricula or "N/A",
                         "promedio_real": a.promedio_real,
                         "promedio_redondeado": a.promedio_redondeado,
                         "calificaciones": calificaciones_map

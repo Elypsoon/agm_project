@@ -578,25 +578,133 @@ def obtener_estadisticas_alumno(request, id):
 
     promedio = CalificacionesGRPCClient.obtener_promedio_alumno(alumno_id=id, materia_id=materia_id)
     asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(alumno_id=id, materia_id=materia_id)
-    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo()
+    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
 
     if promedio is None and asistencia is None:
         return Response({"error": "No se pudo obtener estadísticas del alumno para la materia indicada."}, status=404)
 
+    # 1. Recuperar o autogenerar proactivamente el snapshot del grupo para comparaciones
+    periodo_id = periodo_activo.get('id', 'N/A')
+    snapshot = EstadisticasSnapshot.objects.filter(materia_id=materia_id, periodo_id=periodo_id).first()
+
+    if not snapshot:
+        try:
+            datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+            if datos_materia and datos_materia.get('alumnos'):
+                alumnos_base = datos_materia['alumnos']
+                total_al = len(alumnos_base)
+                prom_g = sum(a['promedio_real'] for a in alumnos_base) / total_al if total_al > 0 else 0.0
+                aprob = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
+                tasa_aprob = (aprob / total_al) * 100 if total_al > 0 else 0.0
+                
+                asist_global = AsistenciasGRPCClient.obtener_estadisticas_asistencia(materia_id)
+                tasa_asist = asist_global.get('porcentaje_global', 0.0) if asist_global else 0.0
+                
+                snapshot = EstadisticasSnapshot.objects.create(
+                    materia_id=materia_id,
+                    periodo_id=periodo_id,
+                    promedio_grupo=round(prom_g, 2),
+                    tasa_aprobacion=round(tasa_aprob, 2),
+                    tasa_asistencia=round(tasa_asist, 2),
+                    total_alumnos=total_al,
+                )
+        except Exception:
+            pass
+
+    # 2. Computar KPIs Comparativos de Calificaciones
+    prom_real = round(float(promedio.get('promedio_real', 0.0)), 2) if promedio and promedio.get('promedio_real') is not None else 0.0
+    prom_red = promedio.get('promedio_redondeado', 0) if promedio and promedio.get('promedio_redondeado') is not None else 0
+    promedio_grupo_val = float(snapshot.promedio_grupo) if snapshot else 0.0
+    
+    diff_prom = round(prom_real - promedio_grupo_val, 2)
+    if diff_prom >= 0:
+        msg_prom = f"Tu promedio se encuentra {diff_prom} puntos por encima de la media grupal."
+    else:
+        msg_prom = f"Tu promedio se encuentra {abs(diff_prom)} puntos por debajo de la media grupal."
+
+    # 3. Computar KPIs Comparativos de Asistencias y Semáforo de Riesgo (Regla BUAP 80%)
+    porcentaje_asist = round(float(asistencia.get('porcentaje', 0.0)), 2) if asistencia and asistencia.get('porcentaje') is not None else 0.0
+    tasa_asistencia_grupo_val = float(snapshot.tasa_asistencia) if snapshot else 0.0
+    
+    diff_asist = round(porcentaje_asist - tasa_asistencia_grupo_val, 2)
+    if diff_asist >= 0:
+        msg_asist = f"Tu asistencia es un {diff_asist}% superior a la media de tu grupo."
+    else:
+        msg_asist = f"Tu asistencia es un {abs(diff_asist)}% inferior a la media de tu grupo."
+
+    if porcentaje_asist >= 90.0:
+        estado_riesgo = "EXCELENTE"
+        msg_alerta = "Cumples satisfactoriamente con el porcentaje de asistencia requerido (mínimo 80%)."
+    elif porcentaje_asist >= 80.0:
+        estado_riesgo = "REGULAR"
+        msg_alerta = "Cumples con el porcentaje mínimo requerido de asistencia, pero procura no faltar más."
+    else:
+        estado_riesgo = "RIESGO_POR_FALTAS"
+        msg_alerta = "¡Alerta! Tu asistencia es menor al 80%. Estás en riesgo de perder derecho a examen final."
+
+    # 4. Calcular el progreso del curso (actividades entregadas vs totales)
+    actividades_totales = 0
+    actividades_entregadas = 0
+    porcentaje_completado = 0.0
+
+    try:
+        datos_concentrado = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+        if datos_concentrado:
+            for p in datos_concentrado.get("ponderaciones", []):
+                actividades_totales += len(p.get("actividades", []))
+
+            for al in datos_concentrado.get("alumnos", []):
+                if str(al.get("alumno_id")) == str(id):
+                    alumno_calificaciones = al.get("calificaciones", {})
+                    for act_id, valor in alumno_calificaciones.items():
+                        if valor is not None:
+                            actividades_entregadas += 1
+                    break
+
+            if actividades_totales > 0:
+                porcentaje_completado = round((actividades_entregadas / actividades_totales) * 100, 2)
+    except Exception:
+        pass
+
+    # 5. Compilar el payload premium
     resumen_alumno = {
         "alumno_id": id,
         "materia_id": materia_id,
-        "periodo_activo": periodo_activo.get('nombre') if periodo_activo else 'N/A',
-        "promedio_real": promedio.get('promedio_real') if promedio else None,
-        "promedio_redondeado": promedio.get('promedio_redondeado') if promedio else None,
-        "porcentaje_asistencia": asistencia.get('porcentaje') if asistencia else 0.0,
-        "total_presentes": asistencia.get('total_presentes') if asistencia else 0,
-        "total_retardos": asistencia.get('total_retardos') if asistencia else 0,
-        "total_ausentes": asistencia.get('total_ausentes') if asistencia else 0,
+        "periodo_activo": periodo_activo.get('nombre', 'PRIMAVERA 2026'),
+        
+        "calificaciones_kpi": {
+            "promedio_real": prom_real,
+            "promedio_redondeado": prom_red,
+            "comparativa_grupo": {
+                "promedio_grupo": promedio_grupo_val,
+                "diferencia": diff_prom,
+                "mensaje": msg_prom
+            }
+        },
+        
+        "asistencia_kpi": {
+            "porcentaje_asistencia": porcentaje_asist,
+            "total_presentes": asistencia.get('total_presentes', 0) if asistencia else 0,
+            "total_retardos": asistencia.get('total_retardos', 0) if asistencia else 0,
+            "total_faltas": asistencia.get('total_ausentes', 0) if asistencia else 0,
+            "comparativa_grupo": {
+                "tasa_asistencia_grupo": tasa_asistencia_grupo_val,
+                "diferencia": diff_asist,
+                "mensaje": msg_asist
+            },
+            "estado_riesgo": estado_riesgo,
+            "mensaje_alerta": msg_alerta
+        },
+        
+        "progreso_academico": {
+            "actividades_entregadas": actividades_entregadas,
+            "actividades_totales": actividades_totales,
+            "porcentaje_completado": porcentaje_completado
+        }
     }
 
     return Response({
         "success": True,
-        "message": f"Estadísticas del alumno {id} calculadas correctamente.",
+        "message": f"Estadísticas analíticas del alumno {id} compiladas correctamente.",
         "data": resumen_alumno,
     })
