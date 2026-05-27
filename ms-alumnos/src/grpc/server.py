@@ -159,20 +159,27 @@ class AlumnosServiceServicer:
         """Obtener informacion de un docente por su nombre completo."""
         from src.models.docente import Docente
         from src.grpc import alumnos_pb2
+        from django.db.models.functions import Lower
+        from django.db.models import Func, F 
+        import grpc
 
         try:
             raw_nombre = request.nombre_completo.strip()
-            
-            tokens = [t for t in raw_nombre.split(" ") if t.strip()]
+            tokens = [t.strip().lower() for t in raw_nombre.split(" ") if t.strip()]
 
             if not tokens:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details("El nombre proporcionado está vacío.")
                 return alumnos_pb2.DocenteInfo()
 
+            class Unaccent(Func):
+                function = 'UNACCENT'
+
             query = Docente.objects.all()
             for token in tokens:
-                query = query.filter(nombre_completo__unaccent__icontains=token)
+                query = query.annotate(
+                    nombre_unaccented=Unaccent(Lower(F('nombre_completo')))
+                ).filter(nombre_unaccented__icontains=token)
 
             docente = query.first()
 
@@ -188,11 +195,11 @@ class AlumnosServiceServicer:
                 cubiculo=docente.cubiculo or "",
             )
         except Exception as e:
+            from django.db.models.functions import Lower
             logger.error(f"gRPC GetDocenteByName error: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return alumnos_pb2.DocenteInfo()
-
 
 def crear_servidor_grpc(port: int) -> grpc.Server:
     """Crea y retorna un servidor gRPC (sin iniciar)."""
