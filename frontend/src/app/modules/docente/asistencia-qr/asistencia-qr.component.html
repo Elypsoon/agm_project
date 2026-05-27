@@ -8,17 +8,60 @@
 
   <!-- Iniciar sesión -->
   <div class="card mb-4" *ngIf="!sesionActiva()">
-    <div class="flex gap-2">
+
+    <!-- Cargando materias -->
+    <div *ngIf="cargandoMaterias()" class="flex items-center gap-2 text-gray-400">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando materias...</span>
+    </div>
+
+    <!-- Dropdown de materias -->
+    <div *ngIf="!cargandoMaterias() && !modoManual()" class="flex gap-2">
+      <p-select
+        [options]="materias()"
+        [(ngModel)]="materiaSeleccionada"
+        (ngModelChange)="materiaSeleccionada.set($event)"
+        optionLabel="nombre"
+        placeholder="Selecciona una materia"
+        class="flex-1"
+        [style]="{'width': '100%'}"
+      >
+        <ng-template pTemplate="item" let-materia>
+          <div class="flex flex-col">
+            <span class="font-medium">{{ materia.nombre }}</span>
+            <span class="text-xs text-gray-400">NRC: {{ materia.nrc }} | Sección: {{ materia.seccion }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+      <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
+      <p-button
+        icon="pi pi-pencil"
+        severity="secondary"
+        pTooltip="Ingresar UUID manualmente"
+        (onClick)="modoManual.set(true)"
+      />
+    </div>
+
+    <!-- Fallback: input manual -->
+    <div *ngIf="!cargandoMaterias() && modoManual()" class="flex gap-2">
       <input
         pInputText
         type="text"
         placeholder="ID de la materia (UUID)"
-        [ngModel]="materiaId()"
-        (ngModelChange)="materiaId.set($event)"
+        [ngModel]="materiaIdManual()"
+        (ngModelChange)="materiaIdManual.set($event)"
         class="flex-1"
       />
       <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
+      <p-button
+        *ngIf="materias().length > 0"
+        icon="pi pi-list"
+        severity="secondary"
+        pTooltip="Volver al selector"
+        (onClick)="modoManual.set(false)"
+      />
     </div>
+
   </div>
 
   <!-- Panel activo -->
@@ -91,9 +134,7 @@
         <div class="flex justify-between items-center mb-3">
           <div>
             <div class="font-semibold text-sm">Sesión activa</div>
-            <div class="text-xs text-gray-400" style="word-break: break-all;">
-              {{ sesionActiva()?.materia_id }}
-            </div>
+            <div class="text-xs text-gray-400">{{ getMaterialLabel() }}</div>
           </div>
           <div class="text-right">
             <div class="text-2xl font-mono font-bold" style="color: #6366f1;">
