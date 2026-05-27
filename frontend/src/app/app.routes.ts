@@ -8,6 +8,10 @@ export const routes: Routes = [
     loadChildren: () => import('./modules/auth/auth.routes').then(m => m.AUTH_ROUTES)
   },
   {
+    path: 'admin',
+    loadChildren: () => import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES)
+  },
+  {
     path: 'docente',
     loadChildren: () => import('./modules/docente/docente.routes').then(m => m.DOCENTE_ROUTES),
     canActivate: [authGuard, roleGuard],

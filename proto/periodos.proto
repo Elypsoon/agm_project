@@ -30,6 +30,8 @@ message HorarioInfo {
   string salon = 4;       // e.g., "12EMA4/208" or "POR ASIGNAR"
   bool es_virtual = 5;
   string profesor = 6;    // Raw string from PDF
+  string campus = 7;
+  string licenciatura = 8;
 }
 
 message MateriaInfo {
