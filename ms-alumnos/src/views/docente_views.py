@@ -55,6 +55,29 @@ class DocenteListView(APIView):
             "message": f"{len(serializer.data)} docentes encontrados",
         })
 
+    def post(self, request):
+        serializer = DocenteSerializer(data=request.data)
+        if serializer.is_valid():
+            docente = serializer.save()
+            # Register in auth service asynchronously
+            from src.utils.rabbitmq import publish_event
+            publish_event(
+                routing_key="teacher.registered",
+                payload={
+                    "local_id": str(docente.id),
+                    "role": "docente",
+                    "email": docente.correo_institucional,
+                    "nombre": docente.nombre_completo,
+                    "password": docente.correo_institucional.split("@")[0],
+                }
+            )
+            return Response({
+                "success": True,
+                "data": serializer.data,
+                "message": "Docente registrado con éxito"
+            }, status=201)
+        return Response({"success": False, "errors": serializer.errors}, status=400)
+
 
 class DocenteDetailView(APIView):
     """GET /docentes/<uuid>/ — Detalle de un docente."""
@@ -73,6 +96,36 @@ class DocenteDetailView(APIView):
             "data": serializer.data,
             "message": "",
         })
+
+    def put(self, request, docente_id):
+        try:
+            docente = Docente.objects.get(id=docente_id)
+        except Docente.DoesNotExist:
+            return Response(
+                {"detail": "Docente no encontrado"}, status=404
+            )
+        serializer = DocenteSerializer(docente, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "success": True,
+                "data": serializer.data,
+                "message": "Docente actualizado con éxito"
+            })
+        return Response({"success": False, "errors": serializer.errors}, status=400)
+
+    def delete(self, request, docente_id):
+        try:
+            docente = Docente.objects.get(id=docente_id)
+            docente.delete()
+            return Response({
+                "success": True,
+                "message": "Docente eliminado con éxito"
+            }, status=200)
+        except Docente.DoesNotExist:
+            return Response(
+                {"detail": "Docente no encontrado"}, status=404
+            )
 
 
 class DocenteImportView(APIView):
