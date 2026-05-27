@@ -185,6 +185,66 @@ class TestCalificacionesViews(TestCase):
         self.assertEqual(resp.status_code, 403)
         self.assertIn("La materia se encuentra cerrada", resp.data["detail"])
 
+    @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
+    def test_eliminar_actividad_exito(self, mock_materia):
+        """Verifica que el docente asignado pueda eliminar una actividad en una materia abierta."""
+        mock_materia.return_value = {
+            "id": str(MATERIA_ID),
+            "docente_id": str(DOCENTE_ID),
+            "estado": "abierta",
+        }
+        pond = Ponderacion.objects.create(materia_id=MATERIA_ID, nombre_categoria="Tareas", porcentaje=100.00)
+        actividad = Actividad.objects.create(ponderacion=pond, nombre="Tarea Borrable", orden=0)
+
+        resp = self.client.delete(f"/api/actividades/{actividad.id}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Actividad.objects.filter(id=actividad.id).exists())
+
+    @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
+    def test_eliminar_actividad_con_calificaciones_exito(self, mock_materia):
+        """Verifica que al eliminar una actividad, se borren también sus calificaciones asociadas (cascada manual)."""
+        mock_materia.return_value = {
+            "id": str(MATERIA_ID),
+            "docente_id": str(DOCENTE_ID),
+            "estado": "abierta",
+        }
+        pond = Ponderacion.objects.create(materia_id=MATERIA_ID, nombre_categoria="Tareas", porcentaje=100.00)
+        actividad = Actividad.objects.create(ponderacion=pond, nombre="Tarea con Notas", orden=0)
+        
+        # Registrar una calificación vinculada a esta actividad
+        from src.models.models import Calificacion
+        import uuid
+        calif = Calificacion.objects.create(
+            actividad=actividad,
+            alumno_id=uuid.uuid4(),
+            valor=85.50
+        )
+
+        # Verificar que existen en la base de datos
+        self.assertTrue(Calificacion.objects.filter(id=calif.id).exists())
+
+        resp = self.client.delete(f"/api/actividades/{actividad.id}/")
+        self.assertEqual(resp.status_code, 200)
+        
+        # Verificar que ambos objetos hayan sido eliminados exitosamente
+        self.assertFalse(Actividad.objects.filter(id=actividad.id).exists())
+        self.assertFalse(Calificacion.objects.filter(id=calif.id).exists())
+
+    @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
+    def test_eliminar_actividad_materia_cerrada(self, mock_materia):
+        """Comprueba que no se pueda eliminar una actividad si la materia está cerrada."""
+        mock_materia.return_value = {
+            "id": str(MATERIA_ID),
+            "docente_id": str(DOCENTE_ID),
+            "estado": "cerrada",
+        }
+        pond = Ponderacion.objects.create(materia_id=MATERIA_ID, nombre_categoria="Tareas", porcentaje=100.00)
+        actividad = Actividad.objects.create(ponderacion=pond, nombre="Tarea Borrable", orden=0)
+
+        resp = self.client.delete(f"/api/actividades/{actividad.id}/")
+        self.assertEqual(resp.status_code, 403)
+        self.assertTrue(Actividad.objects.filter(id=actividad.id).exists())
+
     @patch("src.grpc.alumnos_client.AlumnosClient.is_alumno_en_materia")
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_calificacion_por_docente(self, mock_materia, mock_alumno):

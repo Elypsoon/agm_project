@@ -52,7 +52,15 @@ def _enriquecer_con_asistencia(alumnos, materia_id):
 
 
 import logging
+import re
+import unicodedata
+
 logger = logging.getLogger(__name__)
+
+def slugify(value):
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+    return re.sub(r'[-\s]+', '_', value)
 
 def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_reporte):
     try:
@@ -69,11 +77,22 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
             logger.warning(f"[-] Database error while reading cache in background thread: {e}")
             cache_activo = None
 
+        # Consultar datos dinámicos de la materia y período vía gRPC
+        materia_info = PeriodosGRPCClient.obtener_materia_por_id(materia_id) or {}
+        materia_nombre = materia_info.get("nombre", "Materia Desconocida")
+        docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
+        
+        periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+        periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+        
+        materia_slug = slugify(materia_nombre)
+        friendly_filename = f"{tipo_reporte}_{materia_slug}.{ext}"
+
         if cache_activo and os.path.exists(cache_activo.archivo_path):
             logger.info(f"[+] Hilo asíncrono (tipo: {tipo_reporte}) - Cache Hit para materia {materia_id}")
             with open(cache_activo.archivo_path, 'rb') as f:
                 archivo_bytes = f.read()
-            archivo_nombre = os.path.basename(cache_activo.archivo_path)
+            archivo_nombre = friendly_filename
             expiration_time = cache_activo.valido_hasta
         else:
             logger.info(f"[+] Hilo asíncrono (tipo: {tipo_reporte}) - Cache Miss para materia {materia_id}")
@@ -81,10 +100,6 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
             if not datos_materia or not datos_materia.get('alumnos'):
                 logger.error(f"[-] Error en reporte asíncrono para materia {materia_id}: No hay calificaciones.")
                 return
-
-            periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
-            periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
-            docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
 
             if tipo_reporte == 'calificaciones':
                 if ext == 'xlsx':
@@ -96,8 +111,14 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
                     )
                 else:
                     alumnos_calif = _enriquecer_con_asistencia(datos_materia['alumnos'], materia_id)
-                    archivo_bytes = generate_calificaciones_pdf(materia_id, alumnos_calif)
-                archivo_nombre = f"calificaciones_{materia_id}.{ext}"
+                    archivo_bytes = generate_calificaciones_pdf(
+                        materia_id=materia_id,
+                        datos=alumnos_calif,
+                        materia_nombre=materia_nombre,
+                        periodo_nombre=periodo_nombre,
+                        docente_nombre=docente_nombre
+                    )
+                archivo_nombre = friendly_filename
             else:  # asistencias
                 datos_asistencias = []
                 for al in datos_materia['alumnos']:
@@ -136,8 +157,14 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
                             "retardos": asist_sum.get('total_retardos', 0) if asist_sum else 0,
                             "faltas": asist_sum.get('total_ausentes', 0) if asist_sum else 0,
                         })
-                    archivo_bytes = generate_asistencias_pdf(materia_id, datos_agregados)
-                archivo_nombre = f"asistencias_{materia_id}.{ext}"
+                    archivo_bytes = generate_asistencias_pdf(
+                        materia_id=materia_id,
+                        datos=datos_agregados,
+                        materia_nombre=materia_nombre,
+                        periodo_nombre=periodo_nombre,
+                        docente_nombre=docente_nombre
+                    )
+                archivo_nombre = friendly_filename
 
             # Guardar en caché local por 24 horas (timedelta(days=1))
             prefix_val = "agm_calif_" if tipo_reporte == 'calificaciones' else "agm_asist_"
@@ -152,11 +179,11 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
                     tipo=tipo_reporte if tipo_reporte == 'calificaciones' else 'asistencia',
                     formato=formato,
                     archivo_path=filepath,
-                    valido_hasta=valido_hasta, # Válido por 24 horas (1 día)
+                    valido_hasta=valido_hasta,
                 )
             except Exception as e:
                 logger.warning(f"[-] Database error while writing cache in background thread: {e}")
-            archivo_nombre = os.path.basename(filepath)
+            archivo_nombre = friendly_filename
             expiration_time = valido_hasta
 
         # Formatear la fecha y hora local de expiración
@@ -176,20 +203,11 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
 
         # Codificar los bytes a base64
         archivo_base64 = base64.b64encode(archivo_bytes).decode('utf-8')
-        
-        materia_nombre = "Materia Desconocida"
-        try:
-            datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
-            if datos_materia:
-                materia_nombre = datos_materia.get('materia_nombre', 'Materia Desconocida')
-        except Exception:
-            pass
-
-        materia_nombre = materia_nombre.upper()
+        materia_nombre_upper = materia_nombre.upper()
         formato_display = f"{formato.upper()} DE {tipo_reporte.upper()}"
         payload = {
             "email": dest_email,
-            "materia_nombre": materia_nombre,
+            "materia_nombre": materia_nombre_upper,
             "formato": formato_display,
             "archivo_base64": archivo_base64,
             "archivo_nombre": archivo_nombre,
@@ -212,23 +230,20 @@ def descargar_calificaciones(request, materia_id):
     formato = request.GET.get('formato', 'pdf').lower()
     ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
     content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
-
-    # Soporte para procesamiento asíncrono
-    is_async = request.GET.get('async', 'false').lower() == 'true'
     dest_email = request.GET.get('email')
 
-    if is_async and dest_email:
-        # Lanzar un hilo en segundo plano para no bloquear la petición REST
-        threading.Thread(
-            target=generar_y_enviar_reporte_async,
-            args=(materia_id, dest_email, formato, ext, 'calificaciones')
-        ).start()
-        
-        return Response({
-            "success": True,
-            "message": f"La generación del reporte de calificaciones en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
-        })
+    # Consultar datos dinámicos de la materia y período vía gRPC
+    materia_info = PeriodosGRPCClient.obtener_materia_por_id(materia_id) or {}
+    materia_nombre = materia_info.get("nombre", "Materia Desconocida")
+    docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
+    
+    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+    periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+    
+    materia_slug = slugify(materia_nombre)
+    friendly_filename = f"calificaciones_{materia_slug}.{ext}"
 
+    # 1. Comprobar caché primero (resiliente a fallos de BD)
     try:
         cache_activo = ReporteCache.objects.filter(
             materia_id=materia_id,
@@ -240,13 +255,29 @@ def descargar_calificaciones(request, materia_id):
         logger.warning(f"[-] Database error while reading cache: {e}")
         cache_activo = None
 
+    # Si existe en caché (Cache Hit), se descarga de inmediato síncronamente
     if cache_activo and os.path.exists(cache_activo.archivo_path):
         with open(cache_activo.archivo_path, 'rb') as f:
             archivo_bytes = f.read()
         response = HttpResponse(archivo_bytes, content_type=content_type)
-        response['Content-Disposition'] = f'inline; filename="calificaciones_{materia_id}_cached.{ext}"'
+        response['Content-Disposition'] = f'inline; filename="{friendly_filename}"'
         return response
 
+    # 2. Si es una falla de caché (Cache Miss) y se proporcionó correo: 
+    # Decisión automática: delegar al segundo plano (hilo asíncrono) para no congelar la pantalla.
+    if dest_email:
+        threading.Thread(
+            target=generar_y_enviar_reporte_async,
+            args=(materia_id, dest_email, formato, ext, 'calificaciones')
+        ).start()
+        
+        return Response({
+            "success": True,
+            "async": True,
+            "message": f"La generación del reporte de calificaciones ha comenzado. Recibirás un correo en {dest_email} cuanto esté listo."
+        })
+
+    # 3. Si no se proporcionó correo (descarga síncrona clásica del navegador)
     datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
     if not datos_materia or not datos_materia.get('alumnos'):
         return Response({"error": "No hay calificaciones registradas o el servicio no está disponible."}, status=404)
@@ -254,10 +285,6 @@ def descargar_calificaciones(request, materia_id):
     alumnos_calif = _enriquecer_con_asistencia(datos_materia['alumnos'], materia_id)
 
     if ext == 'xlsx':
-        periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
-        periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
-        docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
-        
         archivo_bytes = generate_calificaciones_excel(
             materia_id=materia_id,
             datos_calificaciones=datos_materia,
@@ -265,7 +292,13 @@ def descargar_calificaciones(request, materia_id):
             docente_nombre=docente_nombre
         )
     else:
-        archivo_bytes = generate_calificaciones_pdf(materia_id, alumnos_calif)
+        archivo_bytes = generate_calificaciones_pdf(
+            materia_id=materia_id,
+            datos=alumnos_calif,
+            materia_nombre=materia_nombre,
+            periodo_nombre=periodo_nombre,
+            docente_nombre=docente_nombre
+        )
 
     fd, filepath = tempfile.mkstemp(suffix=f".{ext}", prefix=f"agm_calif_{materia_id}_")
     with os.fdopen(fd, 'wb') as f:
@@ -277,13 +310,13 @@ def descargar_calificaciones(request, materia_id):
             tipo='calificaciones',
             formato=formato,
             archivo_path=filepath,
-            valido_hasta=timezone.now() + timedelta(days=1), # Expira en exactamente 24 horas
+            valido_hasta=timezone.now() + timedelta(days=1),
         )
     except Exception as e:
         logger.warning(f"[-] Database error while writing cache: {e}")
 
     response = HttpResponse(archivo_bytes, content_type=content_type)
-    response['Content-Disposition'] = f'inline; filename="calificaciones_{materia_id}.{ext}"'
+    response['Content-Disposition'] = f'inline; filename="{friendly_filename}"'
     return response
 
 
@@ -293,23 +326,20 @@ def descargar_asistencias(request, materia_id):
     formato = request.GET.get('formato', 'pdf').lower()
     ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
     content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
-
-    # Soporte para procesamiento asíncrono
-    is_async = request.GET.get('async', 'false').lower() == 'true'
     dest_email = request.GET.get('email')
 
-    if is_async and dest_email:
-        # Lanzar un hilo en segundo plano para no bloquear la petición REST
-        threading.Thread(
-            target=generar_y_enviar_reporte_async,
-            args=(materia_id, dest_email, formato, ext, 'asistencias')
-        ).start()
-        
-        return Response({
-            "success": True,
-            "message": f"La generación del reporte de asistencias en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
-        })
+    # Consultar datos dinámicos de la materia y período vía gRPC
+    materia_info = PeriodosGRPCClient.obtener_materia_por_id(materia_id) or {}
+    materia_nombre = materia_info.get("nombre", "Materia Desconocida")
+    docente_nombre = materia_info.get("docente_nombre", "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ")
+    
+    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+    periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+    
+    materia_slug = slugify(materia_nombre)
+    friendly_filename = f"asistencias_{materia_slug}.{ext}"
 
+    # 1. Comprobar caché primero
     try:
         cache_activo = ReporteCache.objects.filter(
             materia_id=materia_id,
@@ -321,13 +351,29 @@ def descargar_asistencias(request, materia_id):
         logger.warning(f"[-] Database error while reading cache: {e}")
         cache_activo = None
 
+    # Si existe en caché (Cache Hit), se descarga de inmediato síncronamente
     if cache_activo and os.path.exists(cache_activo.archivo_path):
         with open(cache_activo.archivo_path, 'rb') as f:
             archivo_bytes = f.read()
         response = HttpResponse(archivo_bytes, content_type=content_type)
-        response['Content-Disposition'] = f'inline; filename="asistencias_{materia_id}_cached.{ext}"'
+        response['Content-Disposition'] = f'inline; filename="{friendly_filename}"'
         return response
 
+    # 2. Si es una falla de caché (Cache Miss) y se proporcionó correo:
+    # Decisión automática: delegar al segundo plano (hilo asíncrono) para no congelar la pantalla.
+    if dest_email:
+        threading.Thread(
+            target=generar_y_enviar_reporte_async,
+            args=(materia_id, dest_email, formato, ext, 'asistencias')
+        ).start()
+        
+        return Response({
+            "success": True,
+            "async": True,
+            "message": f"La generación del reporte de asistencias ha comenzado. Recibirás un correo en {dest_email} cuanto esté listo."
+        })
+
+    # 3. Si no se proporcionó correo (descarga síncrona clásica del navegador)
     datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
     if not datos_materia or not datos_materia.get('alumnos'):
         return Response({"error": "No hay calificaciones o alumnos registrados para obtener asistencias."}, status=404)
@@ -347,10 +393,6 @@ def descargar_asistencias(request, materia_id):
                 "materia_id": materia_id,
                 "asistencias": []
             })
-
-    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
-    periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
-    docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
 
     if ext == 'xlsx':
         archivo_bytes = generate_asistencias_excel(
@@ -375,7 +417,13 @@ def descargar_asistencias(request, materia_id):
                 "retardos": asist_sum.get('total_retardos', 0) if asist_sum else 0,
                 "faltas": asist_sum.get('total_ausentes', 0) if asist_sum else 0,
             })
-        archivo_bytes = generate_asistencias_pdf(materia_id, datos_agregados)
+        archivo_bytes = generate_asistencias_pdf(
+            materia_id=materia_id,
+            datos=datos_agregados,
+            materia_nombre=materia_nombre,
+            periodo_nombre=periodo_nombre,
+            docente_nombre=docente_nombre
+        )
 
     fd, filepath = tempfile.mkstemp(suffix=f".{ext}", prefix=f"agm_asist_{materia_id}_")
     with os.fdopen(fd, 'wb') as f:
@@ -393,7 +441,7 @@ def descargar_asistencias(request, materia_id):
         logger.warning(f"[-] Database error while writing cache: {e}")
 
     response = HttpResponse(archivo_bytes, content_type=content_type)
-    response['Content-Disposition'] = f'inline; filename="asistencias_{materia_id}.{ext}"'
+    response['Content-Disposition'] = f'inline; filename="{friendly_filename}"'
     return response
 
 

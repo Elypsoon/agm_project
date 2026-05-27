@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
@@ -23,7 +24,7 @@ interface MateriaCard {
 @Component({
   selector: 'app-alumno-materias',
   standalone: true,
-  imports: [CommonModule, CardModule, TagModule, ButtonModule, SkeletonModule, ToastModule],
+  imports: [CommonModule, CardModule, TagModule, ButtonModule, SkeletonModule, ToastModule, RouterLink],
   providers: [MessageService],
   templateUrl: './materias.component.html',
   styleUrls: ['./materias.component.scss']
@@ -60,7 +61,7 @@ export class MateriasComponent implements OnInit {
 
   private mapToCards(inscripciones: Inscripcion[]): MateriaCard[] {
     return inscripciones.map((insc, i) => ({
-      id: insc.id,
+      id: insc.materia_id || insc.id,
       nombre: insc.materia_nombre,
       docente: 'Por asignar',
       horario: 'Consulta con tu docente',

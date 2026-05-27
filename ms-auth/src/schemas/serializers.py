@@ -41,6 +41,8 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['nombre', 'email', 'password', 'role']
+        # SECURITY: La seguridad sobre quién puede asignar qué roles 
+        # (VULN-05) ahora se maneja en el controlador (RegisterView).
 
     def create(self, validated_data):
         temp_password = None

@@ -17,7 +17,7 @@ from src.schemas.serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
 )
-from src.utils.permissions import IsAdminRole, IsDocenteRole
+from src.utils.permissions import IsAdminRole, IsDocenteRole, IsAdminOrDocenteRole
 from src.models.models import User
 
 logger = logging.getLogger(__name__)
@@ -44,11 +44,24 @@ class RegisterView(generics.CreateAPIView):
     """
     Registra un nuevo usuario.
     Si no se envía `password`, se genera una contraseña temporal y se notifica por correo.
+
+    SECURITY (VULN-05): Solo los administradores autenticados pueden crear cuentas.
+    El registro no es un flujo público; los alumnos y docentes son dados de alta por el Admin.
     """
-    permission_classes = [permissions.AllowAny]
+    # SECURITY (VULN-05): Requiere autenticación + rol admin o docente.
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrDocenteRole]
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
+        from rest_framework.exceptions import PermissionDenied
+        
+        role_solicitado = request.data.get('role', 'alumno')
+        
+        # Lógica de negocio de jerarquía:
+        # Si el usuario actual es docente, solo puede registrar alumnos.
+        if request.user.role == 'docente' and role_solicitado != 'alumno':
+            raise PermissionDenied("Los docentes solo pueden registrar alumnos.")
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -73,26 +86,37 @@ class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == status.HTTP_200_OK:
-            user = User.objects.get(email=request.data['email'])
-            return Response({
-                'access_token': response.data['access'],
-                'refresh_token': response.data['refresh'],
-                'token_type': 'bearer',
-                'requires_password_change': user.requires_password_change,
-                'user': UserSerializer(user).data,
-            })
+            email = request.data.get('email')
+            if email:
+                user = User.objects.get(email=email)
+                return Response({
+                    'access_token': response.data['access'],
+                    'refresh_token': response.data['refresh'],
+                    'token_type': 'bearer',
+                    'requires_password_change': user.requires_password_change,
+                    'user': UserSerializer(user).data,
+                })
         return response
 
 
 class ChangePasswordView(APIView):
     """
     Permite cambiar la contraseña temporal. Marca `requires_password_change = False` al completar.
+    Solo accesible si el usuario tiene un cambio de contraseña pendiente.
     Requiere autenticación JWT.
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 
     def post(self, request, *args, **kwargs):
+        # SECURITY (VULN-06): Bloquear el acceso si el usuario NO tiene cambio pendiente.
+        # Evita que un token robado sea usado para cambiar contraseñas arbitrariamente.
+        if not request.user.requires_password_change:
+            return Response(
+                {"error": "No tienes un cambio de contraseña pendiente."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         serializer = ChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -201,8 +225,23 @@ class ConfirmPasswordResetView(generics.GenericAPIView):
                 {"error": "El enlace es inválido o ha expirado."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception:
+        # SECURITY (VULN-08): Captura excepciones específicas en lugar de Exception genérico.
+        # El mensaje al cliente es siempre genérico; el detalle solo queda en los logs internos.
+        except (ValueError, TypeError):
+            logger.warning("[VULN-08] UID malformado en reset de contraseña. uid_raw='%s'", uidb64)
+            return Response(
+                {"error": "El enlace es inválido o ha expirado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except User.DoesNotExist:
+            logger.warning("[VULN-08] Reset con UID sin usuario asociado. uid_raw='%s'", uidb64)
+            return Response(
+                {"error": "El enlace es inválido o ha expirado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as exc:
+            logger.exception("[VULN-08] Error inesperado en ConfirmPasswordResetView: %s", exc)
             return Response(
                 {"error": "No se pudo procesar la solicitud."},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

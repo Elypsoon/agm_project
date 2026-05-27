@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.db.models import Max
 
-from src.models.models import Ponderacion, Actividad
+from src.models.models import Ponderacion, Actividad, Calificacion
 
 from src.services.autorizacion_service import verificar_materia_abierta
 
@@ -59,3 +59,25 @@ def crear_actividad(materia_id, ponderacion_id, nombre, descripcion='', estado='
         )
 
     return actividad
+
+
+class ActividadNoEncontrada(Exception):
+    """Excepción al no encontrar la actividad."""
+    pass
+
+
+def eliminar_actividad(actividad_id):
+    """Elimina una actividad evaluable por su ID.
+
+    Verifica que la materia esté abierta antes de proceder con la eliminación.
+    """
+    actividad = Actividad.objects.filter(id=actividad_id).select_related('ponderacion').first()
+    if not actividad:
+        raise ActividadNoEncontrada('No se encontró la actividad especificada.')
+
+    materia_id = actividad.ponderacion.materia_id
+    verificar_materia_abierta(materia_id)
+
+    with transaction.atomic():
+        Calificacion.objects.filter(actividad=actividad).delete()
+        actividad.delete()

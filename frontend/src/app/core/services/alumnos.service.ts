@@ -7,6 +7,7 @@ export interface Inscripcion {
   id: string;
   materia_id: string;
   materia_nombre: string;
+  docente_nombre?: string;
   fecha_inscripcion: string;
   activo: boolean;
 }

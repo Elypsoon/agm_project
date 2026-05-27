@@ -1,74 +1,159 @@
-<div class="page-enter">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Estadísticas</h1>
-      <p class="page-subtitle">Evolución de tu rendimiento académico</p>
+<div class="stats-container page-enter">
+  
+  <!-- ══ CABECERA DE LA PÁGINA ══ -->
+  <div class="stats-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="regresar()" pTooltip="Volver a mis materias" tooltipPosition="bottom">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div>
+        <h1 class="page-title">Estadísticas por Materia</h1>
+        <p class="page-subtitle">Analíticas comparativas y rendimiento individual</p>
+      </div>
     </div>
-    <p-select
-      id="periodo-select"
-      [options]="periodoOptions"
-      [(ngModel)]="selectedPeriodo"
-      styleClass="periodo-select" />
+    
+    <!-- Selector superior de materia activa -->
+    <div class="header-right">
+      <p-select
+        id="stats-materia-select"
+        [options]="materias()"
+        optionLabel="nombre"
+        optionValue="id"
+        [(ngModel)]="selectedMateriaId"
+        (onChange)="onMateriaChange($event)"
+        styleClass="materia-dropdown"
+        placeholder="Selecciona materia" />
+    </div>
   </div>
 
-  <!-- Summary Metrics -->
-  <div class="summary-grid">
-    @for (card of summaryCards; track card.label) {
-      <div class="sum-card" [style.--sc]="card.color">
-        <div class="sum-icon">
-          <i class="pi {{ card.icon }}"></i>
-        </div>
-        <div class="sum-body">
-          <span class="sum-val">{{ card.value }}</span>
-          <span class="sum-label">{{ card.label }}</span>
-        </div>
-        <div class="sum-trend" [class.up]="card.trendUp" [class.down]="!card.trendUp">
-          <i class="pi" [class.pi-trending-up]="card.trendUp" [class.pi-trending-down]="!card.trendUp"></i>
-          {{ card.trend }}
-        </div>
+  @if (loading()) {
+    <div class="stats-skeleton-grid">
+      <div class="skeleton-card card-full"></div>
+      <div class="skeleton-card card-half"></div>
+      <div class="skeleton-card card-half"></div>
+    </div>
+  } @else if (stats()) {
+    
+    <!-- ══ GRIS/GLASS PANEL DE DETALLES DE LA MATERIA ══ -->
+    <div class="materia-banner">
+      <div class="banner-icon">
+        <i class="pi pi-bookmark-fill"></i>
       </div>
-    }
-  </div>
-
-  <!-- Charts -->
-  <div class="charts-grid">
-
-    <!-- Line Chart: Evolución del promedio -->
-    <div class="chart-card chart-full">
-      <div class="chart-header">
-        <h2 class="chart-title"><i class="pi pi-chart-line"></i> Evolución del Promedio por Semestre</h2>
-        <p-tag value="Histórico" severity="secondary" />
+      <div class="banner-body">
+        <span class="materia-code">Periodo {{ stats()?.periodo_activo }}</span>
+        <h2>{{ selectedMateriaNombre() }}</h2>
       </div>
-      <p-chart type="line" [data]="lineData" [options]="lineOptions" height="240px" />
     </div>
 
-    <!-- Bar Chart: Asistencia por materia -->
-    <div class="chart-card chart-half">
-      <div class="chart-header">
-        <h2 class="chart-title"><i class="pi pi-chart-bar"></i> Asistencia por Materia</h2>
-        <p-tag value="Este semestre" severity="info" />
-      </div>
-      <p-chart type="bar" [data]="barData" [options]="barOptions" height="260px" />
-    </div>
+    <!-- ══ CORE METRICS: CALIFICACIONES Y ASISTENCIAS ══ -->
+    <div class="metrics-dashboard">
+      
+      <!-- 1. DIAL DE CALIFICACIÓN -->
+      <div class="metric-card glass-panel card-grade">
+        <div class="card-title">
+          <i class="pi pi-star-fill text-gold"></i>
+          <span>Calificación Ponderada</span>
+        </div>
 
-    <!-- Doughnut: Distribución de calificaciones -->
-    <div class="chart-card chart-half">
-      <div class="chart-header">
-        <h2 class="chart-title"><i class="pi pi-chart-pie"></i> Estado de Materias</h2>
-      </div>
-      <p-chart type="doughnut" [data]="doughnutData" [options]="doughnutOptions" height="260px" />
-
-      <!-- Legend -->
-      <div class="legend">
-        @for (item of legendItems; track item.label) {
-          <div class="legend-item">
-            <div class="legend-dot" [style.background]="item.color"></div>
-            <span class="legend-label">{{ item.label }}</span>
-            <span class="legend-val">{{ item.value }}</span>
+        <div class="dial-container">
+          <div class="circular-dial" [style.--dc]="'#F59E0B'" [style.--dp.%]="(stats()?.calificaciones_kpi?.promedio_real || 0) * 10">
+            <div class="dial-inner">
+              <span class="dial-val">{{ stats()?.calificaciones_kpi?.promedio_real | number:'1.1-1' }}</span>
+              <span class="dial-sub">Promedio</span>
+            </div>
           </div>
-        }
+        </div>
+
+        <div class="comparison-box">
+          <div class="comp-row">
+            <span class="comp-label">Media del grupo:</span>
+            <span class="comp-val font-semibold">{{ stats()?.calificaciones_kpi?.comparativa_grupo?.promedio_grupo | number:'1.1-1' }}</span>
+          </div>
+          <div class="comp-message" [class.positive]="(stats()?.calificaciones_kpi?.comparativa_grupo?.diferencia || 0) >= 0" [class.negative]="(stats()?.calificaciones_kpi?.comparativa_grupo?.diferencia || 0) < 0">
+            <i class="pi" [class.pi-arrow-up]="(stats()?.calificaciones_kpi?.comparativa_grupo?.diferencia || 0) >= 0" [class.pi-arrow-down]="(stats()?.calificaciones_kpi?.comparativa_grupo?.diferencia || 0) < 0"></i>
+            <span>{{ stats()?.calificaciones_kpi?.comparativa_grupo?.mensaje }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. DIAL DE ASISTENCIA Y SEMÁFORO DE RIESGO BUAP -->
+      <div class="metric-card glass-panel card-attendance" [class]="asistenciaClase()">
+        <div class="card-title">
+          <i class="pi pi-check-circle"></i>
+          <span>Tasa de Asistencia</span>
+        </div>
+
+        <div class="dial-container">
+          <div class="circular-dial" [style.--dp.%]="stats()?.asistencia_kpi?.porcentaje_asistencia">
+            <div class="dial-inner">
+              <span class="dial-val">{{ stats()?.asistencia_kpi?.porcentaje_asistencia }}%</span>
+              <span class="dial-sub">Asistencia</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detalles numéricos de asistencia -->
+        <div class="attendance-table">
+          <div class="att-col success-theme">
+            <span class="num">{{ stats()?.asistencia_kpi?.total_presentes }}</span>
+            <span class="label">Presentes</span>
+          </div>
+          <div class="att-col warn-theme">
+            <span class="num">{{ stats()?.asistencia_kpi?.total_retardos }}</span>
+            <span class="label">Retardos</span>
+          </div>
+          <div class="att-col danger-theme">
+            <span class="num">{{ stats()?.asistencia_kpi?.total_faltas }}</span>
+            <span class="label">Faltas</span>
+          </div>
+        </div>
+
+        <!-- Semáforo BUAP de Alerta de 80% -->
+        <div class="buap-warning-box">
+          <div class="warning-head">
+            <p-tag [value]="stats()?.asistencia_kpi?.estado_riesgo" [severity]="asistenciaSeveridad()" styleClass="risk-tag" />
+            <span class="warning-title">Regla BUAP 80%</span>
+          </div>
+          <p class="warning-text">{{ stats()?.asistencia_kpi?.mensaje_alerta }}</p>
+          <span class="comparison-sub">{{ stats()?.asistencia_kpi?.comparativa_grupo?.mensaje }}</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ BARRA DE PROGRESO DE ACTIVIDADES ══ -->
+    <div class="progress-panel glass-panel">
+      <div class="progress-header">
+        <div class="title-wrap">
+          <i class="pi pi-chart-line text-blue"></i>
+          <div>
+            <h3>Progreso Académico del Curso</h3>
+            <p>Porcentaje de actividades evaluadas y entregadas</p>
+          </div>
+        </div>
+        <div class="progress-counter">
+          <span class="completed">{{ stats()?.progreso_academico?.actividades_entregadas }}</span>
+          <span class="divider">/</span>
+          <span class="total">{{ stats()?.progreso_academico?.actividades_totales }} actividades</span>
+        </div>
+      </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-track">
+          <div class="progress-fill" [style.width.%]="stats()?.progreso_academico?.porcentaje_completado"></div>
+        </div>
+        <div class="progress-label">
+          <span>Avance del programa de evaluaciones</span>
+          <strong>{{ stats()?.progreso_academico?.porcentaje_completado }}%</strong>
+        </div>
       </div>
     </div>
 
-  </div>
+  } @else {
+    <div class="empty-state">
+      <i class="pi pi-chart-bar empty-icon"></i>
+      <h3>Sin estadísticas disponibles</h3>
+      <p>No se encontraron datos analíticos cargados para esta materia en el periodo seleccionado.</p>
+    </div>
+  }
 </div>

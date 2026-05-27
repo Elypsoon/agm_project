@@ -61,7 +61,12 @@ class PonderacionView(APIView):
         """
         ponderaciones = Ponderacion.objects.filter(materia_id=materia_id, activa=True)
         if not ponderaciones.exists():
-            return Response({"detail": "Configuracion no encontrada."}, status=404)
+            return Response(
+                {
+                    "detail": "No se encontró ningún esquema de ponderación configurado para esta materia. Es necesario definir los criterios de evaluación antes de continuar."
+                },
+                status=404
+            )
 
         data = {
             "materia_id": str(materia_id),

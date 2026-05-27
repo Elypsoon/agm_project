@@ -3,7 +3,14 @@ from rest_framework.response import Response
 
 from src.controllers.serializers import ActividadInputSerializer, ActividadSerializer
 
-from src.services.actividad_service import crear_actividad, PonderacionNoEncontrada, PonderacionMateriaNoCoincide
+from src.models.models import Actividad
+from src.services.actividad_service import (
+    crear_actividad,
+    eliminar_actividad,
+    PonderacionNoEncontrada,
+    PonderacionMateriaNoCoincide,
+    ActividadNoEncontrada
+)
 from src.services.autorizacion_service import (
     verificar_docente_sobre_materia,
     DocenteSinAutorizacion,
@@ -84,5 +91,38 @@ class ActividadView(APIView):
                 'data': ActividadSerializer(actividad).data
             },
             status=201,
+        )
+
+    def delete(self, request, actividad_id):
+        """Elimina una actividad evaluable por su ID.
+
+        Verifica que el docente tenga permisos sobre la materia titular de la actividad,
+        y que la materia se encuentre activa/abierta.
+        """
+        actividad = Actividad.objects.filter(id=actividad_id).select_related('ponderacion').first()
+        if not actividad:
+            return Response({'detail': 'No se encontró la actividad especificada.'}, status=404)
+
+        materia_id = actividad.ponderacion.materia_id
+
+        try:
+            verificar_docente_sobre_materia(request.user.user_id, materia_id)
+        except DocenteSinAutorizacion as exc:
+            return Response({'detail': str(exc)}, status=403)
+        except MateriaNoAccesible as exc:
+            return Response({'detail': str(exc)}, status=503)
+
+        try:
+            eliminar_actividad(actividad_id)
+        except ActividadNoEncontrada as exc:
+            return Response({'detail': str(exc)}, status=404)
+        except MateriaCerradaError as exc:
+            return Response({'detail': str(exc)}, status=403)
+        except MateriaNoAccesible as exc:
+            return Response({'detail': str(exc)}, status=503)
+
+        return Response(
+            {'message': 'Actividad eliminada exitosamente.'},
+            status=200,
         )
 

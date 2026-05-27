@@ -1,26 +1,23 @@
-import { Component, inject } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { FloatLabelModule } from 'primeng/floatlabel';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { CommonModule } from '@angular/common';
-
-export function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-  const newPassword = control.get('new_password')?.value;
-  const confirmPassword = control.get('new_password_confirm')?.value;
-  
-  if (newPassword && confirmPassword && newPassword !== confirmPassword) {
-    return { passwordMismatch: true };
-  }
-  return null;
-}
+import { passwordMatchValidator } from '../auth-validators';
 
 @Component({
   selector: 'app-change-password',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PasswordModule, ButtonModule, FloatLabelModule],
+  imports: [
+    CommonModule, ReactiveFormsModule,
+    PasswordModule, ButtonModule, FloatLabelModule, ToastModule
+  ],
+  providers: [MessageService],
   templateUrl: './change-password.component.html',
   styleUrls: ['./change-password.component.scss']
 })
@@ -28,6 +25,10 @@ export class ChangePasswordComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private messageService = inject(MessageService);
+
+  isLoading = signal(false);
+  errorMessage = signal('');
 
   passwordForm: FormGroup = this.fb.group({
     old_password: ['', Validators.required],
@@ -35,8 +36,10 @@ export class ChangePasswordComponent {
     new_password_confirm: ['', Validators.required]
   }, { validators: passwordMatchValidator });
 
-  isLoading = false;
-  errorMessage = '';
+  isInvalid(field: string): boolean {
+    const control = this.passwordForm.get(field);
+    return !!(control?.invalid && (control?.dirty || control?.touched));
+  }
 
   onSubmit() {
     if (this.passwordForm.invalid) {
@@ -44,17 +47,25 @@ export class ChangePasswordComponent {
       return;
     }
 
-    this.isLoading = true;
-    this.errorMessage = '';
+    this.isLoading.set(true);
+    this.errorMessage.set('');
 
     this.authService.changePassword(this.passwordForm.value).subscribe({
       next: () => {
-        this.isLoading = false;
-        this.router.navigate([this.authService.getDashboardRoute()]);
+        this.isLoading.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Contraseña actualizada',
+          detail: 'Tu contraseña ha sido cambiada correctamente',
+          life: 3000
+        });
+        setTimeout(() => {
+          this.router.navigate([this.authService.getDashboardRoute()]);
+        }, 1500);
       },
       error: (err) => {
-        this.isLoading = false;
-        this.errorMessage = err.message || 'Error al cambiar la contraseña. Verifica tu contraseña actual.';
+        this.isLoading.set(false);
+        this.errorMessage.set(err.message || 'Error al cambiar la contraseña. Verifica tu contraseña actual.');
       }
     });
   }

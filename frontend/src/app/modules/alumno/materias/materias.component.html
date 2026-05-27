@@ -18,7 +18,7 @@
   } @else {
     <div class="materias-grid">
       @for (m of materias(); track m.id) {
-        <div class="mat-card" [style.--mat-c]="m.color">
+        <a class="mat-card" [routerLink]="['/alumno/estadisticas']" [queryParams]="{ materia_id: m.id }" style="cursor: pointer; text-decoration: none;" [style.--mat-c]="m.color">
           <div class="mat-card-inner">
 
             <!-- Header colorido -->
@@ -61,7 +61,7 @@
             </div>
 
           </div>
-        </div>
+        </a>
       }
     </div>
 

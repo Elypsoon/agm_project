@@ -18,6 +18,7 @@ Este documento detalla los patrones y contratos de comunicación entre los micro
 | **Cierre Materia → Notificar** | Asíncrono | Event Bus | `ms-calificaciones` | `ms-notificaciones` | Puede haber decenas de alumnos. El procesamiento masivo de correos se hace en background. |
 | **Reset Passw → Recuperar** | Asíncrono | Event Bus | `ms-auth` | `ms-notificaciones` | Desacoplado de la API REST de autenticación rápida. |
 | **Generar Reporte → Aviso** | Asíncrono | Event Bus | `ms-reportes` | `ms-notificaciones` | Compilar PDFs/Excel es pesado. Se avisa al usuario en background cuando esté listo. |
+| **Obtener materias del docente** | Síncrono | gRPC | `ms-asistencias` | `ms-periodos` | El docente necesita ver sus materias asignadas para iniciar una sesión de asistencia sin escribir el UUID manualmente. |
 
 ---
 
@@ -57,6 +58,8 @@ Los contratos gRPC se definen usando **Protocol Buffers (proto3)**. Los puertos 
 |-----|---------|----------|-------------|
 | `GetAsistenciaAlumno` | `GetAsistenciaAlumnoRequest` | `AsistenciasAlumnoResponse` | Historial de asistencias de un alumno en una materia |
 | `GetEstadisticasAsistencia` | `GetEstadisticasAsistenciaRequest` | `EstadisticasAsistenciaResponse` | Estadísticas globales de asistencia por materia |
+
+> **Nota:** MS-5 también consume gRPC de MS-2 (`GetMateriasByDocente`) para obtener las materias del docente autenticado y presentarlas en un dropdown en el frontend. Este flujo tiene fallback manual: si MS-2 no está disponible, el docente puede escribir el UUID directamente.
 
 ### 📂 MS-7 Reportes & Estadísticas (:50057)
 | RPC | Request | Response | Descripción |
