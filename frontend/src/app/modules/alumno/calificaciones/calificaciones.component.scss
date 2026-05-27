@@ -59,3 +59,50 @@
   color: #1E293B; display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
   .pi { color: #F59E0B; }
 }
+
+.expansion-container {
+  border-radius: 12px;
+  background: #F8FAFC;
+  padding: 20px;
+}
+.expansion-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-categoria {
+  background: #FFFFFF;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 16px;
+  transition: all 0.2s ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+}
+.cat-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+.cat-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #F1F5F9;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+.actividades-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+

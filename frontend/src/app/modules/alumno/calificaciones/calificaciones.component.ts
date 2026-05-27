@@ -4,6 +4,8 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ChartModule } from 'primeng/chart';
+import { ButtonModule } from 'primeng/button';
+import { RippleModule } from 'primeng/ripple';
 import { AuthService } from '../../../core/services/auth.service';
 import { AlumnosService } from '../../../core/services/alumnos.service';
 import { CalificacionesService } from '../../../core/services/calificaciones.service';
@@ -24,7 +26,7 @@ interface CalificacionRow {
 @Component({
   selector: 'app-alumno-calificaciones',
   standalone: true,
-  imports: [CommonModule, TableModule, TagModule, SkeletonModule, ChartModule],
+  imports: [CommonModule, TableModule, TagModule, SkeletonModule, ChartModule, ButtonModule, RippleModule],
   templateUrl: './calificaciones.component.html',
   styleUrls: ['./calificaciones.component.scss']
 })
