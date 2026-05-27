@@ -255,7 +255,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5438:5432"tras DBs
+      - "5438:5432"
     volumes:
       - db_periodos_data:/var/lib/postgresql/data
 
