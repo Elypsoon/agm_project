@@ -10,3 +10,4 @@ openpyxl
 reportlab
 drf-yasg
 gunicorn
+requests

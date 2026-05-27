@@ -22,10 +22,10 @@
       }
       @if (selectedMateriaId) {
         <p-button label="Exportar Calificaciones" icon="pi pi-download" severity="info" [outlined]="true" (onClick)="menuCalif.toggle($event)" />
-        <p-menu #menuCalif [model]="itemsCalificaciones" [popup]="true" />
+        <p-menu #menuCalif [model]="itemsCalificaciones" [popup]="true" appendTo="body" />
 
         <p-button label="Exportar Asistencias" icon="pi pi-calendar" severity="success" [outlined]="true" (onClick)="menuAsist.toggle($event)" />
-        <p-menu #menuAsist [model]="itemsAsistencias" [popup]="true" />
+        <p-menu #menuAsist [model]="itemsAsistencias" [popup]="true" appendTo="body" />
       }
       <p-button label="Guardar cambios" icon="pi pi-save"
         [disabled]="!editedRows().size"
