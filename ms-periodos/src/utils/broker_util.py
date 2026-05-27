@@ -1,43 +1,32 @@
 import json
-import logging
 import pika
-from django.conf import settings
+import logging
 
 logger = logging.getLogger(__name__)
 
-def publish_imported_materias_event(periodo_id: str, materias_list: list):
-    """
-    Publishes an asynchronous event to RabbitMQ alerting MS-Alumnos 
-    to look up and resolve the professor UUIDs.
-    """
-    try:
-        rabbitmq_host = getattr(settings, 'RABBITMQ_HOST', 'rabbitmq')
-        rabbitmq_user = getattr(settings, 'RABBITMQ_USER', 'guest')
-        rabbitmq_pass = getattr(settings, 'RABBITMQ_PASS', 'guest')
+import json
+import pika
 
-        credentials = pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)
-        parameters = pika.ConnectionParameters(host=rabbitmq_host, credentials=credentials)
-        
-        connection = pika.BlockingConnection(parameters)
+def publish_imported_materias_event(periodo_id, materias_raw):
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host='agm-rabbitmq'))
         channel = connection.channel()
 
-        channel.exchange_declare(exchange='periodos_exchange', exchange_type='topic', durable=True)
+        queue_name = "ms_alumnos_import_queue"
+        channel.queue_declare(queue=queue_name, durable=True)
 
         payload = {
-            "periodo_id": periodo_id,
-            "materias": materias_list
+            "periodo_id": str(periodo_id),
+            "materias": materias_raw
         }
 
         channel.basic_publish(
-            exchange='periodos_exchange',
-            routing_key='periodos.materias.importadas',
+            exchange='',
+            routing_key=queue_name,
             body=json.dumps(payload),
-            properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Persistent,
-                content_type='application/json'
-            )
+            properties=pika.BasicProperties(delivery_mode=2)
         )
         connection.close()
-        logger.info("Successfully published 'periodos.materias.importadas' event pack to broker.")
+        print(f"🚀 [RabbitMQ] ¡Payload enviado directo a la cola '{queue_name}'!")
     except Exception as e:
-        logger.error(f"Failed to emit background message to RabbitMQ: {e}")
+        print(f"❌ Falló el envío directo: {e}")
