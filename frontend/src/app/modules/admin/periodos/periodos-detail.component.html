@@ -22,14 +22,6 @@
         <strong>{{ periodo.nombre }}</strong>
       </article>
       <article class="detail-card">
-        <span>Plan de estudios</span>
-        <strong>{{ periodo.plan_estudios }}</strong>
-      </article>
-      <article class="detail-card">
-        <span>Campus</span>
-        <strong>{{ periodo.campus || '—' }}</strong>
-      </article>
-      <article class="detail-card">
         <span>Activo</span>
         <p-tag
           [value]="periodo.activo ? 'Activo' : 'Inactivo'"
@@ -49,17 +41,56 @@
     <div class="materias-table-card">
       <div class="table-title">
         <h2>Materias del periodo</h2>
-        <span>{{ periodo.materias?.length ?? 0 }} materias</span>
+        <span>{{ filteredMaterias.length }} de {{ periodo.materias?.length ?? 0 }} materias</span>
       </div>
 
-      <p-table [value]="periodo.materias || []" [paginator]="true" [rows]="10">
+      <div class="filters-panel">
+        <div class="filter-search">
+          <i class="pi pi-search"></i>
+          <input
+            type="text"
+            pInputText
+            placeholder="Buscar por nombre, NRC o docente..."
+            [(ngModel)]="searchText"
+            class="search-input"
+          />
+        </div>
+
+        <div class="filter-controls">
+          <div class="filter-item">
+            <label for="plan-filter">Plan de estudios:</label>
+            <select id="plan-filter" [(ngModel)]="selectedPlanEstudios" class="filter-select">
+              <option [value]="null">Todos</option>
+              <option value="ITI">{{ planEstudiosMap['ITI'] }}</option>
+              <option value="LCC">{{ planEstudiosMap['LCC'] }}</option>
+              <option value="ICC">{{ planEstudiosMap['ICC'] }}</option>
+              <option value="ICD">{{ planEstudiosMap['ICD'] }}</option>
+              <option value="ISC">{{ planEstudiosMap['ISC'] }}</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="campus-filter">Campus:</label>
+            <select id="campus-filter" [(ngModel)]="selectedCampus" class="filter-select">
+              <option [value]="null">Todos</option>
+              <option value="CU2">Campus CU2</option>
+              <option value="SAN_MANUEL">Campus CU San Manuel</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <p-table [value]="filteredMaterias" [paginator]="true" [rows]="10">
         <ng-template pTemplate="header">
           <tr>
             <th>NRC</th>
             <th>Nombre</th>
             <th>Sección</th>
+            <th>Plan de estudios</th>
+            <th>Campus</th>
             <th>Docente</th>
             <th>Estado</th>
+            <th>Horario</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-materia>
@@ -67,6 +98,13 @@
             <td>{{ materia.nrc }}</td>
             <td>{{ materia.nombre }}</td>
             <td>{{ materia.seccion }}</td>
+            <td>{{ materia.plan_estudios || '—' }}</td>
+            <td>
+              <p-tag
+                [value]="getCampusLabel(materia.campus)"
+                [severity]="getCampusBadgeStyle(materia.campus)"
+              ></p-tag>
+            </td>
             <td>{{ materia.docente_nombre || '—' }}</td>
             <td>
               <p-tag [value]="materia.estado" [severity]="materia.estado === 'ABIERTA' ? 'success' : 'warn'"></p-tag>
@@ -78,10 +116,16 @@
                 styleClass="p-button-sm"
                 (click)="toggleMateriaSchedule(materia.id)"
               ></p-button>
+              <p-button
+                label="Editar"
+                icon="pi pi-pencil"
+                styleClass="p-button-sm p-button-info"
+                (click)="openEditModal(materia)"
+              ></p-button>
             </td>
           </tr>
           <tr *ngIf="isMateriaExpanded(materia.id)" class="schedule-row">
-            <td colspan="6">
+            <td colspan="8">
               <div class="schedule-panel">
                 <h3>Horario de {{ materia.nombre }}</h3>
                 <div *ngIf="materia.horarios?.length; else noSchedule">
@@ -119,6 +163,115 @@
           </tr>
         </ng-template>
       </p-table>
+    </div>
+  </div>
+
+  <!-- Edit Materia Modal -->
+  <div class="edit-modal-backdrop" *ngIf="showEditModal && editingMateria">
+    <div class="edit-modal-panel">
+      <div class="modal-header">
+        <h3>Editar materia: {{ editingMateria.nombre }}</h3>
+        <button type="button" class="close-btn" (click)="closeEditModal()">×</button>
+      </div>
+
+      <div class="modal-content">
+        <!-- Basic Materia Information -->
+        <div class="form-section">
+          <h4>Información básica</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nombre</label>
+              <input type="text" [(ngModel)]="editingMateria.nombre" placeholder="Nombre de la materia" />
+            </div>
+            <div class="form-group">
+              <label>NRC</label>
+              <input type="text" [(ngModel)]="editingMateria.nrc" placeholder="NRC" />
+            </div>
+            <div class="form-group">
+              <label>Clave</label>
+              <input type="text" [(ngModel)]="editingMateria.clave" placeholder="Clave (ej: ITIS 604)" />
+            </div>
+            <div class="form-group">
+              <label>Sección</label>
+              <input type="text" [(ngModel)]="editingMateria.seccion" placeholder="Sección" />
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <select [(ngModel)]="editingMateria.estado">
+                <option value="abierta">Abierta</option>
+                <option value="cerrada">Cerrada</option>
+                <option value="finalizada">Finalizada</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Campus</label>
+              <select [(ngModel)]="editingMateria.campus">
+                <option value="CU2">Campus CU2</option>
+                <option value="SAN_MANUEL">Campus CU San Manuel</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Plan de Estudios</label>
+              <select [(ngModel)]="editingMateria.plan_estudios">
+                <option value="ITI">{{ planEstudiosMap['ITI'] }}</option>
+                <option value="LCC">{{ planEstudiosMap['LCC'] }}</option>
+                <option value="ICC">{{ planEstudiosMap['ICC'] }}</option>
+                <option value="ICD">{{ planEstudiosMap['ICD'] }}</option>
+                <option value="ISC">{{ planEstudiosMap['ISC'] }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Horarios Management -->
+        <div class="form-section">
+          <h4>Horarios</h4>
+          <div class="horarios-list">
+            <div *ngFor="let horario of editingMateria.horarios; let i = index" class="horario-row">
+              <div class="horario-controls">
+                <select [(ngModel)]="horario.dia" class="small-input">
+                  <option value="L">Lunes</option>
+                  <option value="A">Martes</option>
+                  <option value="M">Miércoles</option>
+                  <option value="J">Jueves</option>
+                  <option value="V">Viernes</option>
+                  <option value="S">Sábado</option>
+                </select>
+                <input type="text" [(ngModel)]="horario.hora_inicio" placeholder="Inicio (ej: 0800)" class="time-input" maxlength="4" />
+                <span class="time-separator">-</span>
+                <input type="text" [(ngModel)]="horario.hora_fin" placeholder="Fin (ej: 0859)" class="time-input" maxlength="4" />
+                <input type="text" [(ngModel)]="horario.salon" placeholder="Salón" class="salon-input" />
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="horario.es_virtual" />
+                  Virtual
+                </label>
+                <button type="button" class="delete-horario-btn" (click)="deleteHorario(i)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="button" class="add-horario-btn" (click)="addHorario()">
+              <i class="pi pi-plus"></i> Añadir Horario
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          (click)="closeEditModal()"
+          styleClass="p-button-secondary"
+        ></p-button>
+        <p-button
+          label="Guardar Cambios"
+          icon="pi pi-check"
+          (click)="saveMateria()"
+          styleClass="p-button-success"
+        ></p-button>
+      </div>
     </div>
   </div>
 </section>

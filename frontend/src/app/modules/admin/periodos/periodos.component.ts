@@ -39,8 +39,7 @@ export class PeriodosComponent implements OnInit {
     this.periodoForm = this.fb.group({
       nombre: ['', Validators.required],
       fecha_inicio: ['', Validators.required],
-      fecha_fin: ['', Validators.required],
-      plan_estudios: ['', Validators.required]
+      fecha_fin: ['', Validators.required]
     });
   }
 

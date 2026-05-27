@@ -198,6 +198,8 @@ class MateriaViewSet(viewsets.ModelViewSet):
                         'seccion': item.get('seccion', ''),
                         'docente_nombre': final_prof_name,
                         'estado': EstadoMateria.ABIERTA,
+                        'campus': item.get('campus', 'SAN_MANUEL'),       # 🎯 INJECTED
+                        'plan_estudios': item.get('plan_estudios', 'ITI'), # 🎯 INJECTED
                     }
                 )
                 
@@ -239,7 +241,7 @@ class MateriaViewSet(viewsets.ModelViewSet):
                 {'detail': f'Error al importar PDF: {str(e)}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
+            
     @action(detail=True, methods=['get'])
     def horarios(self, request, pk=None):
         """

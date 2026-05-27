@@ -15,10 +15,13 @@ export interface Horario {
 export interface Materia {
   id: string;
   nrc: string;
+  clave: string;
   nombre: string;
   seccion: string;
   docente_nombre: string | null;
   estado: string;
+  campus: string;
+  plan_estudios: string;
   horarios?: Horario[];
 }
 
@@ -27,8 +30,6 @@ export interface Periodo {
   nombre: string;
   fecha_inicio: string;
   fecha_fin: string;
-  plan_estudios: string;
-  campus?: string;
   activo: boolean;
   materias?: Materia[];
 }
@@ -44,7 +45,6 @@ export interface CreatePeriodoPayload {
   nombre: string;
   fecha_inicio: string;
   fecha_fin: string;
-  plan_estudios: string;
 }
 
 @Injectable({ providedIn: 'root' })

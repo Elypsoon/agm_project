@@ -61,8 +61,6 @@
       <ng-template pTemplate="header">
         <tr>
           <th>Nombre</th>
-          <th>Plan de estudios</th>
-          <th>Campus</th>
           <th>Estado</th>
           <th>Materia(s)</th>
           <th>Acciones</th>
@@ -72,8 +70,6 @@
       <ng-template pTemplate="body" let-periodo>
         <tr>
           <td>{{ periodo.nombre || '—' }}</td>
-          <td>{{ periodo.plan_estudios || '—' }}</td>
-          <td>{{ periodo.campus || '—' }}</td>
           <td>
             <p-tag
               [value]="periodo.activo ? 'Activo' : 'Inactivo'"
@@ -189,10 +185,6 @@
         <label>
           Nombre
           <input pInputText formControlName="nombre" />
-        </label>
-        <label>
-          Plan de estudios
-          <input pInputText formControlName="plan_estudios" />
         </label>
         <label>
           Fecha inicio

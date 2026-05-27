@@ -22,28 +22,32 @@ class ScheduleParser:
         return " ".join(cleaned.split()).upper()
 
     def extract_metadata_from_text(self, page_text: str):
-        """Scans the banner text to extract Campus and Plan de Estudios."""
-        # 1. Determine Campus
-        campus = "SAN_MANUEL"
-        if "CU2" in page_text:
+        """Scans the banner text to extract Campus and Plan de Estudios with high tolerance."""
+        import unicodedata
+        
+        if not page_text:
+            return "SAN_MANUEL", "ITI"
+            
+        normalized = unicodedata.normalize('NFKD', page_text).encode('ASCII', 'ignore').decode('ASCII').upper()
+        
+        campus = "SAN_MANUEL" 
+        if "CU2" in normalized or "CU 2" in normalized:
             campus = "CU2"
-        elif "SAN MANUEL" in page_text:
+        elif "SAN MANUEL" in normalized or "MANUEL" in normalized:
             campus = "SAN_MANUEL"
 
-        # 2. Determine Plan de Estudios
-        plan_estudios = "ITI"
-        if "CIENCIAS DE LA COMPUTACIÓN" in page_text:
-            plan_estudios = "LCC"
-        elif "INGENIERÍA EN TECNOLOGÍAS" in page_text:
-            plan_estudios = "ITI"
-        elif "INGENIERÍA EN CIENCIAS" in page_text:
-            plan_estudios = "ICC"
-        elif "INGENIERÍA EN CIENCIA DE DATOS" in page_text:
-            plan_estudios = "ICD"
-        elif "INGENIERÍA EN CIBERSEGURIDAD" in page_text:
-            plan_estudios = "ISC"
+        if "CIENCIA DE DATOS" in normalized or "DATOS" in normalized:
+            return campus, "ICD"
+        elif "CIBERSEGURIDAD" in normalized:
+            return campus, "ICS"
+        elif "TECNOLOGIAS" in normalized or "ITI" in normalized:
+            return campus, "ITI"
+        elif "INGENIERIA EN CIENCIAS DE LA COMPUTACION" in normalized or "ICC" in normalized:
+            return campus, "ICC"
+        elif "LICENCIATURA EN CIENCIAS DE LA COMPUTACION" in normalized or "COMPUTACION" in normalized:
+            return campus, "LCC"
 
-        return campus, plan_estudios
+        return campus, "ITI"
 
     def extract_from_pdf(self, pdf_path: str):
         catalog = []
@@ -52,6 +56,11 @@ class ScheduleParser:
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
                 page_text = page.extract_text() or ""
+                
+                # 🔍 ADD THIS TEMP DEBUG LINE TO SEE THE TRUTH IN THE TERMINAL
+                print(f"--- DEBUG TEXT LAYER FOR PAGE {page.page_number} ---")
+                print(page_text[:500]) # Prints the first 500 characters of the text layout
+                
                 campus, plan_estudios = self.extract_metadata_from_text(page_text)
 
                 table = page.extract_table()
