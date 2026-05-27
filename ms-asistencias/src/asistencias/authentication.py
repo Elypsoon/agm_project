@@ -59,7 +59,6 @@ class GrpcJWTAuthentication(BaseAuthentication):
         try:
             grpc = _load_grpc()
 
-            # Cargar auth_pb2 y auth_pb2_grpc desde ruta absoluta
             def load_module(name, path):
                 spec = importlib.util.spec_from_file_location(name, path)
                 mod = importlib.util.module_from_spec(spec)
@@ -89,25 +88,32 @@ class GrpcJWTAuthentication(BaseAuthentication):
                 'user_id': response.user_id,
                 'rol': response.role,
                 'email': response.email,
+                'matricula': '',
             }
         except Exception:
-            # Fallback: validación local con JWT cuando MS-Auth no está disponible
             return self._validate_token_local(token)
 
     def _validate_token_local(self, token: str) -> dict:
-        import jwt
-        secret = config('JWT_SECRET_KEY', default='temporal-secret')
+        """
+        Fallback: decodifica el JWT usando simplejwt cuando MS-Auth no está disponible.
+        Compatible con los tokens generados por MS-Auth.
+        """
         try:
-            payload = jwt.decode(token, secret, algorithms=['HS256'])
+            from rest_framework_simplejwt.tokens import AccessToken
+            decoded = AccessToken(token)
+            user_id = str(decoded['user_id'])
+            role = decoded.get('role', '')
+            email = decoded.get('email', '')
+            matricula = decoded.get('matricula', '')
+
             return {
-                'user_id': payload.get('user_id'),
-                'rol': payload.get('rol'),
-                'email': payload.get('email', ''),
+                'user_id': user_id,
+                'rol': role,
+                'email': email,
+                'matricula': matricula,
             }
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed("Token expirado.")
-        except jwt.InvalidTokenError:
-            raise AuthenticationFailed("Token inválido.")
+        except Exception as e:
+            raise AuthenticationFailed(f"Token inválido: {str(e)}")
 
 
 class AuthenticatedUser:

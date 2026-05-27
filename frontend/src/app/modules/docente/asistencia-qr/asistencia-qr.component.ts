@@ -26,8 +26,8 @@ type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
   styleUrls: ['./asistencia-qr.component.scss']
 })
 export class AsistenciaQrComponent implements OnInit, OnDestroy {
-  @ViewChild('videoEl') videoEl!: ElementRef<HTMLVideoElement>;
-  @ViewChild('canvasEl') canvasEl!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('videoEl', { static: false }) videoEl!: ElementRef<HTMLVideoElement>;
+  @ViewChild('canvasEl', { static: false }) canvasEl!: ElementRef<HTMLCanvasElement>;
 
   private messageService = inject(MessageService);
   private ngZone = inject(NgZone);
@@ -155,15 +155,20 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.status.set('scanning');
+
+    // Esperar a que Angular renderice el video element
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       });
       this.videoEl.nativeElement.srcObject = this.stream;
       await this.videoEl.nativeElement.play();
-      this.status.set('scanning');
       this.tick();
     } catch (err) {
+      this.status.set('idle');
       this.messageService.add({
         severity: 'error',
         summary: 'Sin acceso a cámara',
