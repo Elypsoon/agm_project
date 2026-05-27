@@ -73,14 +73,16 @@ class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == status.HTTP_200_OK:
-            user = User.objects.get(email=request.data['email'])
-            return Response({
-                'access_token': response.data['access'],
-                'refresh_token': response.data['refresh'],
-                'token_type': 'bearer',
-                'requires_password_change': user.requires_password_change,
-                'user': UserSerializer(user).data,
-            })
+            email = request.data.get('email')
+            if email:
+                user = User.objects.get(email=email)
+                return Response({
+                    'access_token': response.data['access'],
+                    'refresh_token': response.data['refresh'],
+                    'token_type': 'bearer',
+                    'requires_password_change': user.requires_password_change,
+                    'user': UserSerializer(user).data,
+                })
         return response
 
 
