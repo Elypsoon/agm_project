@@ -1,11 +1,9 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
-import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../../core/services/auth.service';
 import { AsistenciasService } from '../../../core/services/asistencias.service';
@@ -14,8 +12,8 @@ import { AsistenciasService } from '../../../core/services/asistencias.service';
   selector: 'app-qr-code',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, QRCodeComponent,
-    ButtonModule, TagModule, ToastModule, InputTextModule
+    CommonModule, QRCodeComponent,
+    ButtonModule, TagModule, ToastModule
   ],
   providers: [MessageService],
   templateUrl: './qr-code.component.html',
@@ -29,12 +27,9 @@ export class QrCodeComponent implements OnInit, OnDestroy {
   private intervalId: any = null;
   private readonly DURATION = 30;
 
-  // Estado
-  sesionId = signal<string>('');
   qrData = signal<string>('');
   secondsLeft = signal<number>(this.DURATION);
   cargando = signal<boolean>(false);
-  sesionActiva = signal<boolean>(false);
 
   readonly userName = computed(() => this.authService.currentUser()?.nombre ?? 'Alumno');
   readonly avatarLabel = computed(() => {
@@ -45,46 +40,31 @@ export class QrCodeComponent implements OnInit, OnDestroy {
       : n.substring(0, 2).toUpperCase();
   });
 
-  readonly countdownPct = computed(() => (this.secondsLeft() / this.DURATION) * 100);
   readonly dashOffset = computed(() => {
     const pct = 1 - (this.secondsLeft() / this.DURATION);
     return pct * 169.6;
   });
 
-  ngOnInit() {}
-
-  activarSesion() {
-    if (!this.sesionId()) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Campo requerido',
-        detail: 'Ingresa el ID de la sesión activa',
-        life: 3000
-      });
-      return;
-    }
-    this.sesionActiva.set(true);
+  ngOnInit() {
     this.generarQR();
     this.startCountdown();
   }
 
   private generarQR() {
     this.cargando.set(true);
-    this.asistenciasService.generarQRToken(this.sesionId()).subscribe({
+    this.asistenciasService.generarQRToken().subscribe({
       next: (res) => {
         if (res.success) {
           this.qrData.set(res.data.qr_token);
           this.cargando.set(false);
         }
       },
-      error: (err) => {
+      error: () => {
         this.cargando.set(false);
-        this.sesionActiva.set(false);
-        this.stopCountdown();
         this.messageService.add({
           severity: 'error',
-          summary: 'Sesión inválida',
-          detail: err.error?.message || 'La sesión no existe o ya cerró',
+          summary: 'Error',
+          detail: 'No se pudo generar el QR',
           life: 4000
         });
       }
@@ -96,7 +76,7 @@ export class QrCodeComponent implements OnInit, OnDestroy {
     this.intervalId = setInterval(() => {
       this.secondsLeft.update(s => {
         if (s <= 1) {
-          this.rotate();
+          this.generarQR();
           return this.DURATION;
         }
         return s - 1;
@@ -104,36 +84,14 @@ export class QrCodeComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  private stopCountdown() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-  }
-
-  private rotate() {
-    this.generarQR();
-    this.messageService.add({
-      severity: 'info',
-      summary: 'QR renovado',
-      detail: 'Tu código de asistencia ha sido actualizado',
-      life: 2000
-    });
-  }
-
   refreshQr() {
-    this.rotate();
+    this.generarQR();
     this.secondsLeft.set(this.DURATION);
   }
 
-  desactivar() {
-    this.sesionActiva.set(false);
-    this.qrData.set('');
-    this.sesionId.set('');
-    this.stopCountdown();
-  }
-
   ngOnDestroy() {
-    this.stopCountdown();
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
   }
 }
