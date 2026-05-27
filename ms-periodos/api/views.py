@@ -121,6 +121,16 @@ class MateriaViewSet(viewsets.ModelViewSet):
         """Filter materias by periodo or docente if specified"""
         queryset = super().get_queryset().prefetch_related('horarios')
         periodo_id = self.request.query_params.get('periodo_id')
+        search_param = self.request.query_params.get('search', '').strip()
+        
+        if periodo_id:
+            queryset = queryset.filter(periodo_id=periodo_id)
+            
+        if search_param:
+            tokens = [t.strip() for t in search_param.split(" ") if t.strip()]
+            for token in tokens:
+                queryset = queryset.filter(docente_nombre__icontains=token)
+                
         docente_id = self.request.query_params.get('docente_id')
         if periodo_id:
             queryset = queryset.filter(periodo_id=periodo_id)
@@ -130,7 +140,6 @@ class MateriaViewSet(viewsets.ModelViewSet):
         return queryset
 
     def update(self, request, *args, **kwargs):
-        
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
@@ -140,7 +149,6 @@ class MateriaViewSet(viewsets.ModelViewSet):
 
         if 'horarios' in request.data and isinstance(request.data['horarios'], list):
             horarios_data = request.data['horarios']
-            
             kept_horario_ids = []
 
             for slot in horarios_data:
@@ -164,7 +172,6 @@ class MateriaViewSet(viewsets.ModelViewSet):
                     except Horario.DoesNotExist:
                         continue
                 else:
-                    # Append brand new layout slot row to the database
                     h_new = Horario.objects.create(
                         materia=materia,
                         dia=dia,
@@ -277,7 +284,7 @@ class MateriaViewSet(viewsets.ModelViewSet):
                     skipped_count += 1
 
                 for horario_data in item.get('horarios', []):
-                    hora_raw = horario_data.get('hora', '')
+                    hora_raw = Carney_raw = horario_data.get('hora', '')
                     hora_parts = hora_raw.split('-') if '-' in hora_raw else [None, None]
                     
                     Horario.objects.get_or_create(
@@ -303,6 +310,7 @@ class MateriaViewSet(viewsets.ModelViewSet):
             ]
             
             if payload_materias:
+                # This naturally fires off RabbitMQ using your team's utilities!
                 publish_imported_materias_event(str(periodo.id), payload_materias)
 
             return Response({
