@@ -26,28 +26,35 @@ class ScheduleParser:
         import unicodedata
         
         if not page_text:
-            return "SAN_MANUEL", "ITI"
+            return "SAN_MANUEL", "ICS" 
             
         normalized = unicodedata.normalize('NFKD', page_text).encode('ASCII', 'ignore').decode('ASCII').upper()
         
-        campus = "SAN_MANUEL" 
+        # 1. Determinar Campus
+        campus = "SAN_MANUEL"
         if "CU2" in normalized or "CU 2" in normalized:
             campus = "CU2"
         elif "SAN MANUEL" in normalized or "MANUEL" in normalized:
             campus = "SAN_MANUEL"
 
-        if "CIENCIA DE DATOS" in normalized or "DATOS" in normalized:
-            return campus, "ICD"
-        elif "CIBERSEGURIDAD" in normalized:
+        # 2. Determinar Plan de Estudios
+        
+        if "CIBERSEGURIDAD" in normalized or "CIBER" in normalized:
             return campus, "ICS"
-        elif "TECNOLOGIAS" in normalized or "ITI" in normalized:
+            
+        if "CIENCIA DE DATOS" in normalized:
+            return campus, "ICD"
+            
+        if "TECNOLOGIAS" in normalized or "ITI" in normalized:
             return campus, "ITI"
-        elif "INGENIERIA EN CIENCIAS DE LA COMPUTACION" in normalized or "ICC" in normalized:
+        if "INGENIERIA EN CIENCIAS DE LA COMPUTACION" in normalized or "ICC" in normalized:
             return campus, "ICC"
-        elif "LICENCIATURA EN CIENCIAS DE LA COMPUTACION" in normalized or "COMPUTACION" in normalized:
-            return campus, "LCC"
+            
+        if "LICENCIATURA EN CIENCIAS DE LA COMPUTACION" in normalized or "COMPUTACION" in normalized:
+            if "INGENIERIA" not in normalized:
+                return campus, "LCC"
 
-        return campus, "ITI"
+        return campus, "ICS"
 
     def extract_from_pdf(self, pdf_path: str):
         catalog = []

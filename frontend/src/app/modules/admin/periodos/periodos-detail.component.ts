@@ -32,7 +32,7 @@ export class PeriodosDetailComponent implements OnInit {
   loading = true;
   errorMessage = '';
   expandedMateriaId: string | null = null;
-  
+
   searchText = '';
   selectedPlanEstudios: string | null = null;
   selectedCampus: string | null = null;
@@ -150,11 +150,11 @@ export class PeriodosDetailComponent implements OnInit {
 
   addHorario() {
     if (!this.editingMateria) return;
-    
+
     if (!this.editingMateria.horarios) {
       this.editingMateria.horarios = [];
     }
-    
+
     this.editingMateria.horarios.push({
       id: '',
       dia: 'L',
