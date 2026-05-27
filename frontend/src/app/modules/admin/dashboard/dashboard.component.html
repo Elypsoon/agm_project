@@ -1,0 +1,91 @@
+<div class="dashboard-page">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Panel de Administración</h1>
+      <p class="page-subtitle">Resumen general del sistema AGM</p>
+    </div>
+  </div>
+
+  <!-- Metric cards -->
+  <div class="metrics-grid">
+    @if (loading) {
+      @for (i of [1,2,3,4]; track i) {
+        <div class="metric-card skeleton-card">
+          <p-skeleton height="90px" borderRadius="12px" />
+        </div>
+      }
+    } @else {
+      @for (m of metrics; track m.label) {
+        <div class="metric-card" [style.--accent]="m.color" [style.--accent-bg]="m.bg">
+          <div class="metric-icon-wrap">
+            <i class="pi {{ m.icon }} metric-icon"></i>
+          </div>
+          <div class="metric-body">
+            <span class="metric-value">{{ m.value }}</span>
+            <span class="metric-label">{{ m.label }}</span>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Charts row -->
+  <div class="charts-row">
+
+    <!-- Donut chart -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h3 class="chart-title">Distribución de Alumnos</h3>
+        <span class="chart-subtitle">Por carrera — periodo actual</span>
+      </div>
+      <div class="chart-body donut-wrap">
+        @if (loading) {
+          <p-skeleton shape="circle" size="200px" />
+        } @else {
+          <p-chart type="doughnut" [data]="donutData" [options]="donutOptions" />
+        }
+      </div>
+    </div>
+
+    <!-- Bar chart -->
+    <div class="chart-card chart-card--wide">
+      <div class="chart-card-header">
+        <h3 class="chart-title">Materias por Periodo</h3>
+        <span class="chart-subtitle">Últimos 3 periodos</span>
+      </div>
+      <div class="chart-body bar-wrap">
+        @if (loading) {
+          <p-skeleton height="200px" borderRadius="8px" />
+        } @else {
+          <p-chart type="bar" [data]="barData" [options]="barOptions" />
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Quick links -->
+  <div class="quick-links">
+    <h2 class="section-title">Acciones rápidas</h2>
+    <div class="links-grid">
+      <a routerLink="/admin/periodos" class="quick-link-card">
+        <i class="pi pi-calendar quick-link-icon"></i>
+        <span class="quick-link-label">Gestionar Periodos</span>
+        <i class="pi pi-arrow-right quick-link-arrow"></i>
+      </a>
+      <a routerLink="/admin/materias" class="quick-link-card">
+        <i class="pi pi-book quick-link-icon"></i>
+        <span class="quick-link-label">Gestionar Materias</span>
+        <i class="pi pi-arrow-right quick-link-arrow"></i>
+      </a>
+      <a routerLink="/admin/docentes" class="quick-link-card">
+        <i class="pi pi-users quick-link-icon"></i>
+        <span class="quick-link-label">Gestionar Docentes</span>
+        <i class="pi pi-arrow-right quick-link-arrow"></i>
+      </a>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,176 @@
+<p-toast position="top-right" />
+
+<div class="docentes-page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Docentes</h1>
+      <p class="page-subtitle">Gestión del personal docente activo</p>
+    </div>
+    <button class="btn-primary" (click)="showCreateDialog = true">
+      <i class="pi pi-plus"></i>
+      <span>Nuevo Docente</span>
+    </button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-card">
+
+    <div class="table-toolbar">
+      <p-iconfield>
+        <p-inputicon styleClass="pi pi-search" />
+        <input pInputText type="text" placeholder="Buscar por nombre, email o departamento…"
+               [(ngModel)]="searchValue" [ngModelOptions]="{standalone: true}"
+               class="search-input" />
+      </p-iconfield>
+      <span class="record-count">{{ docentes.length }} docentes</span>
+    </div>
+
+    @if (loading) {
+      <div class="skeleton-rows">
+        @for (i of [1,2,3,4,5]; track i) {
+          <p-skeleton height="60px" borderRadius="8px" />
+        }
+      </div>
+    } @else {
+      <p-table
+        [value]="docentes"
+        [paginator]="true"
+        [rows]="10"
+        styleClass="p-datatable-sm"
+        [tableStyle]="{'min-width': '800px'}">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Docente</th>
+            <th>Email</th>
+            <th>Departamento</th>
+            <th class="text-center">Materias</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-doc>
+          <tr>
+            <td>
+              <div class="docente-cell">
+                <p-avatar [label]="getInitials(doc.nombre)" shape="circle" size="normal"
+                          [style]="{'background': 'rgba(67,56,202,0.12)', 'color': '#4338CA', 'font-weight': '700'}" />
+                <span class="docente-nombre">{{ doc.nombre }}</span>
+              </div>
+            </td>
+            <td><span class="email-text">{{ doc.email }}</span></td>
+            <td><span class="depto-badge">{{ doc.departamento }}</span></td>
+            <td class="text-center">
+              <span class="materias-count">{{ doc.materias }}</span>
+            </td>
+            <td class="text-center">
+              @if (doc.estado === 'activo') {
+                <p-tag severity="success" value="Activo" />
+              } @else {
+                <p-tag severity="secondary" value="Inactivo" />
+              }
+            </td>
+            <td class="text-center">
+              <div class="action-btns">
+                <button class="icon-btn icon-btn--assign" pTooltip="Asignar materia" tooltipPosition="top"
+                        (click)="openAssignDialog(doc)">
+                  <i class="pi pi-book"></i>
+                </button>
+                <button class="icon-btn icon-btn--edit" pTooltip="Editar" tooltipPosition="top">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button class="icon-btn icon-btn--danger" pTooltip="Eliminar" tooltipPosition="top">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" class="empty-state">
+              <i class="pi pi-users empty-icon"></i>
+              <p>No se encontraron docentes</p>
+            </td>
+          </tr>
+        </ng-template>
+
+      </p-table>
+    }
+  </div>
+
+</div>
+
+<!-- ── Assign Materia Dialog ── -->
+<p-dialog
+  [header]="'Asignar Materia — ' + (selectedDocente?.nombre || '')"
+  [(visible)]="showAssignDialog"
+  [modal]="true"
+  [style]="{ width: '440px' }"
+  [draggable]="false">
+
+  <div class="assign-body">
+    <label class="form-label">Selecciona la materia a asignar</label>
+    <p-select
+      [options]="materiaOptions"
+      [(ngModel)]="selectedMateria"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="— Seleccionar materia —"
+      styleClass="w-full" />
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button class="btn-secondary" (click)="showAssignDialog = false">Cancelar</button>
+    <button class="btn-primary" (click)="saveAssignment()">
+      <i class="pi pi-check"></i> Asignar
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ── Create Docente Dialog ── -->
+<p-dialog
+  header="Nuevo Docente"
+  [(visible)]="showCreateDialog"
+  [modal]="true"
+  [style]="{ width: '440px' }"
+  [draggable]="false">
+
+  <form [formGroup]="createForm" class="create-form" (ngSubmit)="submitCreate()">
+
+    <div class="form-row">
+      <label class="form-label">Nombre completo <span class="required">*</span></label>
+      <input pInputText formControlName="nombre" placeholder="Ej. Dr. Juan Pérez"
+             [class.ng-invalid]="isInvalid('nombre')" [class.ng-dirty]="isInvalid('nombre')" />
+      @if (isInvalid('nombre')) {
+        <small class="p-error">El nombre es obligatorio (mín. 2 caracteres).</small>
+      }
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Email institucional <span class="required">*</span></label>
+      <input pInputText formControlName="email" placeholder="docente@itson.edu.mx"
+             [class.ng-invalid]="isInvalid('email')" [class.ng-dirty]="isInvalid('email')" />
+      @if (isInvalid('email')) {
+        <small class="p-error">Email inválido.</small>
+      }
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Departamento <span class="required">*</span></label>
+      <input pInputText formControlName="departamento" placeholder="Ej. Ingeniería" />
+    </div>
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button class="btn-secondary" (click)="showCreateDialog = false; createForm.reset()">Cancelar</button>
+    <button class="btn-primary" (click)="submitCreate()">
+      <i class="pi pi-check"></i> Registrar
+    </button>
+  </ng-template>
+</p-dialog>
