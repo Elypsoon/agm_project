@@ -186,4 +186,9 @@ export class CalificacionesService {
   getConcentrado(materiaId: string): Observable<ConcentradoResponse> {
     return this.http.get<ConcentradoResponse>(`${this.baseUrlCalificaciones}/api/concentrado/${materiaId}/`);
   }
+
+  /** Obtiene las estadísticas y desglose detallado de calificaciones de un alumno en una materia (MS-4) */
+  getEstadisticasAlumno(alumnoId: string, materiaId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrlCalificaciones}/api/estadisticas/alumno/${alumnoId}/materia/${materiaId}/`);
+  }
 }
