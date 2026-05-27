@@ -17,7 +17,7 @@ from src.schemas.serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
 )
-from src.utils.permissions import IsAdminRole, IsDocenteRole
+from src.utils.permissions import IsAdminRole, IsDocenteRole, IsAdminOrDocenteRole
 from src.models.models import User
 
 logger = logging.getLogger(__name__)
@@ -48,11 +48,20 @@ class RegisterView(generics.CreateAPIView):
     SECURITY (VULN-05): Solo los administradores autenticados pueden crear cuentas.
     El registro no es un flujo público; los alumnos y docentes son dados de alta por el Admin.
     """
-    # SECURITY (VULN-05): Requiere autenticación + rol admin.
-    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    # SECURITY (VULN-05): Requiere autenticación + rol admin o docente.
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrDocenteRole]
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
+        from rest_framework.exceptions import PermissionDenied
+        
+        role_solicitado = request.data.get('role', 'alumno')
+        
+        # Lógica de negocio de jerarquía:
+        # Si el usuario actual es docente, solo puede registrar alumnos.
+        if request.user.role == 'docente' and role_solicitado != 'alumno':
+            raise PermissionDenied("Los docentes solo pueden registrar alumnos.")
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
