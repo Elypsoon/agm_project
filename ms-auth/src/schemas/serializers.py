@@ -41,6 +41,10 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['nombre', 'email', 'password', 'role']
+        # SECURITY (VULN-05): 'role' es read_only para que ningún cliente externo
+        # pueda asignarse un rol elevado (admin/docente) en el momento del registro.
+        # El valor siempre lo determina el backend (default='alumno' en el modelo).
+        read_only_fields = ['role']
 
     def create(self, validated_data):
         temp_password = None
