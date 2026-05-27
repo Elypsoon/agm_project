@@ -17,6 +17,9 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from .crypto import encrypt_qr_payload
+
+from .grpc_clients import get_materias_by_docente
 
 from .models import Sesion, Asistencia
 from .serializers import (
@@ -25,7 +28,7 @@ from .serializers import (
     RegistrarAsistenciaSerializer,
     IniciarSesionSerializer,
 )
-from .permissions import EsDocente, EsDocenteOAlumno
+from .permissions import EsDocente, EsDocenteOAlumno, EsAlumno
 from .crypto import decrypt_qr_token, hash_token
 
 
@@ -221,3 +224,73 @@ class HistorialAsistenciasView(APIView):
             'limit': limit,
             'sesiones': result,
         }, f"Historial de asistencias para materia {materia_id}.")
+
+
+class GenerarQRView(APIView):
+    """
+    Genera un token QR cifrado para que el alumno lo muestre en pantalla.
+    El frontend llama a este endpoint cada 30 segundos para rotar el QR.
+    """
+    permission_classes = [EsAlumno]
+
+    def get(self, request):
+        sesion_id = request.query_params.get('sesion_id')
+        if not sesion_id:
+            return _response_error("Se requiere sesion_id.", status.HTTP_400_BAD_REQUEST)
+
+        # Verificar que la sesión exista y esté activa
+        sesion = Sesion.objects.filter(id=sesion_id, estado='activa').first()
+        if not sesion:
+            return _response_error("La sesión no existe o ya fue cerrada.", status.HTTP_404_NOT_FOUND)
+
+        alumno_id = str(request.user.user_id)
+        matricula = request.user.matricula if hasattr(request.user, 'matricula') else 'SIN-MATRICULA'
+
+        try:
+            token = encrypt_qr_payload(
+                alumno_id=alumno_id,
+                matricula=matricula,
+                sesion_id=sesion_id,
+            )
+        except RuntimeError as e:
+            return _response_error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return _response_ok({
+            'qr_token': token,
+            'sesion_id': sesion_id,
+            'expira_en_segundos': 30,
+        }, "Token QR generado correctamente.")
+    
+class MisMateriasSesionView(APIView):
+    """
+    Retorna las materias del docente autenticado consultando MS-2 via gRPC.
+    Las materias se cachean en Redis por 1 hora para tolerar caídas de MS-2.
+    Si MS-2 no está disponible y no hay caché, retorna lista vacía (fallback UUID manual).
+    """
+    permission_classes = [EsDocente]
+
+    def get(self, request):
+        docente_id = str(request.user.user_id)
+        cache_key = f"materias_docente:{docente_id}"
+
+        # 1. Intentar obtener del caché
+        materias_cache = cache.get(cache_key)
+        if materias_cache:
+            return _response_ok(
+                materias_cache,
+                "Materias obtenidas desde caché."
+            )
+
+        # 2. Consultar MS-2 via gRPC
+        materias = get_materias_by_docente(docente_id)
+
+        if materias:
+            # Guardar en Redis por 1 hora
+            cache.set(cache_key, materias, timeout=3600)
+            return _response_ok(materias, "Materias obtenidas correctamente.")
+
+        # 3. Fallback: lista vacía, el docente usa UUID manual
+        return _response_ok(
+            [],
+            "MS-2 no disponible y sin caché, use UUID manual."
+        )

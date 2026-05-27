@@ -39,6 +39,11 @@ class ConcentradoView(APIView):
         try:
             data = build_concentrado(materia_id)
         except Ponderacion.DoesNotExist:
-            return Response({'detail': 'No se encontró la configuración de ponderación para esta materia.'}, status=404)
+            return Response(
+                {
+                    'detail': 'No se ha configurado un esquema de ponderación para esta materia. Es necesario definir los criterios de evaluación (categorías de ponderación) antes de registrar calificaciones.'
+                },
+                status=404
+            )
 
         return Response(data, status=200)

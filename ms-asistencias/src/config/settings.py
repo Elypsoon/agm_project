@@ -75,3 +75,11 @@ USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configuración de simplejwt para decodificar tokens de MS-Auth
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': config('JWT_SECRET_KEY', default='temporal-secret'),
+}

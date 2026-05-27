@@ -17,6 +17,7 @@ urlpatterns = [
 
     # Actividades
     path('actividades/', ActividadView.as_view(), name='actividades'),
+    path('actividades/<uuid:actividad_id>/', ActividadView.as_view(), name='actividad-delete'),
 
     # Calificaciones
     path('calificaciones/', CalificacionView.as_view(), name='calificaciones'),

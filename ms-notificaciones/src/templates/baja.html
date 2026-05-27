@@ -1,15 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Notificación de Baja de Alumno</title>
+    <title>Baja de Alumno - AGM</title>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-    <div style="max-width: 600px; background: white; border: 1px solid #d9534f; padding: 20px; margin: 0 auto; border-radius: 5px;">
-        <h2 style="color: #d9534f; border-bottom: 2px solid #d9534f; padding-bottom: 10px;">Aviso de Baja de Alumno</h2>
-        <p>Estimado Docente,</p>
-        <p>El sistema AGM le notifica que el alumno con ID <strong>{{ alumno_id }}</strong> ha solicitado formalmente darse de baja de su curso[cite: 187].</p>
-        <p><strong>Nota importante:</strong> Este proceso es totalmente irreversible[cite: 132]. El alumno ha perdido el acceso a la consulta de actividades, asistencias y concentrados de su materia[cite: 133].</p>
+<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+    <div style="max-width: 600px; background: white; border: 1px solid #e2e8f0; border-top: 4px solid #c62828; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
+        <div style="background-color: #004b93; color: white; padding: 22px 15px; text-align: center;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: bold; letter-spacing: 1px;">SISTEMA ACADÉMICO AGM</h2>
+            <span style="font-size: 11px; opacity: 0.85; letter-spacing: 0.5px;">BENEMÉRITA UNIVERSIDAD AUTÓNOMA DE PUEBLA</span>
+        </div>
+        
+        <div style="padding: 30px 25px;">
+            <h3 style="color: #c62828; margin-top: 0; font-size: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">Notificación de Baja</h3>
+            
+            <p style="color: #4a5568; line-height: 1.6;">Estimado(a) Docente,</p>
+            <p style="color: #4a5568; line-height: 1.6;">Le informamos que se ha registrado una solicitud de baja para un alumno inscrito en su grupo:</p>
+            
+            <div style="background-color: #fffaf0; border-left: 4px solid #c62828; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 0; font-size: 15px; color: #2d3748;"><strong>ID de Matrícula/Alumno:</strong> {{ alumno_id }}</p>
+                <p style="margin: 8px 0 0 0; font-size: 13px; color: #718096; font-style: italic;">Estado del Alumno: Dado de baja del curso</p>
+            </div>
+            
+            <p style="color: #e53e3e; line-height: 1.6; font-weight: bold; font-size: 14px;">Nota importante de seguridad:</p>
+            <p style="color: #4a5568; line-height: 1.6; font-size: 14px; background-color: #f7fafc; padding: 12px; border-radius: 4px; margin: 10px 0;">
+                Este proceso es <strong>totalmente irreversible</strong>. El alumno ha perdido inmediatamente el acceso a la entrega de actividades, visualización de concentrados, asistencias y material didáctico correspondiente a este curso.
+            </p>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 20px;">
+                <p style="color: #4a5568; line-height: 1.6; margin-bottom: 0;">Atentamente,<br><strong>El equipo del Sistema AGM</strong></p>
+            </div>
+        </div>
+        
+        <div style="background-color: #f7fafc; padding: 15px 25px; text-align: center; border-top: 1px solid #edf2f7;">
+            <p style="color: #718096; font-size: 11px; margin: 0; line-height: 1.5;">
+                Este es un aviso automático generado por el Sistema Académico de Gestión de Calificaciones (AGM). Por favor, no responda a este correo.
+            </p>
+        </div>
     </div>
 </body>
 </html>

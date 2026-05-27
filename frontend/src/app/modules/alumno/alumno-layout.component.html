@@ -54,7 +54,9 @@
           <i class="pi pi-bars"></i>
         </button>
         <div class="breadcrumb">
-          <i class="pi pi-home" style="font-size:13px;color:#94A3B8"></i>
+          <a routerLink="/alumno/dashboard" class="breadcrumb-home-link" pTooltip="Ir al Dashboard" tooltipPosition="bottom">
+            <i class="pi pi-home" style="font-size:13px;color:#94A3B8"></i>
+          </a>
           <span class="breadcrumb-sep">/</span>
           <span class="breadcrumb-page">{{ activePageLabel() }}</span>
         </div>

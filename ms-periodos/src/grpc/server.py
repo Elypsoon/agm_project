@@ -10,6 +10,9 @@ import uuid
 import logging
 import os
 import django
+from datetime import date
+from django.db.models import Q
+from asgiref.sync import sync_to_async
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -19,6 +22,49 @@ from src.grpc import periodos_pb2, periodos_pb2_grpc
 from api.models import Materia, Periodo, Horario
 
 logger = logging.getLogger(__name__)
+
+
+def _ejecutar_evaluacion_periodos(hoy: date):
+    """Helper method to run strict single-active-period evaluations."""
+    periodo_actual = Periodo.objects.filter(
+        fecha_inicio__lte=hoy,
+        fecha_fin__gte=hoy
+    ).first()
+
+    if periodo_actual and not periodo_actual.activo:
+        Periodo.objects.filter(activo=True).exclude(id=periodo_actual.id).update(activo=False)
+        
+        periodo_actual.activo = True
+        periodo_actual.save()
+        logger.info(f"Periodo de referencia global activado: {periodo_actual.nombre}")
+        
+    elif not periodo_actual:
+        # If today doesn't match any period bounds, ensure everything is turned off
+        Periodo.objects.filter(activo=True).update(activo=False)
+        
+async def cron_evaluador_periodos():
+    """
+    Automated background task that evaluates calendar date bounds.
+    Runs instantly on boot for quick validation, then loops quietly once an hour.
+    """
+    try:
+        await asyncio.sleep(2)
+        hoy = date.today()
+        logger.info(f"Ejecutando verificación inicial de calendario para: {hoy}")
+        await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
+    except Exception as e:
+        logger.error(f"Error en la verificación inicial de periodos: {e}", exc_info=True)
+
+    while True:
+        try:
+            await asyncio.sleep(86400) 
+            
+            hoy = date.today()
+            logger.info(f"Evaluación de rutina: {hoy}")
+            await sync_to_async(_ejecutar_evaluacion_periodos)(hoy)
+
+        except Exception as e:
+            logger.error(f"Error al revisar: {e}", exc_info=True)
 
 
 class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
@@ -67,17 +113,15 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
             return periodos_pb2.MateriaInfo()
 
     def GetMateriasByDocente(self, request: periodos_pb2.DocenteIdRequest, context):
-        """Get all materias for a docente in the active periodo."""
+        """Get all materias for a given docente in the active periodo."""
         try:
-            # Get active periodo
             periodo_activo = Periodo.objects.filter(activo=True).first()
             
             if not periodo_activo:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("No active periodo found")
+                context.set_details("No unique active periodo found currently.")
                 return periodos_pb2.MateriasListResponse()
             
-            # Get materias for docente
             materias = (
                 Materia.objects
                 .filter(
@@ -126,13 +170,14 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
             return periodos_pb2.MateriasListResponse()
 
     def GetActivePeriodo(self, request: periodos_pb2.Empty, context):
-        """Get the currently active academic periodo."""
+        """Get the primary active academic periodo."""
         try:
+            # Pull the first available active period layout as reference context
             periodo = Periodo.objects.filter(activo=True).first()
             
             if not periodo:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("No active periodo found")
+                context.set_details("No active periodo found right now.")
                 return periodos_pb2.PeriodoInfo()
             
             return periodos_pb2.PeriodoInfo(
@@ -153,6 +198,8 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
 async def serve():
     """Start the gRPC server."""
     from django.conf import settings
+
+    asyncio.create_task(cron_evaluador_periodos())
     
     server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))
     periodos_pb2_grpc.add_PeriodosServiceServicer_to_server(
@@ -162,7 +209,7 @@ async def serve():
     grpc_address = f"{settings.GRPC_HOST}:{settings.GRPC_PORT}"
     server.add_insecure_port(grpc_address)
     
-    logger.info(f"gRPC server listening on {grpc_address}")
+    logger.info(f"🚀 [gRPC Server] MS-Periodos activo en {grpc_address}")
     await server.start()
     
     try:
@@ -171,9 +218,6 @@ async def serve():
         logger.info("gRPC server shutting down...")
         await server.stop(0)
 
-# =============================================================================
-# Execution Bootstrapper Entry Point
-# =============================================================================
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
@@ -183,4 +227,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(serve())
     except (KeyboardInterrupt, SystemExit):
-        logger.info("gRPC server forcefully stopped by terminal interrupt.")
+        logger.info("gRPC server process killed.")

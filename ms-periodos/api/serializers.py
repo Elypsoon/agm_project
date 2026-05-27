@@ -21,7 +21,7 @@ class MateriaSerializer(serializers.ModelSerializer):
         model = Materia
         fields = [
             'id', 'nrc', 'clave', 'nombre', 'seccion',
-            'docente_nombre', 'docente_id', 'periodo',
+            'docente_nombre', 'docente_id', 'plan_estudios', 'campus', 'periodo',
             'estado', 'horarios', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -34,8 +34,11 @@ class MateriaCreateUpdateSerializer(serializers.ModelSerializer):
         model = Materia
         fields = [
             'nrc', 'clave', 'nombre', 'seccion',
-            'docente_nombre', 'docente_id', 'periodo', 'estado'
+            'docente_nombre', 'docente_id', 'plan_estudios', 'campus', 'periodo', 'estado'
         ]
+        
+    def validate(self, attrs):
+        return attrs
 
 
 class PeriodoSerializer(serializers.ModelSerializer):
@@ -45,7 +48,7 @@ class PeriodoSerializer(serializers.ModelSerializer):
         model = Periodo
         fields = [
             'id', 'nombre', 'fecha_inicio', 'fecha_fin',
-            'plan_estudios', 'activo', 'created_at', 'updated_at'
+            'estado', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -56,8 +59,7 @@ class PeriodoCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Periodo
         fields = [
-            'nombre', 'fecha_inicio', 'fecha_fin',
-            'plan_estudios', 'activo'
+            'nombre', 'fecha_inicio', 'fecha_fin', 'estado'
         ]
 
 
@@ -69,7 +71,7 @@ class PeriodoWithMateriasSerializer(serializers.ModelSerializer):
         model = Periodo
         fields = [
             'id', 'nombre', 'fecha_inicio', 'fecha_fin',
-            'plan_estudios', 'activo', 'materias', 'created_at', 'updated_at'
+            'estado', 'materias', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

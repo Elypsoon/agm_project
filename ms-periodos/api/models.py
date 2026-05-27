@@ -3,6 +3,7 @@ Models for MS-Periodos API
 """
 import uuid
 from django.db import models
+from datetime import date
 
 
 class EstadoMateria(models.TextChoices):
@@ -11,6 +12,15 @@ class EstadoMateria(models.TextChoices):
     CERRADA = 'cerrada', 'Cerrada'
     FINALIZADA = 'finalizada', 'Finalizada'
 
+class EstadoPeriodo(models.TextChoices):
+    PENDIENTE = 'pendiente', 'Pendiente'
+    ACTIVO = 'activo', 'Activo'
+    FINALIZADA = 'finalizada', 'Finalizada'
+
+class CampusOptions(models.TextChoices):
+    CU2 = 'CU2', 'Campus CU2'
+    SAN_MANUEL = 'SAN_MANUEL', 'Campus CU San Manuel'
+
 
 class Periodo(models.Model):
     """Modelo para periodos académicos"""
@@ -18,30 +28,59 @@ class Periodo(models.Model):
     nombre = models.CharField(max_length=100)  # e.g., "Primavera 2026"
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
-    plan_estudios = models.CharField(max_length=50)  # e.g., "ITI"
-    activo = models.BooleanField(default=False)
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoPeriodo.choices,
+        default=EstadoPeriodo.PENDIENTE
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-created_at'] 
         verbose_name = 'Periodo'
-        verbose_name_plural = 'Periodos'
+        verbose_name_plural = 'Periodos'    
 
     def __str__(self):
-        return f"{self.nombre} ({self.plan_estudios})"
+        return self.nombre
+    
+    def save(self, *args, **kwargs):
+        """Override save to evaluate bounds, allowing manual activation overrides."""
+        hoy = date.today()
+        
+        if self.estado not in [EstadoPeriodo.ACTIVO, EstadoPeriodo.FINALIZADA]:
+            if self.fecha_inicio <= hoy <= self.fecha_fin:
+                self.estado = EstadoPeriodo.ACTIVO
+            elif hoy > self.fecha_fin:
+                self.estado = EstadoPeriodo.FINALIZADA
+            else:
+                self.estado = EstadoPeriodo.PENDIENTE
+
+        if self.estado == EstadoPeriodo.ACTIVO:
+            Periodo.objects.exclude(id=self.id).filter(estado=EstadoPeriodo.ACTIVO).update(
+                estado=EstadoPeriodo.FINALIZADA
+            )
+
+        super().save(*args, **kwargs)
 
 
 class Materia(models.Model):
-    """Modelo para materias/cursos"""
+    """Modelo para materias/cursos - Maneja el branching por campus y carrera"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nrc = models.CharField(max_length=20)
     clave = models.CharField(max_length=20)  # e.g., "ITIS 604"
-    nombre = models.CharField(max_length=255)  # e.g., "Inteligencia Artificial"
-    seccion = models.CharField(max_length=10, null=True, blank=True)  # e.g., "001"
-    docente_nombre = models.CharField(max_length=255, null=True, blank=True) 
+    nombre = models.CharField(max_length=255)
+    seccion = models.CharField(max_length=10, null=True, blank=True)
+    docente_nombre = models.CharField(max_length=255, null=True, blank=True)
     docente_id = models.UUIDField(null=True, blank=True)
     
+    campus = models.CharField(
+        max_length=20,
+        choices=CampusOptions.choices,
+        default=CampusOptions.SAN_MANUEL
+    )
+    plan_estudios = models.CharField(max_length=50, default="ITI")  # e.g., ITI, LCC, ICC
+
     periodo = models.ForeignKey(
         Periodo,
         on_delete=models.CASCADE,

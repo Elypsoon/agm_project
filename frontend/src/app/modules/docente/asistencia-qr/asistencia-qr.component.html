@@ -1,104 +1,200 @@
-<p-toast position="top-right" />
+<p-toast />
 
 <div class="page-enter">
   <div class="page-header">
-    <div>
-      <h1 class="page-title">Asistencia QR</h1>
-      <p class="page-subtitle">Escanea el código QR del alumno para registrar su asistencia</p>
-    </div>
+    <h1 class="page-title">Asistencia QR</h1>
+    <p class="page-subtitle">Escanea el código QR del alumno para registrar su asistencia</p>
   </div>
 
-  <div class="scanner-layout">
+  <!-- Iniciar sesión -->
+  <div class="card mb-4" *ngIf="!sesionActiva()">
 
-    <!-- Camera Panel -->
+    <!-- Cargando materias -->
+    <div *ngIf="cargandoMaterias()" class="flex items-center gap-2 text-gray-400">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando materias...</span>
+    </div>
+
+    <!-- Dropdown de materias -->
+    <div *ngIf="!cargandoMaterias() && !modoManual()" class="flex gap-2">
+      <p-select
+        [options]="materias()"
+        [(ngModel)]="materiaSeleccionada"
+        (ngModelChange)="materiaSeleccionada.set($event)"
+        optionLabel="nombre"
+        placeholder="Selecciona una materia"
+        class="flex-1"
+        [style]="{'width': '100%'}"
+      >
+        <ng-template pTemplate="item" let-materia>
+          <div class="flex flex-col">
+            <span class="font-medium">{{ materia.nombre }}</span>
+            <span class="text-xs text-gray-400">NRC: {{ materia.nrc }} | Sección: {{ materia.seccion }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+      <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
+      <p-button
+        icon="pi pi-pencil"
+        severity="secondary"
+        pTooltip="Ingresar UUID manualmente"
+        (onClick)="modoManual.set(true)"
+      />
+    </div>
+
+    <!-- Fallback: input manual -->
+    <div *ngIf="!cargandoMaterias() && modoManual()" class="flex gap-2">
+      <input
+        pInputText
+        type="text"
+        placeholder="ID de la materia (UUID)"
+        [ngModel]="materiaIdManual()"
+        (ngModelChange)="materiaIdManual.set($event)"
+        class="flex-1"
+      />
+      <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
+      <p-button
+        *ngIf="materias().length > 0"
+        icon="pi pi-list"
+        severity="secondary"
+        pTooltip="Volver al selector"
+        (onClick)="modoManual.set(false)"
+      />
+    </div>
+
+  </div>
+
+  <!-- Panel activo -->
+  <div *ngIf="sesionActiva()" class="scanner-layout">
+
+    <!-- Columna izquierda: Cámara -->
     <div class="camera-panel">
-      <div class="camera-frame" [class.scanning]="status() === 'scanning'"
-           [class.success-frame]="status() === 'success'"
-           [class.error-frame]="status() === 'error'">
+      <div class="camera-frame"
+        [class.scanning]="status() === 'scanning'"
+        [class.success-frame]="status() === 'success'"
+        [class.error-frame]="status() === 'error'">
 
-        @if (status() === 'idle') {
-          <div class="camera-placeholder">
-            <i class="pi pi-qrcode placeholder-icon"></i>
-            <p>Haz clic en "Iniciar escaneo" para activar la cámara</p>
-          </div>
-        }
+        <!-- Placeholder -->
+        <div class="camera-placeholder" *ngIf="status() === 'idle'">
+          <i class="pi pi-qrcode placeholder-icon"></i>
+          <p>Haz clic en "Iniciar escaneo" para activar la cámara</p>
+        </div>
 
-        <video #videoEl [hidden]="status() === 'idle'" autoplay playsinline muted
-               class="camera-video"></video>
-        <canvas #canvasEl hidden></canvas>
+        <!-- Video -->
+        <video #videoEl class="camera-video" playsinline
+          *ngIf="status() === 'scanning'">
+        </video>
+        <canvas #canvasEl class="hidden" *ngIf="status() === 'scanning'"></canvas>
 
-        <!-- Scan overlay -->
-        @if (status() === 'scanning') {
-          <div class="scan-overlay">
-            <div class="scan-corner tl"></div>
-            <div class="scan-corner tr"></div>
-            <div class="scan-corner bl"></div>
-            <div class="scan-corner br"></div>
-            <div class="scan-line"></div>
-          </div>
-        }
+        <!-- Overlay de escaneo -->
+        <div class="scan-overlay" *ngIf="status() === 'scanning'">
+          <div class="scan-corner tl"></div>
+          <div class="scan-corner tr"></div>
+          <div class="scan-corner bl"></div>
+          <div class="scan-corner br"></div>
+          <div class="scan-line"></div>
+        </div>
 
-        @if (status() === 'success') {
-          <div class="result-overlay success-overlay">
-            <i class="pi pi-check-circle result-icon"></i>
-            <p>Asistencia registrada</p>
-          </div>
-        }
+        <!-- Resultado éxito -->
+        <div class="result-overlay success-overlay" *ngIf="status() === 'success'">
+          <i class="pi pi-check-circle result-icon"></i>
+          <p>Asistencia registrada</p>
+        </div>
 
-        @if (status() === 'error') {
-          <div class="result-overlay error-overlay">
-            <i class="pi pi-times-circle result-icon"></i>
-            <p>QR inválido</p>
-          </div>
-        }
+        <!-- Resultado error -->
+        <div class="result-overlay error-overlay" *ngIf="status() === 'error'">
+          <i class="pi pi-times-circle result-icon"></i>
+          <p>QR inválido</p>
+        </div>
       </div>
 
+      <!-- Botón escanear -->
       <div class="camera-controls">
-        @if (status() === 'idle') {
-          <p-button label="Iniciar escaneo" icon="pi pi-camera"
-            (onClick)="startScanning()" />
-        } @else if (status() === 'scanning') {
-          <p-button label="Detener" icon="pi pi-stop-circle"
-            severity="secondary" (onClick)="stopScanning()" />
-        } @else {
-          <p-button label="Escanear otro" icon="pi pi-refresh"
-            (onClick)="resetScanner()" />
-        }
+        <p-button
+          *ngIf="status() !== 'scanning'"
+          label="Iniciar escaneo"
+          icon="pi pi-camera"
+          (onClick)="startScanning()"
+        />
+        <p-button
+          *ngIf="status() === 'scanning'"
+          label="Detener"
+          icon="pi pi-stop"
+          severity="warn"
+          (onClick)="stopScanning()"
+        />
       </div>
     </div>
 
-    <!-- History Panel -->
+    <!-- Columna derecha: Info + Historial -->
     <div class="history-panel">
+
+      <!-- Info sesión -->
+      <div style="padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <div class="font-semibold text-sm">Sesión activa</div>
+            <div class="text-xs text-gray-400">{{ getMaterialLabel() }}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-2xl font-mono font-bold" style="color: #6366f1;">
+              {{ segundosRestantes() }}s
+            </div>
+            <div class="text-xs text-gray-400">restantes</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div class="bg-green-50 rounded-lg p-2 text-center">
+            <div class="text-xl font-bold text-green-600">{{ sesionActiva()?.total_presentes }}</div>
+            <div class="text-xs text-green-700">Presentes</div>
+          </div>
+          <div class="bg-yellow-50 rounded-lg p-2 text-center">
+            <div class="text-xl font-bold text-yellow-600">{{ sesionActiva()?.total_retardos }}</div>
+            <div class="text-xs text-yellow-700">Retardos</div>
+          </div>
+        </div>
+
+        <p-button
+          label="Cerrar sesión"
+          icon="pi pi-times"
+          severity="danger"
+          [style]="{'width': '100%'}"
+          (onClick)="cerrarSesion()"
+        />
+      </div>
+
+      <!-- Historial -->
       <div class="history-header">
-        <h2 class="history-title">Registros de hoy</h2>
+        <span class="history-title">Registros de hoy</span>
         <p-tag [value]="scanHistory().length + ' asistencias'" severity="info" />
       </div>
 
-      @if (scanHistory().length === 0) {
-        <div class="history-empty">
-          <i class="pi pi-inbox"></i>
-          <p>Sin registros todavía</p>
-        </div>
-      } @else {
-        <div class="history-list">
-          @for (record of scanHistory(); track record.timestamp) {
-            <div class="history-item" [class.history-success]="record.success">
-              <div class="history-avatar">
-                {{ record.initials }}
-              </div>
-              <div class="history-info">
-                <span class="history-name">{{ record.name }}</span>
-                <span class="history-time">{{ record.timestamp }}</span>
-              </div>
-              <i class="pi"
-                 [class.pi-check-circle]="record.success"
-                 [class.pi-times-circle]="!record.success"
-                 [style.color]="record.success ? '#22C55E' : '#EF4444'"></i>
-            </div>
-          }
-        </div>
-      }
-    </div>
+      <div class="history-empty" *ngIf="scanHistory().length === 0">
+        <i class="pi pi-inbox"></i>
+        <span>Sin registros todavía</span>
+      </div>
 
+      <div class="history-list">
+        <div
+          *ngFor="let item of scanHistory()"
+          class="history-item"
+          [class.history-success]="item.estado === 'presente'"
+        >
+          <div class="history-avatar">
+            {{ item.matricula.substring(0, 2).toUpperCase() }}
+          </div>
+          <div class="history-info">
+            <span class="history-name">{{ item.matricula }}</span>
+            <span class="history-time">{{ item.timestamp }}</span>
+          </div>
+          <p-tag
+            [value]="item.estado"
+            [severity]="item.estado === 'presente' ? 'success' : 'warn'"
+          />
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>

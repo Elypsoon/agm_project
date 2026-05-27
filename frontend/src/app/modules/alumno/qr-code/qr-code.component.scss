@@ -17,7 +17,6 @@
 
 @media (max-width: 860px) { .qr-layout { grid-template-columns: 1fr; } }
 
-/* QR Card */
 .qr-card {
   background: #fff; border-radius: 20px; padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
@@ -52,7 +51,6 @@
 .qr-user-name { font-size: 14px; font-weight: 600; color: #1E293B; }
 .qr-user-id   { font-size: 11px; color: #94A3B8; }
 
-/* QR Wrapper */
 .qr-wrapper {
   padding: 12px; background: #fff;
   border: 1px solid #E2E8F0; border-radius: 12px;
@@ -69,7 +67,6 @@
   75%       { transform: translateX(2px); }
 }
 
-/* Countdown Ring */
 .countdown-section {
   display: flex; align-items: center; gap: 16px; width: 100%;
 }
@@ -108,7 +105,6 @@
 
 :host ::ng-deep .refresh-btn .p-button-label { color: #94A3B8; font-size: 13px; }
 
-/* Info Panel */
 .info-panel {
   background: #fff; border-radius: 16px; padding: 24px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -144,7 +140,6 @@
 .security-title { font-size: 13px; font-weight: 600; color: #1E293B; margin-bottom: 4px; }
 .security-desc  { font-size: 12px; color: #64748B; line-height: 1.5; }
 
-/* Materias hoy */
 .mat-info-title {
   font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600;
   color: #1E293B; margin-bottom: 10px;

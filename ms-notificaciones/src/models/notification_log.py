@@ -7,6 +7,7 @@ class NotificationLog(models.Model):
         ('baja', 'Baja'),
         ('cierre', 'Cierre de Materia'),
         ('reset_password', 'Recuperación de Contraseña'),
+        ('reporte_finalizado', 'Reporte Académico Finalizado'),
     ]
 
     ESTADO_CHOICES = [

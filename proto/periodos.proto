@@ -24,12 +24,12 @@ message Empty {}
 // --- Responses ---
 
 message HorarioInfo {
-  string dia = 1;         // L, A, M, J, V, S, D
-  string hora_inicio = 2; // e.g., "0800"
-  string hora_fin = 3;    // e.g., "1059"
-  string salon = 4;       // e.g., "12EMA4/208" or "POR ASIGNAR"
-  bool es_virtual = 5;
-  string profesor = 6;    // Raw string from PDF
+  string id = 1;
+  string dia = 2;         // L, M, I, J, V, S, D
+  string hora_inicio = 3; // e.g., "0800"
+  string hora_fin = 4;    // e.g., "1059"
+  string salon = 5;       // e.g., "12EMA4/208" or "POR ASIGNAR"
+  bool es_virtual = 6;
 }
 
 message MateriaInfo {
@@ -39,9 +39,12 @@ message MateriaInfo {
   string nombre = 4;      // e.g., "Introduccion a las Matematicas"
   string seccion = 5;     // e.g., "001"
   string docente_id = 6;
-  string periodo_id = 7;
-  string estado = 8;      // "abierta", "cerrada", "finalizada"
-  repeated HorarioInfo horarios = 9; // List of schedule slots
+  string docente_nombre = 7;
+  string periodo_id = 8;
+  string estado = 9;      // "abierta", "cerrada", "finalizada"
+  string campus = 10;   
+  string plan_estudios = 11;
+  repeated HorarioInfo horarios = 12; // Nested list of slots
 }
 
 message MateriasListResponse {
@@ -53,6 +56,5 @@ message PeriodoInfo {
   string nombre = 2;      // e.g., "Primavera 2026"
   string fecha_inicio = 3;
   string fecha_fin = 4;
-  string plan_estudios = 5; // e.g., "ITI"
-  bool activo = 6;
+  string estado = 5; 
 }
