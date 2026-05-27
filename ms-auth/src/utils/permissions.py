@@ -23,3 +23,11 @@ class IsAlumnoRole(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.role == 'alumno')
+
+class IsAdminOrDocenteRole(permissions.BasePermission):
+    """
+    Permite el acceso a usuarios que sean administradores o docentes.
+    Usado en flujos donde los docentes tienen un subconjunto de permisos administrativos (ej. registrar alumnos).
+    """
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.role in ['admin', 'docente'])

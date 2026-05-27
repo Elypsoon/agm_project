@@ -234,6 +234,30 @@
   color: #475569;
 }
 
+.breadcrumb-home-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.08);
+    
+    i {
+      color: var(--role-color) !important;
+      transform: scale(1.1);
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
 .breadcrumb-sep { color: #CBD5E1; }
 .breadcrumb-page { font-weight: 600; color: #1E293B; }
 

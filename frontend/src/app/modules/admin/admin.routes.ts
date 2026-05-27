@@ -33,5 +33,15 @@ export const ADMIN_ROUTES: Routes = [
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
+  },
+  {
+    path: 'dashboard',
+    redirectTo: 'periodos',
+    pathMatch: 'full'
+  },
+  {
+    path: '',
+    redirectTo: 'periodos',
+    pathMatch: 'full'
   }
 ];

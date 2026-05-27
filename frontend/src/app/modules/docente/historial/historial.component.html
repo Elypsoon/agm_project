@@ -1,103 +1,189 @@
-<div class="page-enter">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Historial de Asistencia</h1>
-      <p class="page-subtitle">Consulta y filtra los registros de asistencia por fecha y materia</p>
-    </div>
-    <p-button label="Exportar" icon="pi pi-download" severity="secondary" (onClick)="exportar()" />
-  </div>
-
-  <!-- Filters -->
-  <div class="filter-row">
-    <p-datepicker
-      id="rango-fechas"
-      [(ngModel)]="rangoFechas"
-      selectionMode="range"
-      [readonlyInput]="true"
-      placeholder="Selecciona rango de fechas"
-      styleClass="date-picker"
-      (onSelect)="onFilterChange()" />
-
-    <p-select
-      id="materia-filter"
-      [options]="materiaOptions"
-      [(ngModel)]="selectedMateria"
-      placeholder="Todas las materias"
-      [showClear]="true"
-      styleClass="materia-filter"
-      (onChange)="onFilterChange()" />
-
-    <p-iconfield>
-      <p-inputicon styleClass="pi pi-search" />
-      <input id="buscar-alumno" pInputText [(ngModel)]="searchText"
-        placeholder="Buscar alumno..."
-        (input)="onFilterChange()" />
-    </p-iconfield>
-
-    <p-button icon="pi pi-filter-slash" severity="secondary" [text]="true"
-      pTooltip="Limpiar filtros" (onClick)="clearFilters()" />
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-row">
-    @for (stat of statsCards; track stat.label) {
-      <div class="stat-card" [style.--sc]="stat.color">
-        <span class="stat-val">{{ stat.value }}</span>
-        <span class="stat-label">{{ stat.label }}</span>
+<div class="historial-shell page-enter">
+  
+  <!-- ══ BARRA LATERAL (SIDEBAR DE PERIODOS) ══ -->
+  <aside class="periodos-sidebar">
+    <div class="sidebar-head">
+      <i class="pi pi-calendar-minus"></i>
+      <div>
+        <h3>Periodos</h3>
+        <p>Selecciona para filtrar</p>
       </div>
-    }
-  </div>
-
-  <!-- Table -->
-  @if (loading()) {
-    <div class="skeleton-col">
-      @for (i of [1,2,3,4,5,6]; track i) {
-        <p-skeleton height="44px" borderRadius="6px" />
+    </div>
+    
+    <div class="sidebar-list">
+      @if (loading()) {
+        @for (i of [1, 2, 3]; track i) {
+          <div class="period-skeleton"></div>
+        }
+      } @else {
+        @for (p of periodos(); track p.id) {
+          <button 
+            class="period-btn" 
+            [class.active]="selectedPeriodoId() === p.id"
+            [class.current]="p.activo"
+            (click)="selectPeriodo(p.id)">
+            <span class="period-dot" [class.current]="p.activo"></span>
+            <span class="period-name">{{ p.nombre }}</span>
+            @if (p.activo) {
+              <p-tag value="Activo" severity="success" styleClass="active-tag" />
+            }
+          </button>
+        }
       }
     </div>
-  } @else {
-    <p-table
-      id="tabla-historial"
-      [value]="filteredData()"
-      [paginator]="true"
-      [rows]="15"
-      [rowsPerPageOptions]="[10, 15, 25, 50]"
-      sortField="fecha"
-      [sortOrder]="-1"
-      styleClass="p-datatable-sm">
+  </aside>
 
-      <ng-template #header>
-        <tr>
-          <th pSortableColumn="fecha">Fecha <p-sortIcon field="fecha"/></th>
-          <th pSortableColumn="materia">Materia <p-sortIcon field="materia"/></th>
-          <th pSortableColumn="alumno">Alumno <p-sortIcon field="alumno"/></th>
-          <th>Matrícula</th>
-          <th pSortableColumn="hora">Hora <p-sortIcon field="hora"/></th>
-          <th style="text-align:center">Estado</th>
-        </tr>
-      </ng-template>
+  <!-- ══ PANEL PRINCIPAL (KPIs Y TARJETAS DE MATERIAS) ══ -->
+  <main class="historial-main">
+    
+    <div class="main-header">
+      <div>
+        <h1 class="page-title">Historial por Periodo</h1>
+        <p class="page-subtitle">Rendimiento académico consolidado en {{ selectedPeriodoName() }}</p>
+      </div>
+      @if (isCurrentPeriodActive()) {
+        <p-tag value="Periodo en Curso" severity="success" styleClass="badge-periodo" />
+      } @else {
+        <p-tag value="Periodo Histórico" severity="secondary" styleClass="badge-periodo" />
+      }
+    </div>
 
-      <ng-template #body let-row>
-        <tr>
-          <td>{{ row.fecha }}</td>
-          <td>{{ row.materia }}</td>
-          <td>{{ row.alumno }}</td>
-          <td><span class="mono-id">{{ row.matricula }}</span></td>
-          <td>{{ row.hora }}</td>
-          <td style="text-align:center">
-            <p-tag [value]="estadoLabel(row.estado)" [severity]="estadoSeverity(row.estado)" />
-          </td>
-        </tr>
-      </ng-template>
+    <!-- KPIs consolidados del período -->
+    <div class="kpi-dashboard">
+      <div class="kpi-card" style="--kpi-color: #004b93;">
+        <div class="kpi-icon">
+          <i class="pi pi-percentage"></i>
+        </div>
+        <div class="kpi-data">
+          @if (loading()) {
+            <p-skeleton width="80px" height="36px" />
+          } @else {
+            <span class="kpi-value">{{ statsPeriodo().tasaAsistencia }}%</span>
+          }
+          <span class="kpi-label">Asistencia del Periodo</span>
+        </div>
+        <div class="kpi-footer">
+          Promedio ponderado de asistencia
+        </div>
+      </div>
 
-      <ng-template #emptymessage>
-        <tr>
-          <td colspan="6" class="empty-table-msg">
-            <i class="pi pi-history" style="font-size:32px;display:block;margin-bottom:12px"></i>
-            No hay registros para los filtros seleccionados
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
-  }
+      <div class="kpi-card" style="--kpi-color: #F59E0B;">
+        <div class="kpi-icon">
+          <i class="pi pi-star-fill"></i>
+        </div>
+        <div class="kpi-data">
+          @if (loading()) {
+            <p-skeleton width="80px" height="36px" />
+          } @else {
+            <span class="kpi-value">{{ statsPeriodo().promedioCalificaciones | number:'1.2-2' }}</span>
+          }
+          <span class="kpi-label">Promedio del Periodo</span>
+        </div>
+        <div class="kpi-footer">
+          Nota media de todos los grupos
+        </div>
+      </div>
+
+      <div class="kpi-card" style="--kpi-color: #22C55E;">
+        <div class="kpi-icon">
+          <i class="pi pi-check-circle"></i>
+        </div>
+        <div class="kpi-data">
+          @if (loading()) {
+            <p-skeleton width="80px" height="36px" />
+          } @else {
+            <span class="kpi-value">{{ statsPeriodo().tasaAprobacion }}%</span>
+          }
+          <span class="kpi-label">Tasa de Aprobación</span>
+        </div>
+        <div class="kpi-footer">
+          Alumnos aprobados en total
+        </div>
+      </div>
+    </div>
+
+    <!-- Título de Sección -->
+    <div class="section-divider">
+      <h3>
+        <i class="pi pi-book"></i>
+        Materias Impartidas
+        <span class="materias-count">({{ statsPeriodo().totalMaterias }} materias)</span>
+      </h3>
+    </div>
+
+    <!-- Grid de Materias -->
+    @if (loading()) {
+      <div class="materias-grid">
+        @for (i of [1, 2, 3]; track i) {
+          <div class="materia-skeleton"></div>
+        }
+      </div>
+    } @else {
+      <div class="materias-grid">
+        @for (m of materiasFiltradas(); track m.materia_id) {
+          <div class="materia-card" 
+               [class.inactive-materia]="!isCurrentPeriodActive()"
+               [style.--mat-color]="materiaColor(m.nrc)">
+            <div class="card-glow"></div>
+            <div class="card-body">
+              
+              <!-- Cabecera de Tarjeta -->
+              <div class="card-head">
+                <span class="nrc-badge">NRC {{ m.nrc }}</span>
+                @if (isCurrentPeriodActive()) {
+                  <p-tag value="Impartiendo" severity="info" />
+                } @else {
+                  <p-tag value="Concluida" severity="secondary" styleClass="concluida-tag" />
+                }
+              </div>
+
+              <!-- Nombre y Código -->
+              <h2 class="materia-title">{{ m.materia_nombre }}</h2>
+              
+              <!-- Estadísticas de la materia -->
+              <div class="materia-stats">
+                <div class="materia-stat-item">
+                  <span class="stat-label">Alumnos inscritos:</span>
+                  <span class="stat-val">{{ m.total_alumnos }}</span>
+                </div>
+                <div class="materia-stat-item">
+                  <span class="stat-label">Promedio de grupo:</span>
+                  <span class="stat-val font-semibold">{{ m.promedio_grupo | number:'1.2-2' }}</span>
+                </div>
+                <div class="materia-stat-item">
+                  <span class="stat-label">Asistencia promedio:</span>
+                  <span class="stat-val font-semibold">{{ m.tasa_asistencia }}%</span>
+                </div>
+                <div class="materia-stat-item">
+                  <span class="stat-label">Porcentaje aprobados:</span>
+                  <span class="stat-val font-semibold text-green">{{ m.tasa_aprobacion }}%</span>
+                </div>
+              </div>
+
+              <!-- Footer e interacciones (sólo activas en periodo actual) -->
+              <div class="card-action-bar">
+                @if (isCurrentPeriodActive()) {
+                  <button class="action-btn text-info" pTooltip="Ver lista de alumnos" tooltipPosition="bottom">
+                    <i class="pi pi-users"></i>
+                    <span>Ver alumnos</span>
+                  </button>
+                  <button class="action-btn text-warning" pTooltip="Administrar ponderaciones" tooltipPosition="bottom">
+                    <i class="pi pi-sliders-h"></i>
+                    <span>Ponderaciones</span>
+                  </button>
+                } @else {
+                  <span class="historical-footer">
+                    <i class="pi pi-lock"></i>
+                    Periodo histórico finalizado
+                  </span>
+                }
+              </div>
+
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+  </main>
 </div>

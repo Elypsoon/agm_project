@@ -20,6 +20,9 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('role', 'admin')
+        # El superusuario define su propia contraseña durante la creación,
+        # por lo que no necesita el flujo de cambio obligatorio al primer login.
+        extra_fields.setdefault('requires_password_change', False)
         return self.create_user(email, password, **extra_fields)
 
 

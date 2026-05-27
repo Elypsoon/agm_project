@@ -8,8 +8,9 @@ import { ToastModule } from 'primeng/toast';
 import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
-import { AsistenciasService, Sesion } from '../../../core/services/asistencias.service';
+import { AsistenciasService, Sesion, MateriaResumen } from '../../../core/services/asistencias.service';
 import jsQR from 'jsqr';
 
 type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
@@ -19,7 +20,7 @@ type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
   standalone: true,
   imports: [
     CommonModule, FormsModule, ButtonModule, ToastModule,
-    TagModule, InputTextModule, ProgressBarModule
+    TagModule, InputTextModule, ProgressBarModule, SelectModule
   ],
   providers: [MessageService],
   templateUrl: './asistencia-qr.component.html',
@@ -33,9 +34,15 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
   private ngZone = inject(NgZone);
   private asistenciasService = inject(AsistenciasService);
 
+  // Estado de materias
+  materias = signal<MateriaResumen[]>([]);
+  materiaSeleccionada = signal<MateriaResumen | null>(null);
+  materiaIdManual = signal<string>('');
+  cargandoMaterias = signal<boolean>(false);
+  modoManual = signal<boolean>(false);
+
   // Estado de la sesión
   sesionActiva = signal<Sesion | null>(null);
-  materiaId = signal<string>('');
   timerInterval: any = null;
   segundosRestantes = signal<number>(0);
 
@@ -46,22 +53,57 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
   private stream: MediaStream | null = null;
   private animationId: number | null = null;
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.cargarMaterias();
+  }
+
+  // ── Materias ─────────────────────────────────────────────
+
+  cargarMaterias() {
+    this.cargandoMaterias.set(true);
+    this.asistenciasService.getMisMaterias().subscribe({
+      next: (res) => {
+        this.cargandoMaterias.set(false);
+        if (res.success && res.data.length > 0) {
+          this.materias.set(res.data);
+          this.modoManual.set(false);
+        } else {
+          this.modoManual.set(true);
+        }
+      },
+      error: () => {
+        this.cargandoMaterias.set(false);
+        this.modoManual.set(true);
+      }
+    });
+  }
+
+  getMateriaId(): string {
+    if (this.modoManual()) return this.materiaIdManual();
+    return this.materiaSeleccionada()?.id ?? '';
+  }
+
+  getMaterialLabel(): string {
+    if (this.modoManual()) return this.materiaIdManual();
+    const m = this.materiaSeleccionada();
+    return m ? `${m.nombre} (${m.nrc})` : '';
+  }
 
   // ── Sesión ───────────────────────────────────────────────
 
   iniciarSesion() {
-    if (!this.materiaId()) {
+    const materiaId = this.getMateriaId();
+    if (!materiaId) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campo requerido',
-        detail: 'Ingresa el ID de la materia',
+        detail: this.modoManual() ? 'Ingresa el ID de la materia' : 'Selecciona una materia',
         life: 3000
       });
       return;
     }
 
-    this.asistenciasService.iniciarSesion(this.materiaId()).subscribe({
+    this.asistenciasService.iniciarSesion(materiaId).subscribe({
       next: (res) => {
         if (res.success) {
           this.sesionActiva.set(res.data);
@@ -156,14 +198,13 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
     }
 
     this.status.set('scanning');
-
-    // Esperar a que Angular renderice el video element
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       });
+      if (!this.videoEl?.nativeElement) return;
       this.videoEl.nativeElement.srcObject = this.stream;
       await this.videoEl.nativeElement.play();
       this.tick();
@@ -226,7 +267,6 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
             life: 3000
           });
 
-          // Actualizar contadores de la sesión
           this.asistenciasService.getAsistenciasHoy(sesion.materia_id).subscribe(r => {
             if (r.success && r.data.length > 0) {
               this.sesionActiva.set(r.data[0]);
@@ -267,6 +307,9 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
     }
     this.stream?.getTracks().forEach(t => t.stop());
     this.stream = null;
+    if (this.videoEl?.nativeElement) {
+      this.videoEl.nativeElement.srcObject = null;
+    }
   }
 
   ngOnDestroy() {

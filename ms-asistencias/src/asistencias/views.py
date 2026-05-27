@@ -19,6 +19,8 @@ from rest_framework.response import Response
 
 from .crypto import encrypt_qr_payload
 
+from .grpc_clients import get_materias_by_docente
+
 from .models import Sesion, Asistencia
 from .serializers import (
     SesionSerializer,
@@ -62,12 +64,19 @@ class IniciarSesionView(APIView):
         ).first()
 
         if sesion_activa:
-            segundos = (timezone.now() - sesion_activa.hora_inicio).total_seconds()
-            restantes = max(0, int(settings.SESION_DURACION_SEGUNDOS - segundos))
-            return _response_error(
-                f"Ya existe una sesión activa para esta materia. Segundos restantes: {restantes}",
-                status.HTTP_409_CONFLICT
-            )
+            elapsed = (timezone.now() - sesion_activa.hora_inicio).total_seconds()
+            # Si la sesión ya expiró, cerrarla automáticamente
+            if elapsed > sesion_activa.duracion_segundos:
+                sesion_activa.estado = 'cerrada'
+                sesion_activa.hora_fin = timezone.now()
+                sesion_activa.save(update_fields=['estado', 'hora_fin'])
+                cache.delete(_sesion_redis_key(str(sesion_activa.id)))
+            else:
+                restantes = max(0, int(sesion_activa.duracion_segundos - elapsed))
+                return _response_error(
+                    f"Ya existe una sesión activa para esta materia. Segundos restantes: {restantes}",
+                    status.HTTP_409_CONFLICT
+                )
 
         sesion = Sesion.objects.create(
             materia_id=materia_id,
@@ -258,3 +267,37 @@ class GenerarQRView(APIView):
             'sesion_id': sesion_id,
             'expira_en_segundos': 30,
         }, "Token QR generado correctamente.")
+    
+class MisMateriasSesionView(APIView):
+    """
+    Retorna las materias del docente autenticado consultando MS-2 via gRPC.
+    Las materias se cachean en Redis por 1 hora para tolerar caídas de MS-2.
+    Si MS-2 no está disponible y no hay caché, retorna lista vacía (fallback UUID manual).
+    """
+    permission_classes = [EsDocente]
+
+    def get(self, request):
+        docente_id = str(request.user.user_id)
+        cache_key = f"materias_docente:{docente_id}"
+
+        # 1. Intentar obtener del caché
+        materias_cache = cache.get(cache_key)
+        if materias_cache:
+            return _response_ok(
+                materias_cache,
+                "Materias obtenidas desde caché."
+            )
+
+        # 2. Consultar MS-2 via gRPC
+        materias = get_materias_by_docente(docente_id)
+
+        if materias:
+            # Guardar en Redis por 1 hora
+            cache.set(cache_key, materias, timeout=3600)
+            return _response_ok(materias, "Materias obtenidas correctamente.")
+
+        # 3. Fallback: lista vacía, el docente usa UUID manual
+        return _response_ok(
+            [],
+            "MS-2 no disponible y sin caché, use UUID manual."
+        )

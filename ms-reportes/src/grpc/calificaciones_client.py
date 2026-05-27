@@ -21,15 +21,15 @@ class CalificacionesGRPCClient:
                 
                 # Parsear las ponderaciones del gRPC
                 ponderaciones = []
-                for p in response.ponderaciones:
+                for p in response.categorias:
                     actividades = []
                     for act in p.actividades:
                         actividades.append({
-                            "id": act.id,
-                            "nombre": act.nombre
+                            "id": act.actividad_id,
+                            "nombre": act.actividad_nombre
                         })
                     ponderaciones.append({
-                        "id": p.id,
+                        "id": "",
                         "nombre_categoria": p.nombre_categoria,
                         "porcentaje": p.porcentaje,
                         "actividades": actividades
