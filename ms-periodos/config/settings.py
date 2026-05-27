@@ -139,6 +139,11 @@ CORS_ALLOW_CREDENTIALS = True
 SERVICE_NAME = 'ms-periodos'
 SERVICE_VERSION = '1.0.0'
 
+# RabbitMQ Settings
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
+RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'guest')
+RABBITMQ_PASS = os.getenv('RABBITMQ_PASSWORD', os.getenv('RABBITMQ_PASS', 'guest'))
+
 # gRPC Settings
 GRPC_PORT = int(os.getenv('GRPC_PORT'))
 GRPC_HOST = os.getenv('GRPC_HOST')

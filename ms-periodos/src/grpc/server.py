@@ -19,7 +19,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from src.grpc import periodos_pb2, periodos_pb2_grpc
-from api.models import Materia, Periodo, Horario
+from api.models import Materia, Periodo, Horario, EstadoPeriodo
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +31,14 @@ def _ejecutar_evaluacion_periodos(hoy: date):
         fecha_fin__gte=hoy
     ).first()
 
-    if periodo_actual and not periodo_actual.activo:
-        Periodo.objects.filter(activo=True).exclude(id=periodo_actual.id).update(activo=False)
-        
-        periodo_actual.activo = True
+    if periodo_actual and periodo_actual.estado != EstadoPeriodo.ACTIVO:
+        periodo_actual.estado = EstadoPeriodo.ACTIVO
         periodo_actual.save()
         logger.info(f"Periodo de referencia global activado: {periodo_actual.nombre}")
         
     elif not periodo_actual:
         # If today doesn't match any period bounds, ensure everything is turned off
-        Periodo.objects.filter(activo=True).update(activo=False)
+        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).update(estado=EstadoPeriodo.FINALIZADA)
         
 async def cron_evaluador_periodos():
     """
@@ -115,7 +113,7 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
     def GetMateriasByDocente(self, request: periodos_pb2.DocenteIdRequest, context):
         """Get all materias for a given docente in the active periodo."""
         try:
-            periodo_activo = Periodo.objects.filter(activo=True).first()
+            periodo_activo = Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).first()
             
             if not periodo_activo:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -169,11 +167,11 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
             context.set_details("Internal server error")
             return periodos_pb2.MateriasListResponse()
 
-    def GetActivePeriodo(self, request: periodos_pb2.Empty, context):
+    def GetPeriodoActivo(self, request: periodos_pb2.Empty, context):
         """Get the primary active academic periodo."""
         try:
             # Pull the first available active period layout as reference context
-            periodo = Periodo.objects.filter(activo=True).first()
+            periodo = Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).first()
             
             if not periodo:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -185,11 +183,10 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
                 nombre=periodo.nombre,
                 fecha_inicio=periodo.fecha_inicio.isoformat(),
                 fecha_fin=periodo.fecha_fin.isoformat(),
-                plan_estudios=periodo.plan_estudios,
-                activo=periodo.activo,
+                estado=periodo.estado,
             )
         except Exception as e:
-            logger.error(f"Error in GetActivePeriodo: {str(e)}", exc_info=True)
+            logger.error(f"Error in GetPeriodoActivo: {str(e)}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details("Internal server error")
             return periodos_pb2.PeriodoInfo()
