@@ -64,12 +64,19 @@ class IniciarSesionView(APIView):
         ).first()
 
         if sesion_activa:
-            segundos = (timezone.now() - sesion_activa.hora_inicio).total_seconds()
-            restantes = max(0, int(settings.SESION_DURACION_SEGUNDOS - segundos))
-            return _response_error(
-                f"Ya existe una sesión activa para esta materia. Segundos restantes: {restantes}",
-                status.HTTP_409_CONFLICT
-            )
+            elapsed = (timezone.now() - sesion_activa.hora_inicio).total_seconds()
+            # Si la sesión ya expiró, cerrarla automáticamente
+            if elapsed > sesion_activa.duracion_segundos:
+                sesion_activa.estado = 'cerrada'
+                sesion_activa.hora_fin = timezone.now()
+                sesion_activa.save(update_fields=['estado', 'hora_fin'])
+                cache.delete(_sesion_redis_key(str(sesion_activa.id)))
+            else:
+                restantes = max(0, int(sesion_activa.duracion_segundos - elapsed))
+                return _response_error(
+                    f"Ya existe una sesión activa para esta materia. Segundos restantes: {restantes}",
+                    status.HTTP_409_CONFLICT
+                )
 
         sesion = Sesion.objects.create(
             materia_id=materia_id,

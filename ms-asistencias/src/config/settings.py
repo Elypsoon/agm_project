@@ -81,5 +81,5 @@ from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': config('JWT_SECRET_KEY', default='temporal-secret'),
+    'SIGNING_KEY': config('MS_AUTH_SECRET_KEY', default='django-insecure-clave-temporal-valida-32bytes'),
 }
