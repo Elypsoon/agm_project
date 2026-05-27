@@ -30,7 +30,6 @@ export interface Asistencia {
 
 export interface QRToken {
   qr_token: string;
-  sesion_id: string;
   expira_en_segundos: number;
 }
 
@@ -95,11 +94,9 @@ export class AsistenciasService {
 
   // ── QR ──────────────────────────────────────────────────
 
-  generarQRToken(sesion_id: string): Observable<ApiResponse<QRToken>> {
-    const params = new HttpParams().set('sesion_id', sesion_id);
+  generarQRToken(): Observable<ApiResponse<QRToken>> {
     return this.http.get<ApiResponse<QRToken>>(
-      `${this.baseUrl}/asistencias/qr/generar`,
-      { params }
+      `${this.baseUrl}/asistencias/qr/generar`
     );
   }
 

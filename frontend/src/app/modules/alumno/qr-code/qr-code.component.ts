@@ -1,21 +1,19 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
-import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../../core/services/auth.service';
-import { AsistenciasService, MateriaResumen } from '../../../core/services/asistencias.service';
+import { AsistenciasService } from '../../../core/services/asistencias.service';
 
 @Component({
   selector: 'app-qr-code',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, QRCodeComponent,
-    ButtonModule, TagModule, ToastModule, SelectModule
+    CommonModule, QRCodeComponent,
+    ButtonModule, TagModule, ToastModule
   ],
   providers: [MessageService],
   templateUrl: './qr-code.component.html',
@@ -29,20 +27,9 @@ export class QrCodeComponent implements OnInit, OnDestroy {
   private intervalId: any = null;
   private readonly DURATION = 30;
 
-  // Estado materias
-  materias = signal<MateriaResumen[]>([]);
-  materiaSeleccionada = signal<MateriaResumen | null>(null);
-  cargandoMaterias = signal<boolean>(false);
-  modoManual = signal<boolean>(false);
-  sesionIdManual = signal<string>('');
-
-  // Estado QR
-  sesionId = signal<string>('');
   qrData = signal<string>('');
   secondsLeft = signal<number>(this.DURATION);
   cargando = signal<boolean>(false);
-  sesionActiva = signal<boolean>(false);
-  buscandoSesion = signal<boolean>(false);
 
   readonly userName = computed(() => this.authService.currentUser()?.nombre ?? 'Alumno');
   readonly avatarLabel = computed(() => {
@@ -59,97 +46,25 @@ export class QrCodeComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
-    this.cargarMaterias();
-  }
-
-  cargarMaterias() {
-    this.cargandoMaterias.set(true);
-    this.asistenciasService.getMisMaterias().subscribe({
-      next: (res) => {
-        this.cargandoMaterias.set(false);
-        if (res.success && res.data.length > 0) {
-          this.materias.set(res.data);
-          this.modoManual.set(false);
-        } else {
-          this.modoManual.set(true);
-        }
-      },
-      error: () => {
-        this.cargandoMaterias.set(false);
-        this.modoManual.set(true);
-      }
-    });
-  }
-
-  activarSesion() {
-    if (this.modoManual()) {
-      if (!this.sesionIdManual()) {
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Campo requerido',
-          detail: 'Ingresa el ID de la sesión',
-          life: 3000
-        });
-        return;
-      }
-      this.sesionId.set(this.sesionIdManual());
-      this.sesionActiva.set(true);
-      this.generarQR();
-      this.startCountdown();
-      return;
-    }
-
-    if (!this.materiaSeleccionada()) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Campo requerido',
-        detail: 'Selecciona una materia',
-        life: 3000
-      });
-      return;
-    }
-
-    // Buscar sesión activa para la materia seleccionada
-    this.buscandoSesion.set(true);
-    this.asistenciasService.getSesionActiva(this.materiaSeleccionada()!.id).subscribe({
-      next: (res) => {
-        this.buscandoSesion.set(false);
-        if (res.success) {
-          this.sesionId.set(res.data.id);
-          this.sesionActiva.set(true);
-          this.generarQR();
-          this.startCountdown();
-        }
-      },
-      error: (err) => {
-        this.buscandoSesion.set(false);
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Sin sesión activa',
-          detail: err.message || 'No hay sesión activa para esta materia',
-          life: 4000
-        });
-      }
-    });
+    this.generarQR();
+    this.startCountdown();
   }
 
   private generarQR() {
     this.cargando.set(true);
-    this.asistenciasService.generarQRToken(this.sesionId()).subscribe({
+    this.asistenciasService.generarQRToken().subscribe({
       next: (res) => {
         if (res.success) {
           this.qrData.set(res.data.qr_token);
           this.cargando.set(false);
         }
       },
-      error: (err) => {
+      error: () => {
         this.cargando.set(false);
-        this.sesionActiva.set(false);
-        this.stopCountdown();
         this.messageService.add({
           severity: 'error',
-          summary: 'Sesión inválida',
-          detail: err.message || 'La sesión no existe o ya cerró',
+          summary: 'Error',
+          detail: 'No se pudo generar el QR',
           life: 4000
         });
       }
@@ -161,7 +76,7 @@ export class QrCodeComponent implements OnInit, OnDestroy {
     this.intervalId = setInterval(() => {
       this.secondsLeft.update(s => {
         if (s <= 1) {
-          this.rotate();
+          this.generarQR();
           return this.DURATION;
         }
         return s - 1;
@@ -169,32 +84,14 @@ export class QrCodeComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  private stopCountdown() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-  }
-
-  private rotate() {
-    this.generarQR();
-  }
-
   refreshQr() {
-    this.rotate();
+    this.generarQR();
     this.secondsLeft.set(this.DURATION);
   }
 
-  desactivar() {
-    this.sesionActiva.set(false);
-    this.qrData.set('');
-    this.sesionId.set('');
-    this.materiaSeleccionada.set(null);
-    this.sesionIdManual.set('');
-    this.stopCountdown();
-  }
-
   ngOnDestroy() {
-    this.stopCountdown();
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
   }
 }

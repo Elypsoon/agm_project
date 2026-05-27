@@ -2,10 +2,10 @@
 Módulo de cifrado para tokens QR dinámicos.
 
 El alumno genera un QR que contiene un token cifrado con la siguiente estructura:
-    {alumno_id}:{matricula}:{sesion_id}:{timestamp}
+    {alumno_id}:{matricula}:{timestamp}
 
 El token se cifra con AES-128 (Fernet) usando QR_SECRET_KEY.
-El token cambia cada pocos segundos (el frontend lo regenera), lo que
+El token cambia cada 30 segundos (el frontend lo regenera), lo que
 previene capturas y uso fraudulento (anti-replay).
 
 En el backend se valida:
@@ -29,13 +29,13 @@ def _get_fernet() -> Fernet:
     return Fernet(_RAW_KEY.encode() if isinstance(_RAW_KEY, str) else _RAW_KEY)
 
 
-def encrypt_qr_payload(alumno_id: int, matricula: str, sesion_id: str) -> str:
+def encrypt_qr_payload(alumno_id: str, matricula: str) -> str:
     """
     Genera el token cifrado que el alumno mostrará en su QR.
-    Formato del payload: alumno_id:matricula:sesion_id:timestamp
+    Formato del payload: alumno_id:matricula:timestamp
     """
     timestamp = int(time.time())
-    payload = f"{alumno_id}:{matricula}:{sesion_id}:{timestamp}"
+    payload = f"{alumno_id}:{matricula}:{timestamp}"
     f = _get_fernet()
     token = f.encrypt(payload.encode()).decode()
     return token
@@ -53,10 +53,10 @@ def decrypt_qr_token(token: str) -> dict:
         raise ValueError("Token QR inválido o corrupto.")
 
     parts = payload.split(':')
-    if len(parts) != 4:
+    if len(parts) != 3:
         raise ValueError("Formato de token QR incorrecto.")
 
-    alumno_id, matricula, sesion_id, timestamp_str = parts
+    alumno_id, matricula, timestamp_str = parts
     timestamp = int(timestamp_str)
     age = int(time.time()) - timestamp
 
@@ -66,7 +66,6 @@ def decrypt_qr_token(token: str) -> dict:
     return {
         'alumno_id': alumno_id,
         'matricula': matricula,
-        'sesion_id': sesion_id,
         'timestamp': timestamp,
     }
 
