@@ -34,6 +34,14 @@ export interface QRToken {
   expira_en_segundos: number;
 }
 
+export interface MateriaResumen {
+  id: string;
+  nombre: string;
+  nrc: string;
+  seccion: string;
+  estado: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -94,4 +102,11 @@ export class AsistenciasService {
       { params }
     );
   }
+
+  getMisMaterias(): Observable<ApiResponse<MateriaResumen[]>> {
+    return this.http.get<ApiResponse<MateriaResumen[]>>(
+      `${this.baseUrl}/materias/mis-materias`
+    );
+  }
+
 }

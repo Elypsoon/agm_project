@@ -6,6 +6,7 @@ from .views import (
     AsistenciasHoyView,
     HistorialAsistenciasView,
     GenerarQRView,
+    MisMateriasSesionView,
 )
 
 urlpatterns = [
@@ -20,4 +21,7 @@ urlpatterns = [
 
     # QR
     path('asistencias/qr/generar', GenerarQRView.as_view(), name='generar-qr'),
+
+    # Materias del docente (via gRPC a MS-2)
+    path('materias/mis-materias', MisMateriasSesionView.as_view(), name='mis-materias'),
 ]

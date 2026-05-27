@@ -19,6 +19,8 @@ from rest_framework.response import Response
 
 from .crypto import encrypt_qr_payload
 
+from .grpc_clients import get_materias_by_docente
+
 from .models import Sesion, Asistencia
 from .serializers import (
     SesionSerializer,
@@ -258,3 +260,19 @@ class GenerarQRView(APIView):
             'sesion_id': sesion_id,
             'expira_en_segundos': 30,
         }, "Token QR generado correctamente.")
+    
+class MisMateriasSesionView(APIView):
+    """
+    Retorna las materias del docente autenticado consultando MS-2 via gRPC.
+    Si MS-2 no está disponible retorna lista vacía y el frontend
+    muestra el input manual de UUID como fallback.
+    """
+    permission_classes = [EsDocente]
+
+    def get(self, request):
+        docente_id = str(request.user.user_id)
+        materias = get_materias_by_docente(docente_id)
+        return _response_ok(
+            materias,
+            "Materias obtenidas correctamente." if materias else "MS-2 no disponible, use UUID manual."
+        )
