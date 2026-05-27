@@ -112,13 +112,16 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
             return periodos_pb2.MateriaInfo()
 
     def GetMateriasByDocente(self, request: periodos_pb2.DocenteIdRequest, context):
-        """Get all materias for a given docente in the active periodo."""
+        """Get all materias for a given docente in the active periodo using enum states."""
+        from api.models import Periodo, Materia, EstadoPeriodo
+        import uuid
+
         try:
             periodo_activo = Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).first()
             
             if not periodo_activo:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("No unique active periodo found currently.")
+                context.set_details("No unique active academic term found currently.")
                 return periodos_pb2.MateriasListResponse()
             
             materias = (
@@ -135,48 +138,53 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
                 horarios = []
                 for horario in materia.horarios.all():
                     horario_info = periodos_pb2.HorarioInfo(
+                        id=str(horario.id),
                         dia=horario.dia or "",
                         hora_inicio=horario.hora_inicio or "",
                         hora_fin=horario.hora_fin or "",
                         salon=horario.salon or "",
                         es_virtual=horario.es_virtual,
-                        profesor=materia.docente_nombre or ""
                     )
                     horarios.append(horario_info)
                 
                 materia_info = periodos_pb2.MateriaInfo(
                     id=str(materia.id),
                     nrc=materia.nrc,
-                    nombre=materia.nombre,
                     clave=materia.clave or "",
+                    nombre=materia.nombre,
                     seccion=materia.seccion or "",
                     docente_id=str(materia.docente_id) if materia.docente_id else "",
+                    docente_nombre=materia.docente_nombre or "POR ASIGNAR",
                     periodo_id=str(materia.periodo_id),
+                    estado=materia.estado, # e.g., "abierta"
+                    campus=materia.campus or "",     
+                    plan_estudios=materia.plan_estudios or "", 
                     horarios=horarios,
-                    estado=materia.estado,
                 )
                 materias_info.append(materia_info)
             
             return periodos_pb2.MateriasListResponse(materias=materias_info)
+            
         except ValueError as e:
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(f"Invalid docente_id format: {str(e)}")
+            context.set_details(f"Invalid docente_id format execution: {str(e)}")
             return periodos_pb2.MateriasListResponse()
         except Exception as e:
             logger.error(f"Error in GetMateriasByDocente: {str(e)}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal server error")
+            context.set_details("Internal microservice server error")
             return periodos_pb2.MateriasListResponse()
 
     def GetPeriodoActivo(self, request: periodos_pb2.Empty, context):
-        """Get the primary active academic periodo."""
+        """Get the primary active academic periodo mapping state strings instead of bools."""
+        from api.models import Periodo, EstadoPeriodo
+
         try:
-            # Pull the first available active period layout as reference context
             periodo = Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).first()
             
             if not periodo:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("No active periodo found right now.")
+                context.set_details("No active period match found right now.")
                 return periodos_pb2.PeriodoInfo()
             
             return periodos_pb2.PeriodoInfo(
@@ -184,12 +192,12 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
                 nombre=periodo.nombre,
                 fecha_inicio=periodo.fecha_inicio.isoformat(),
                 fecha_fin=periodo.fecha_fin.isoformat(),
-                estado=periodo.estado,
+                estado=periodo.estado, # "activo"
             )
         except Exception as e:
             logger.error(f"Error in GetPeriodoActivo: {str(e)}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal server error")
+            context.set_details("Internal microservice server error")
             return periodos_pb2.PeriodoInfo()
 
 
