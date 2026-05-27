@@ -143,7 +143,6 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
   }
 
   // ── Escáner QR ───────────────────────────────────────────
-
   async startScanning() {
     if (!this.sesionActiva()) {
       this.messageService.add({
@@ -158,12 +157,13 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
     this.status.set('scanning');
 
     // Esperar a que Angular renderice el video element
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       });
+      if (!this.videoEl?.nativeElement) return;
       this.videoEl.nativeElement.srcObject = this.stream;
       await this.videoEl.nativeElement.play();
       this.tick();
@@ -267,6 +267,11 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
     }
     this.stream?.getTracks().forEach(t => t.stop());
     this.stream = null;
+
+    // Limpiar el video para que no quede congelado
+    if (this.videoEl?.nativeElement) {
+      this.videoEl.nativeElement.srcObject = null;
+    }
   }
 
   ngOnDestroy() {

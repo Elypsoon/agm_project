@@ -24,7 +24,7 @@
   <!-- Panel activo -->
   <div *ngIf="sesionActiva()" class="scanner-layout">
 
-    <!-- Cámara -->
+    <!-- Columna izquierda: Cámara -->
     <div class="camera-panel">
       <div class="camera-frame"
         [class.scanning]="status() === 'scanning'"
@@ -39,9 +39,9 @@
 
         <!-- Video -->
         <video #videoEl class="camera-video" playsinline
-          [style.display]="status() === 'scanning' ? 'block' : 'none'">
+          *ngIf="status() === 'scanning'">
         </video>
-        <canvas #canvasEl class="hidden"></canvas>
+        <canvas #canvasEl class="hidden" *ngIf="status() === 'scanning'"></canvas>
 
         <!-- Overlay de escaneo -->
         <div class="scan-overlay" *ngIf="status() === 'scanning'">
@@ -65,7 +65,7 @@
         </div>
       </div>
 
-      <!-- Controles -->
+      <!-- Botón escanear -->
       <div class="camera-controls">
         <p-button
           *ngIf="status() !== 'scanning'"
@@ -81,19 +81,28 @@
           (onClick)="stopScanning()"
         />
       </div>
+    </div>
+
+    <!-- Columna derecha: Info + Historial -->
+    <div class="history-panel">
 
       <!-- Info sesión -->
-      <div class="card">
+      <div style="padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
         <div class="flex justify-between items-center mb-3">
           <div>
             <div class="font-semibold text-sm">Sesión activa</div>
-            <div class="text-xs text-gray-400">{{ sesionActiva()?.materia_id }}</div>
+            <div class="text-xs text-gray-400" style="word-break: break-all;">
+              {{ sesionActiva()?.materia_id }}
+            </div>
           </div>
           <div class="text-right">
-            <div class="text-2xl font-mono font-bold text-primary">{{ segundosRestantes() }}s</div>
+            <div class="text-2xl font-mono font-bold" style="color: #6366f1;">
+              {{ segundosRestantes() }}s
+            </div>
             <div class="text-xs text-gray-400">restantes</div>
           </div>
         </div>
+
         <div class="grid grid-cols-2 gap-2 mb-3">
           <div class="bg-green-50 rounded-lg p-2 text-center">
             <div class="text-xl font-bold text-green-600">{{ sesionActiva()?.total_presentes }}</div>
@@ -104,6 +113,7 @@
             <div class="text-xs text-yellow-700">Retardos</div>
           </div>
         </div>
+
         <p-button
           label="Cerrar sesión"
           icon="pi pi-times"
@@ -112,10 +122,8 @@
           (onClick)="cerrarSesion()"
         />
       </div>
-    </div>
 
-    <!-- Historial -->
-    <div class="history-panel">
+      <!-- Historial -->
       <div class="history-header">
         <span class="history-title">Registros de hoy</span>
         <p-tag [value]="scanHistory().length + ' asistencias'" severity="info" />
@@ -145,7 +153,7 @@
           />
         </div>
       </div>
-    </div>
 
+    </div>
   </div>
 </div>
