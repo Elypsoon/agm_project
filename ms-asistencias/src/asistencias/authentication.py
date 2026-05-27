@@ -55,6 +55,7 @@ class GrpcJWTAuthentication(BaseAuthentication):
     def _validate_token_via_grpc(self, token: str) -> dict:
         host = config('MS_AUTH_GRPC_HOST', default='localhost')
         port = config('MS_AUTH_GRPC_PORT', default='50051')
+        
 
         try:
             grpc = _load_grpc()
@@ -80,6 +81,8 @@ class GrpcJWTAuthentication(BaseAuthentication):
             response = stub.ValidateToken(
                 auth_pb2.ValidateTokenRequest(access_token=token)
             )
+            print(f"[DEBUG] Respuesta gRPC: valid={response.valid}, error={response.error}, role={response.role}")
+
 
             if not response.valid:
                 raise AuthenticationFailed(f"Token rechazado: {response.error}")
@@ -90,13 +93,17 @@ class GrpcJWTAuthentication(BaseAuthentication):
                 'email': response.email,
                 'matricula': '',
             }
+        
+        
         except Exception:
             return self._validate_token_local(token)
+        
+        
 
     def _validate_token_local(self, token: str) -> dict:
         """
-        Fallback: decodifica el JWT usando simplejwt cuando MS-Auth no está disponible.
-        Compatible con los tokens generados por MS-Auth.
+        Fallback: decodifica el JWT usando simplejwt.
+        Si el token no tiene role, lo obtiene via gRPC usando el user_id.
         """
         try:
             from rest_framework_simplejwt.tokens import AccessToken
@@ -104,17 +111,54 @@ class GrpcJWTAuthentication(BaseAuthentication):
             user_id = str(decoded['user_id'])
             role = decoded.get('role', '')
             email = decoded.get('email', '')
-            matricula = decoded.get('matricula', '')
+
+            # Si el token no trae role, intentar obtenerlo via gRPC
+            if not role:
+                try:
+                    role, email = self._get_user_info_via_grpc(user_id, token)
+                except Exception:
+                    pass
 
             return {
                 'user_id': user_id,
                 'rol': role,
                 'email': email,
-                'matricula': matricula,
+                'matricula': decoded.get('matricula', ''),
             }
         except Exception as e:
             raise AuthenticationFailed(f"Token inválido: {str(e)}")
 
+    def _get_user_info_via_grpc(self, user_id: str, token: str):
+        """
+        Obtiene el role y email del usuario via gRPC usando el token original.
+        """
+        host = config('MS_AUTH_GRPC_HOST', default='localhost')
+        port = config('MS_AUTH_GRPC_PORT', default='50051')
+
+        import importlib.util
+        grpc = _load_grpc()
+
+        def load_module(name, path):
+            spec = importlib.util.spec_from_file_location(name, path)
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[name] = mod
+            spec.loader.exec_module(mod)
+            return mod
+
+        auth_pb2 = load_module('auth_pb2', '/app/src/grpc/grpc_generated/auth_pb2.py')
+        auth_pb2_grpc = load_module('auth_pb2_grpc', '/app/src/grpc/grpc_generated/auth_pb2_grpc.py')
+
+        channel = grpc.insecure_channel(f'{host}:{port}')
+        stub = auth_pb2_grpc.AuthServiceStub(channel)
+        response = stub.ValidateToken(
+            auth_pb2.ValidateTokenRequest(access_token=token),
+            timeout=2
+        )
+
+        if response.valid:
+            return response.role, response.email
+
+        raise Exception("Token rechazado por MS-Auth")
 
 class AuthenticatedUser:
     def __init__(self, user_id, rol, email, matricula=''):
