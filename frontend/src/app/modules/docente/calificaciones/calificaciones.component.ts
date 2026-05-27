@@ -204,12 +204,20 @@ export class CalificacionesComponent implements OnInit {
           this.esquemaBloqueado.set(false);
           this.concentrado.set(null);
           this.allActividades.set([]);
+
+          // Mostrar un aviso informativo claro para guiar al docente
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Esquema requerido',
+            detail: err.error?.detail || 'Esta materia aún no tiene categorías de ponderación configuradas. Crea los criterios (Exámenes, Tareas, etc.) para comenzar.',
+            life: 6000
+          });
         } else {
           this.messageService.add({
             severity: 'error',
-            summary: 'Error',
-            detail: err.error?.detail || 'Error al obtener el concentrado de calificaciones.',
-            life: 5000
+            summary: 'Error de conexión',
+            detail: err.error?.detail || 'Error al obtener el concentrado de calificaciones. Si la materia es nueva, asegúrate de haber configurado sus criterios de evaluación (categorías de ponderación).',
+            life: 7000
           });
         }
       }
