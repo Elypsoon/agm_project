@@ -123,6 +123,9 @@ class MateriaViewSet(viewsets.ModelViewSet):
         periodo_id = self.request.query_params.get('periodo_id')
         if periodo_id:
             queryset = queryset.filter(periodo_id=periodo_id)
+        docente_id = self.request.query_params.get('docente_id')
+        if docente_id:
+            queryset = queryset.filter(docente_id=docente_id)
         return queryset
 
     def update(self, request, *args, **kwargs):
