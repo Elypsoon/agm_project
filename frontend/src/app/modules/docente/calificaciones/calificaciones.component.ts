@@ -13,6 +13,7 @@ import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { forkJoin, Observable } from 'rxjs';
+import { ReportesService } from '../../../core/services/reportes.service';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { 
@@ -45,6 +46,7 @@ export class CalificacionesComponent implements OnInit {
   private messageService = inject(MessageService);
   private authService = inject(AuthService);
   private calificacionesService = inject(CalificacionesService);
+  private reportesService = inject(ReportesService);
 
   loading = signal(false);
   editedRows = signal<Set<string>>(new Set());
@@ -580,5 +582,109 @@ export class CalificacionesComponent implements OnInit {
   estadoSeverity(row: AlumnoConcentrado): 'success' | 'danger' | 'secondary' {
     if (!this.tieneCalificaciones(row)) return 'secondary';
     return row.promedio_redondeado >= 6 ? 'success' : 'danger';
+  }
+
+  exportarCalificaciones() {
+    if (!this.selectedMateriaId) return;
+    
+    const email = this.authService.currentUser()?.email || 'docente@buap.mx';
+    
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Exportando',
+      detail: 'Iniciando la exportación de calificaciones...',
+      life: 2000
+    });
+
+    this.reportesService.descargarCalificaciones(this.selectedMateriaId, email, 'xlsx').subscribe({
+      next: (res) => {
+        if (res.isBlob) {
+          const blob = res.blob;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = res.filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Descargado',
+            detail: 'El archivo se ha descargado correctamente.',
+            life: 3000
+          });
+        } else if (res.async) {
+          this.messageService.add({
+            severity: 'success',
+            summary: '✉️ Reporte en Proceso',
+            detail: res.message || 'El reporte se está procesando y lo recibirás en tu correo.',
+            life: 6000
+          });
+        }
+      },
+      error: (err) => {
+        console.error('[-] Error al exportar calificaciones:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo exportar el reporte en este momento.',
+          life: 4000
+        });
+      }
+    });
+  }
+
+  exportarAsistencias() {
+    if (!this.selectedMateriaId) return;
+    
+    const email = this.authService.currentUser()?.email || 'docente@buap.mx';
+    
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Exportando',
+      detail: 'Iniciando la exportación de asistencias...',
+      life: 2000
+    });
+
+    this.reportesService.descargarAsistencias(this.selectedMateriaId, email, 'xlsx').subscribe({
+      next: (res) => {
+        if (res.isBlob) {
+          const blob = res.blob;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = res.filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Descargado',
+            detail: 'El archivo se ha descargado correctamente.',
+            life: 3000
+          });
+        } else if (res.async) {
+          this.messageService.add({
+            severity: 'success',
+            summary: '✉️ Reporte en Proceso',
+            detail: res.message || 'El reporte se está procesando y lo recibirás en tu correo.',
+            life: 6000
+          });
+        }
+      },
+      error: (err) => {
+        console.error('[-] Error al exportar asistencias:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo exportar el reporte en este momento.',
+          life: 4000
+        });
+      }
+    });
   }
 }

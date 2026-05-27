@@ -6,7 +6,7 @@
       <h1 class="page-title">Calificaciones</h1>
       <p class="page-subtitle">Gestión de calificaciones por materia</p>
     </div>
-    <div class="header-buttons">
+    <div style="display: flex; gap: 8px; align-items: center;">
       @if (selectedMateriaId && hasPonderaciones()) {
         <p-button 
           label="Editar Criterios" 
@@ -19,6 +19,10 @@
           (onClick)="abrirEditarPonderacionesModal()" />
         <p-button label="Importar Excel" icon="pi pi-file-excel" severity="secondary" styleClass="mr-2" (onClick)="abrirImportarModal()" />
         <p-button label="Añadir Actividad" icon="pi pi-plus" severity="secondary" styleClass="mr-2" (onClick)="abrirActividadModal()" />
+      }
+      @if (selectedMateriaId) {
+        <p-button label="Exportar Calificaciones" icon="pi pi-file-excel" severity="info" [outlined]="true" (onClick)="exportarCalificaciones()" />
+        <p-button label="Exportar Asistencias" icon="pi pi-check-square" severity="success" [outlined]="true" (onClick)="exportarAsistencias()" />
       }
       <p-button label="Guardar cambios" icon="pi pi-save"
         [disabled]="!editedRows().size"

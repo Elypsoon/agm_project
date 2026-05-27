@@ -212,23 +212,9 @@ def descargar_calificaciones(request, materia_id):
     formato = request.GET.get('formato', 'pdf').lower()
     ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
     content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
-
-    # Soporte para procesamiento asíncrono
-    is_async = request.GET.get('async', 'false').lower() == 'true'
     dest_email = request.GET.get('email')
 
-    if is_async and dest_email:
-        # Lanzar un hilo en segundo plano para no bloquear la petición REST
-        threading.Thread(
-            target=generar_y_enviar_reporte_async,
-            args=(materia_id, dest_email, formato, ext, 'calificaciones')
-        ).start()
-        
-        return Response({
-            "success": True,
-            "message": f"La generación del reporte de calificaciones en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
-        })
-
+    # 1. Comprobar caché primero (resiliente a fallos de BD)
     try:
         cache_activo = ReporteCache.objects.filter(
             materia_id=materia_id,
@@ -240,6 +226,7 @@ def descargar_calificaciones(request, materia_id):
         logger.warning(f"[-] Database error while reading cache: {e}")
         cache_activo = None
 
+    # Si existe en caché (Cache Hit), se descarga de inmediato síncronamente
     if cache_activo and os.path.exists(cache_activo.archivo_path):
         with open(cache_activo.archivo_path, 'rb') as f:
             archivo_bytes = f.read()
@@ -247,6 +234,21 @@ def descargar_calificaciones(request, materia_id):
         response['Content-Disposition'] = f'inline; filename="calificaciones_{materia_id}_cached.{ext}"'
         return response
 
+    # 2. Si es una falla de caché (Cache Miss) y se proporcionó correo: 
+    # Decisión automática: delegar al segundo plano (hilo asíncrono) para no congelar la pantalla.
+    if dest_email:
+        threading.Thread(
+            target=generar_y_enviar_reporte_async,
+            args=(materia_id, dest_email, formato, ext, 'calificaciones')
+        ).start()
+        
+        return Response({
+            "success": True,
+            "async": True,
+            "message": f"La generación del reporte de calificaciones en formato {formato.upper()} ha comenzado en segundo plano debido a un cache-miss. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
+        })
+
+    # 3. Si no se proporcionó correo (descarga síncrona clásica del navegador)
     datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
     if not datos_materia or not datos_materia.get('alumnos'):
         return Response({"error": "No hay calificaciones registradas o el servicio no está disponible."}, status=404)
@@ -293,23 +295,9 @@ def descargar_asistencias(request, materia_id):
     formato = request.GET.get('formato', 'pdf').lower()
     ext = 'xlsx' if formato in ['xls', 'xlsx'] else 'pdf'
     content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
-
-    # Soporte para procesamiento asíncrono
-    is_async = request.GET.get('async', 'false').lower() == 'true'
     dest_email = request.GET.get('email')
 
-    if is_async and dest_email:
-        # Lanzar un hilo en segundo plano para no bloquear la petición REST
-        threading.Thread(
-            target=generar_y_enviar_reporte_async,
-            args=(materia_id, dest_email, formato, ext, 'asistencias')
-        ).start()
-        
-        return Response({
-            "success": True,
-            "message": f"La generación del reporte de asistencias en formato {formato.upper()} ha comenzado en segundo plano. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
-        })
-
+    # 1. Comprobar caché primero
     try:
         cache_activo = ReporteCache.objects.filter(
             materia_id=materia_id,
@@ -321,6 +309,7 @@ def descargar_asistencias(request, materia_id):
         logger.warning(f"[-] Database error while reading cache: {e}")
         cache_activo = None
 
+    # Si existe en caché (Cache Hit), se descarga de inmediato síncronamente
     if cache_activo and os.path.exists(cache_activo.archivo_path):
         with open(cache_activo.archivo_path, 'rb') as f:
             archivo_bytes = f.read()
@@ -328,6 +317,21 @@ def descargar_asistencias(request, materia_id):
         response['Content-Disposition'] = f'inline; filename="asistencias_{materia_id}_cached.{ext}"'
         return response
 
+    # 2. Si es una falla de caché (Cache Miss) y se proporcionó correo:
+    # Decisión automática: delegar al segundo plano (hilo asíncrono) para no congelar la pantalla.
+    if dest_email:
+        threading.Thread(
+            target=generar_y_enviar_reporte_async,
+            args=(materia_id, dest_email, formato, ext, 'asistencias')
+        ).start()
+        
+        return Response({
+            "success": True,
+            "async": True,
+            "message": f"La generación del reporte de asistencias en formato {formato.upper()} ha comenzado en segundo plano debido a un cache-miss. Recibirás un correo en {dest_email} con el archivo adjunto en cuanto esté listo."
+        })
+
+    # 3. Si no se proporcionó correo (descarga síncrona clásica del navegador)
     datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
     if not datos_materia or not datos_materia.get('alumnos'):
         return Response({"error": "No hay calificaciones o alumnos registrados para obtener asistencias."}, status=404)
