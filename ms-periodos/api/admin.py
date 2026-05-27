@@ -7,12 +7,11 @@ from .models import Periodo, Materia, Horario
 
 @admin.register(Periodo)
 class PeriodoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'fecha_inicio', 'fecha_fin', 'activo', 'created_at')
-    list_filter = ('activo', 'created_at')
+    list_display = ('nombre', 'fecha_inicio', 'fecha_fin', 'estado', 'created_at')
+    list_filter = ('estado', 'created_at')
     search_fields = ('nombre',)
     ordering = ('-created_at',)
     readonly_fields = ('id', 'created_at', 'updated_at')
-
 
 @admin.register(Materia)
 class MateriaAdmin(admin.ModelAdmin):

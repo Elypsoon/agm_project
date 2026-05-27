@@ -237,6 +237,53 @@ services:
              python manage.py run_consumer"
 
   # ---------------------------------------------------------------------------
+  # MS-2: Periodos y Materias (Django + PostgreSQL)
+  # ---------------------------------------------------------------------------
+
+  # Base de datos independiente para MS-2
+  db-periodos:
+    image: postgres:15
+    container_name: db-periodos
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: periodos_dev_2026
+      POSTGRES_DB: agm_periodos_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_periodos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5438:5432"tras DBs
+    volumes:
+      - db_periodos_data:/var/lib/postgresql/data
+
+  # Microservicio de Periodos y Materias (MS-2)
+  ms-periodos:
+    build:
+      context: ./ms-periodos
+      dockerfile: Dockerfile
+    container_name: ms-periodos
+    restart: on-failure
+    ports:
+      - "3002:3002"   # API REST
+      - "50052:50052" # gRPC
+    volumes:
+      - ./ms-periodos:/app    # Hot-reload
+    env_file:
+      - ./ms-periodos/.env
+    depends_on:
+      db-periodos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py run_consumer &
+             python manage.py run_with_grpc"
+
+  # ---------------------------------------------------------------------------
   # MS-7: Reportes (Django + PostgreSQL)
   # ---------------------------------------------------------------------------
 
@@ -308,6 +355,7 @@ services:
       - "4200:4200"
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - NG_CLI_ANALYTICS=false
@@ -322,3 +370,4 @@ volumes:
   db_asistencias_data:
   db_notificaciones_data:
   db_reportes_data:
+  db_periodos_data:

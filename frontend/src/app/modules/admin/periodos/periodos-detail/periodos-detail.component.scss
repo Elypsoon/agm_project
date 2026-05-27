@@ -1,4 +1,4 @@
-@use '../../../../styles/variables' as v;
+@use '../../../../../styles/variables' as v;
 
 .periodos-detail-page {
   padding: 2rem;
@@ -35,9 +35,10 @@
 
 .detail-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.75rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
 }
 
 .detail-card {

@@ -5,7 +5,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
-import { PeriodosService, Periodo } from './periodos.service';
+import { PeriodosService, Periodo } from '../periodos.service';
 
 @Component({
   selector: 'agm-admin-periodos',
@@ -30,13 +30,21 @@ export class PeriodosComponent implements OnInit {
   importTargetId: string | null = null;
   importTargetName = '';
   periodoForm: FormGroup;
+  editPeriodoForm: FormGroup;
   actionLoading = '';
   uploadError = '';
   uploadSuccess = '';
   selectedFile: File | null = null;
+  editingPeriodo: Periodo | null = null;
+  showEditPeriodoDialog = false;
 
   constructor() {
     this.periodoForm = this.fb.group({
+      nombre: ['', Validators.required],
+      fecha_inicio: ['', Validators.required],
+      fecha_fin: ['', Validators.required]
+    });
+    this.editPeriodoForm = this.fb.group({
       nombre: ['', Validators.required],
       fecha_inicio: ['', Validators.required],
       fecha_fin: ['', Validators.required]
@@ -129,7 +137,7 @@ export class PeriodosComponent implements OnInit {
   }
 
   activatePeriodo(periodo: Periodo) {
-    if (periodo.activo) {
+    if (periodo.estado === 'activo') {
       return;
     }
 
@@ -211,7 +219,86 @@ export class PeriodosComponent implements OnInit {
     this.router.navigate(['/admin/periodos', periodo.id]);
   }
 
+  deactivatePeriodo(periodo: Periodo) {
+    if (periodo.estado !== 'activo') {
+      return;
+    }
+
+    this.actionLoading = periodo.id;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    this.periodosService.deactivatePeriodo(periodo.id).subscribe({
+      next: () => {
+        this.actionLoading = '';
+        this.successMessage = `Periodo "${periodo.nombre}" desactivado.`;
+        this.loadPeriodos();
+      },
+      error: (err) => {
+        this.actionLoading = '';
+        this.errorMessage = err?.message || 'No se pudo desactivar el periodo.';
+      }
+    });
+  }
+
+  openEditPeriodoDialog(periodo: Periodo) {
+    this.editingPeriodo = { ...periodo };
+    this.editPeriodoForm.patchValue({
+      nombre: periodo.nombre,
+      fecha_inicio: periodo.fecha_inicio,
+      fecha_fin: periodo.fecha_fin
+    });
+    this.showEditPeriodoDialog = true;
+  }
+
+  closeEditPeriodoDialog() {
+    this.showEditPeriodoDialog = false;
+    this.editingPeriodo = null;
+    this.editPeriodoForm.reset();
+  }
+
+  saveEditPeriodo() {
+    if (!this.editingPeriodo || !this.editPeriodoForm.valid) {
+      return;
+    }
+
+    this.actionLoading = this.editingPeriodo.id;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    this.periodosService.updatePeriodo(this.editingPeriodo.id, this.editPeriodoForm.value).subscribe({
+      next: () => {
+        this.actionLoading = '';
+        this.successMessage = `Periodo "${this.editPeriodoForm.value.nombre}" actualizado.`;
+        this.closeEditPeriodoDialog();
+        this.loadPeriodos();
+      },
+      error: (err) => {
+        this.actionLoading = '';
+        this.errorMessage = err?.message || 'No se pudo actualizar el periodo.';
+      }
+    });
+  }
+
   getPeriodosCount() {
     return this.periodos.length;
+  }
+
+  getEstadoLabel(estado: string): string {
+    const labels: { [key: string]: string } = {
+      'pendiente': 'Pendiente',
+      'activo': 'Activo',
+      'finalizada': 'Finalizada'
+    };
+    return labels[estado.toLowerCase()] || estado;
+  }
+
+  getEstadoSeverity(estado: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
+    const severity: { [key: string]: 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' } = {
+      'pendiente': 'warn',
+      'activo': 'success',
+      'finalizada': 'info'
+    };
+    return severity[estado.toLowerCase()] || 'secondary';
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
@@ -30,7 +30,7 @@ export interface Periodo {
   nombre: string;
   fecha_inicio: string;
   fecha_fin: string;
-  activo: boolean;
+  estado: 'pendiente' | 'activo' | 'finalizada';
   materias?: Materia[];
 }
 
@@ -67,7 +67,14 @@ export class PeriodosService {
   }
 
   createPeriodo(payload: CreatePeriodoPayload): Observable<Periodo> {
-    return this.http.post<Periodo>(`${this.baseUrl}/periodos/`, payload);
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.post<Periodo>(
+      `${this.baseUrl}/periodos/`,
+      payload,
+      { headers }
+    );
   }
 
   deletePeriodo(periodoId: string): Observable<void> {
@@ -75,7 +82,47 @@ export class PeriodosService {
   }
 
   activatePeriodo(periodoId: string): Observable<Periodo> {
-    return this.http.put<Periodo>(`${this.baseUrl}/periodos/${periodoId}/activar/`, {});
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.put<Periodo>(
+      `${this.baseUrl}/periodos/${periodoId}/activar/`,
+      {},
+      { headers }
+    );
+  }
+
+  deactivatePeriodo(periodoId: string): Observable<Periodo> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.put<Periodo>(
+      `${this.baseUrl}/periodos/${periodoId}/desactivar/`,
+      {},
+      { headers }
+    );
+  }
+
+  updatePeriodo(periodoId: string, payload: Partial<CreatePeriodoPayload>): Observable<Periodo> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.put<Periodo>(
+      `${this.baseUrl}/periodos/${periodoId}/`,
+      payload,
+      { headers }
+    );
+  }
+
+  updateMateria(materiaId: string, payload: any): Observable<Materia> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.put<Materia>(
+      `${this.baseUrl}/materias/${materiaId}/`,
+      payload,
+      { headers }
+    );
   }
 
   importPdf(periodoId: string, file: File): Observable<any> {
