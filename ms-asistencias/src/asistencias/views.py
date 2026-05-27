@@ -264,15 +264,33 @@ class GenerarQRView(APIView):
 class MisMateriasSesionView(APIView):
     """
     Retorna las materias del docente autenticado consultando MS-2 via gRPC.
-    Si MS-2 no está disponible retorna lista vacía y el frontend
-    muestra el input manual de UUID como fallback.
+    Las materias se cachean en Redis por 1 hora para tolerar caídas de MS-2.
+    Si MS-2 no está disponible y no hay caché, retorna lista vacía (fallback UUID manual).
     """
     permission_classes = [EsDocente]
 
     def get(self, request):
         docente_id = str(request.user.user_id)
+        cache_key = f"materias_docente:{docente_id}"
+
+        # 1. Intentar obtener del caché
+        materias_cache = cache.get(cache_key)
+        if materias_cache:
+            return _response_ok(
+                materias_cache,
+                "Materias obtenidas desde caché."
+            )
+
+        # 2. Consultar MS-2 via gRPC
         materias = get_materias_by_docente(docente_id)
+
+        if materias:
+            # Guardar en Redis por 1 hora
+            cache.set(cache_key, materias, timeout=3600)
+            return _response_ok(materias, "Materias obtenidas correctamente.")
+
+        # 3. Fallback: lista vacía, el docente usa UUID manual
         return _response_ok(
-            materias,
-            "Materias obtenidas correctamente." if materias else "MS-2 no disponible, use UUID manual."
+            [],
+            "MS-2 no disponible y sin caché, use UUID manual."
         )
