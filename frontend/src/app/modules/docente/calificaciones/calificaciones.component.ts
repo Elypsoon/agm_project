@@ -136,7 +136,8 @@ export class CalificacionesComponent implements OnInit {
     this.calificacionesService.getPeriodoActivo().subscribe({
       next: (periodo) => {
         this.periodoActivo.set(periodo);
-        const email = this.authService.currentUser()?.email;
+        // ID del docente autenticado (local_id guardado tras el login)
+        const docenteId = this.authService.currentUser()?.id || null;
 
         if (email) {
           // 2. Obtener el perfil del docente para conseguir el docente_id real (ms-alumnos)
