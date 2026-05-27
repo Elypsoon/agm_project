@@ -8,10 +8,16 @@
       <h1 class="page-title">Docentes</h1>
       <p class="page-subtitle">Gestión del personal docente activo</p>
     </div>
-    <button class="btn-primary" (click)="openCreateDialog()">
-      <i class="pi pi-plus"></i>
-      <span>Nuevo Docente</span>
-    </button>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="openImportDialog()">
+        <i class="pi pi-upload"></i>
+        <span>Importar PDF</span>
+      </button>
+      <button class="btn-primary" (click)="openCreateDialog()">
+        <i class="pi pi-plus"></i>
+        <span>Nuevo Docente</span>
+      </button>
+    </div>
   </div>
 
   <!-- Tabla -->
@@ -179,6 +185,55 @@
     <button class="btn-secondary" (click)="showCreateDialog = false; createForm.reset()">Cancelar</button>
     <button class="btn-primary" (click)="submitCreate()">
       <i class="pi pi-check"></i> {{ isEditMode ? 'Guardar' : 'Registrar' }}
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ── Import Docentes PDF Dialog ── -->
+<p-dialog
+  header="Importar Docentes desde Directorio PDF"
+  [(visible)]="showImportDialog"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false">
+
+  <div class="import-dialog-body">
+    <div class="import-info">
+      <i class="pi pi-info-circle"></i>
+      <span>Se procesarán los docentes a partir del PDF del Directorio institucional de la Facultad.</span>
+    </div>
+
+    <div class="file-drop-zone" [class.has-file]="selectedFile">
+      <input type="file" id="doc-pdf-upload" accept=".pdf" (change)="onFileChange($event)" style="display:none" />
+      <label for="doc-pdf-upload" class="file-drop-label">
+        <i class="pi pi-file-pdf file-icon"></i>
+        @if (selectedFile) {
+          <span class="file-name">{{ selectedFile.name }}</span>
+        } @else {
+          <span>Haz clic o arrastra el archivo PDF aquí</span>
+        }
+      </label>
+    </div>
+
+    @if (uploadError) {
+      <div class="alert alert--error">
+        <i class="pi pi-times-circle"></i> {{ uploadError }}
+      </div>
+    }
+    @if (uploadSuccess) {
+      <div class="alert alert--success">
+        <i class="pi pi-check-circle"></i> {{ uploadSuccess }}
+      </div>
+    }
+    @if (importLoading) {
+      <p-progressBar mode="indeterminate" styleClass="import-progress" />
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button class="btn-secondary" (click)="showImportDialog = false" [disabled]="importLoading">Cancelar</button>
+    <button class="btn-primary" (click)="uploadPdf()" [disabled]="importLoading">
+      <i class="pi pi-upload"></i> Importar
     </button>
   </ng-template>
 </p-dialog>

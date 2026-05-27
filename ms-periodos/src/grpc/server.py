@@ -30,16 +30,16 @@ def _ejecutar_evaluacion_periodos(hoy: date):
         fecha_fin__gte=hoy
     ).first()
 
-    if periodo_actual and not periodo_actual.activo:
-        Periodo.objects.filter(activo=True).exclude(id=periodo_actual.id).update(activo=False)
+    if periodo_actual and periodo_actual.estado != EstadoPeriodo.ACTIVO:
+        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).exclude(id=periodo_actual.id).update(estado=EstadoPeriodo.FINALIZADA)
         
-        periodo_actual.activo = True
+        periodo_actual.estado = EstadoPeriodo.ACTIVO
         periodo_actual.save()
         logger.info(f"Periodo de referencia global activado automáticamente: {periodo_actual.nombre}")
         
     elif not periodo_actual:
         # If today doesn't match any period bounds, ensure everything is turned off
-        Periodo.objects.filter(activo=True).update(activo=False)
+        Periodo.objects.filter(estado=EstadoPeriodo.ACTIVO).update(estado=EstadoPeriodo.FINALIZADA)
         
 async def cron_evaluador_periodos():
     """

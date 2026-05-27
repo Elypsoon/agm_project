@@ -13,6 +13,7 @@ import { SelectModule } from 'primeng/select';
 import { AvatarModule } from 'primeng/avatar';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { MessageService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 
@@ -35,7 +36,7 @@ export interface Docente {
     CommonModule, ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, InputTextModule, IconFieldModule, InputIconModule,
     TagModule, DialogModule, ToastModule, SelectModule, AvatarModule, SkeletonModule,
-    TooltipModule
+    TooltipModule, ProgressBarModule
   ],
   providers: [MessageService],
   templateUrl: './docentes.component.html',
@@ -49,11 +50,17 @@ export class DocentesComponent implements OnInit {
 
   showCreateDialog = false;
   showAssignDialog = false;
+  showImportDialog = false;
   isEditMode = false;
   selectedDocente: Docente | null = null;
 
   materiaOptions: { label: string; value: string }[] = [];
   selectedMateria: string | null = null;
+
+  importLoading = false;
+  selectedFile: File | null = null;
+  uploadError = '';
+  uploadSuccess = '';
 
   createForm: FormGroup;
 
@@ -250,6 +257,62 @@ export class DocentesComponent implements OnInit {
         }
       });
     }
+  }
+
+  openImportDialog() {
+    this.selectedFile = null;
+    this.uploadError = '';
+    this.uploadSuccess = '';
+    this.showImportDialog = true;
+  }
+
+  onFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile = input.files?.[0] ?? null;
+    this.uploadError = '';
+    this.uploadSuccess = '';
+  }
+
+  uploadPdf() {
+    if (!this.selectedFile) {
+      this.uploadError = 'Selecciona un archivo PDF antes de continuar.';
+      return;
+    }
+    this.importLoading = true;
+    this.uploadError = '';
+    this.uploadSuccess = '';
+
+    this.docentesService.importarDocentes(this.selectedFile).subscribe({
+      next: (res) => {
+        this.importLoading = false;
+        if (res.success) {
+          this.uploadSuccess = res.message || 'PDF importado correctamente.';
+          this.selectedFile = null;
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Importación exitosa',
+            detail: res.message
+          });
+          this.loadData();
+          setTimeout(() => {
+            this.showImportDialog = false;
+            this.uploadSuccess = '';
+          }, 1500);
+        } else {
+          this.uploadError = res.message || 'Error al procesar el PDF.';
+        }
+      },
+      error: (err) => {
+        this.importLoading = false;
+        const msg = err.error?.detail || err.error?.message || 'Error al subir el archivo.';
+        this.uploadError = `Error: ${msg}`;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error de importación',
+          detail: msg
+        });
+      }
+    });
   }
 
   isInvalid(field: string): boolean {
