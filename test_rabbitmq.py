@@ -21,10 +21,10 @@ def main():
     print("PRUEBA DE INTEGRACIÓN - RABBITMQ BROKER")
 
     # Datos realistas de prueba
-    email_prueba = "angel.gutierrezpa@alumno.buap.mx"
-    nombre_completo = "Angel Gutiérrez Pacheco"
-    matricula = "202623500"
-    clave_acceso = "Gutierrez@123"
+    email_prueba = "jorge.rojasru@alumno.buap.mx"
+    nombre_completo = "Jorge Rojas Ruiz"
+    matricula = "202623510"
+    clave_acceso = "JorgeRojas@25"
     materia_id = "12345678-1234-5678-1234-567812345678"
 
     print("Este script realizará las siguientes acciones:")

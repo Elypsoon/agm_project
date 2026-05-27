@@ -1,3 +1,5 @@
+<p-toast position="top-right" />
+
 <div class="auth-layout">
   <div class="auth-container">
     <div class="auth-header">
@@ -14,31 +16,50 @@
         <label for="email">Correo Electrónico</label>
       </p-floatlabel>
 
-      <small class="p-error block" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
-        <span *ngIf="loginForm.get('email')?.hasError('required')">El correo es requerido.</span>
-        <span *ngIf="loginForm.get('email')?.hasError('email')">Formato de correo inválido.</span>
-      </small>
+      @if (isInvalid('email')) {
+        <small class="p-error block">
+          @if (loginForm.get('email')?.hasError('required')) {
+            El correo es requerido.
+          }
+          @if (loginForm.get('email')?.hasError('email')) {
+            Formato de correo inválido.
+          }
+        </small>
+      }
 
       <p-floatlabel class="mt-4 block">
         <p-password id="password" formControlName="password" [toggleMask]="true" [feedback]="false" styleClass="w-full" inputStyleClass="w-full" autocomplete="current-password"></p-password>
         <label for="password">Contraseña</label>
       </p-floatlabel>
 
-      <small class="p-error block" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
-        <span *ngIf="loginForm.get('password')?.hasError('required')">La contraseña es requerida.</span>
-      </small>
+      @if (isInvalid('password')) {
+        <small class="p-error block">
+          @if (loginForm.get('password')?.hasError('required')) {
+            La contraseña es requerida.
+          }
+        </small>
+      }
 
       <div class="forgot-password-link">
         <a routerLink="/auth/forgot-password">¿Olvidaste tu contraseña?</a>
       </div>
 
-      <div class="form-actions mt-4">
-        <p-button type="submit" [loading]="isLoading" label="Iniciar Sesión" styleClass="w-full"></p-button>
+      <div class="form-actions">
+        <p-button
+          type="submit"
+          icon="pi pi-sign-in"
+          [loading]="isLoading()"
+          [disabled]="loginForm.invalid || isLoading()"
+          label="Iniciar Sesión"
+          styleClass="w-full">
+        </p-button>
       </div>
     </form>
-    
-    <div *ngIf="errorMessage" class="error-banner mt-4">
-      <i class="pi pi-exclamation-triangle"></i> {{ errorMessage }}
-    </div>
+
+    @if (errorMessage()) {
+      <div class="error-banner mt-4">
+        <i class="pi pi-exclamation-triangle"></i> {{ errorMessage() }}
+      </div>
+    }
   </div>
 </div>
