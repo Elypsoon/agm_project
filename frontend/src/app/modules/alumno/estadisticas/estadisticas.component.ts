@@ -121,7 +121,7 @@ export class EstadisticasComponent implements OnInit {
         }
         this.loading.set(false);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('[-] Error al obtener estadísticas del alumno:', err);
         // Fallback de contingencia a mock interactivo premium
         this.stats.set(this.generarMockStats(materiaId));

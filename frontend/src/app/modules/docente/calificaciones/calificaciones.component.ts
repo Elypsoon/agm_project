@@ -605,13 +605,13 @@ export class CalificacionesComponent implements OnInit {
     });
 
     this.reportesService.descargarCalificaciones(this.selectedMateriaId, email, 'xlsx').subscribe({
-      next: (res) => {
+      next: (res: any) => {
         if (res.isBlob) {
-          const blob = res.blob;
+          const blob = res.blob!;
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = res.filename;
+          a.download = res.filename!;
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
@@ -632,7 +632,7 @@ export class CalificacionesComponent implements OnInit {
           });
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('[-] Error al exportar calificaciones:', err);
         this.messageService.add({
           severity: 'error',
@@ -657,13 +657,13 @@ export class CalificacionesComponent implements OnInit {
     });
 
     this.reportesService.descargarAsistencias(this.selectedMateriaId, email, 'xlsx').subscribe({
-      next: (res) => {
+      next: (res: any) => {
         if (res.isBlob) {
-          const blob = res.blob;
+          const blob = res.blob!;
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = res.filename;
+          a.download = res.filename!;
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
@@ -684,7 +684,7 @@ export class CalificacionesComponent implements OnInit {
           });
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('[-] Error al exportar asistencias:', err);
         this.messageService.add({
           severity: 'error',

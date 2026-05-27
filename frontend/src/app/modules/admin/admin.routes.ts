@@ -14,5 +14,15 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () => import('./periodos/periodos-detail.component').then(m => m.PeriodosDetailComponent)
       }
     ]
+  },
+  {
+    path: 'dashboard',
+    redirectTo: 'periodos',
+    pathMatch: 'full'
+  },
+  {
+    path: '',
+    redirectTo: 'periodos',
+    pathMatch: 'full'
   }
 ];
