@@ -27,7 +27,6 @@ export interface Docente {
   email: string;
   departamento: string;
   materias: number;
-  estado: 'activo' | 'inactivo';
 }
 
 @Component({
@@ -130,8 +129,7 @@ export class DocentesComponent implements OnInit {
                 nombre: d.nombre_completo,
                 email: d.correo_institucional,
                 departamento: d.cubiculo || 'Sin cubículo',
-                materias: docenteMaterias.length,
-                estado: d.activo ? 'activo' : 'inactivo'
+                materias: docenteMaterias.length
               };
             });
           }
