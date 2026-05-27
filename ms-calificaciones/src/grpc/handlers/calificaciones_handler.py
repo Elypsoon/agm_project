@@ -1,33 +1,85 @@
 import logging
-from src.services.concentrado_service import build_concentrado
-from src.models.models import Calificacion, PonderacionConfig
-from src.utils.rounding import redondeo
 from decimal import Decimal
+
+from src.models.models import Calificacion, Ponderacion, Actividad
+
+from src.services.concentrado_service import build_concentrado
+from src.services.estadisticas_service import get_estadisticas_materia, get_estadisticas_alumno
+
+from src.utils.rounding import redondeo
 
 logger = logging.getLogger(__name__)
 
 
 class CalificacionesServicer:
+    """Implementa el servant gRPC CalificacionesService definido en el protocolo (.proto).
+
+    Sirve peticiones entrantes de otros microservicios para recuperar concentrados de notas, promedios de estudiantes y analíticas grupales.
+    """
 
     def GetConcentrado(self, request, context):
+        """Obtiene la matriz completa de notas del grupo incluyendo el desglose por actividad.
+
+        Retorna la jerarquía de categorías de ponderación de la materia (una sola vez)
+        y los promedios e historial de calificaciones por actividad de cada alumno.
+
+        Args:
+            calificaciones_pb2.MateriaIdRequest: Mensaje con el materia_id.
+            grpc.ServicerContext: Contexto de ejecución de la llamada gRPC.
+
+        Returns:
+            calificaciones_pb2.ConcentradoResponse: Respuesta con categorías y desglose grupal.
+        """
         from src.grpc import calificaciones_pb2
         try:
             data = build_concentrado(request.materia_id)
-            alumnos = [
-                calificaciones_pb2.AlumnoCalif(
-                    alumno_id=a['alumno_id'],
-                    alumno_nombre=a['alumno_nombre'],
-                    promedio_real=a['promedio_real'],
-                    promedio_redondeado=a['promedio_redondeado'],
+
+            # Construir jerarquía de categorías con sus actividades
+            categorias = []
+            for cat in data['categorias']:
+                actividades = [
+                    calificaciones_pb2.ActividadInfo(
+                        actividad_id=a['actividad_id'],
+                        actividad_nombre=a['actividad_nombre'],
+                    )
+                    for a in cat['actividades']
+                ]
+                categorias.append(
+                    calificaciones_pb2.CategoriaPonderacion(
+                        nombre_categoria=cat['nombre_categoria'],
+                        porcentaje=cat['porcentaje'],
+                        actividades=actividades,
+                    )
                 )
-                for a in data['alumnos']
-            ]
+
+            # Construir lista de alumnos con sus calificaciones por actividad
+            alumnos = []
+            for a in data['alumnos']:
+                calificaciones_pb = [
+                    calificaciones_pb2.CalificacionActividad(
+                        actividad_id=c['actividad_id'],
+                        valor=c['valor'],
+                    )
+                    for c in a['calificaciones']
+                ]
+                alumnos.append(
+                    calificaciones_pb2.AlumnoCalif(
+                        alumno_id=a['alumno_id'],
+                        alumno_matricula=a['alumno_matricula'],
+                        alumno_nombre=a['alumno_nombre'],
+                        promedio_real=a['promedio_real'],
+                        promedio_redondeado=a['promedio_redondeado'],
+                        calificaciones=calificaciones_pb,
+                    )
+                )
+
             return calificaciones_pb2.ConcentradoResponse(
                 materia_id=data['materia_id'],
                 materia_nombre=data['materia_nombre'],
+                categorias=categorias,
                 alumnos=alumnos,
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('No existe configuración de ponderación para esa materia.')
@@ -39,33 +91,25 @@ class CalificacionesServicer:
             context.set_details(str(exc))
             return calificaciones_pb2.ConcentradoResponse()
 
+
     def GetPromedioAlumno(self, request, context):
+        """Calcula y devuelve el promedio ponderado de un alumno en una materia.
+
+        Args:
+            calificaciones_pb2.PromedioRequest: Petición con el alumno_id y materia_id.
+            grpc.ServicerContext: Contexto gRPC.
+
+        Returns:
+            calificaciones_pb2.PromedioResponse: Respuesta con promedios real y redondeado.
+        """
         from src.grpc import calificaciones_pb2
         try:
-            config = PonderacionConfig.objects.prefetch_related(
-                'categorias__actividades'
-            ).get(materia_id=request.materia_id)
-
-            total = Decimal('0.00')
-            for categoria in config.categorias.all():
-                actividades = list(categoria.actividades.all())
-                if not actividades:
-                    continue
-                suma = Decimal('0.00')
-                for actividad in actividades:
-                    cal = Calificacion.objects.filter(
-                        actividad=actividad,
-                        alumno_id=request.alumno_id
-                    ).first()
-                    suma += cal.valor if cal else Decimal('0.00')
-                promedio_cat = suma / Decimal(len(actividades))
-                total += promedio_cat * (categoria.porcentaje / Decimal('100'))
-
+            data = get_estadisticas_alumno(request.alumno_id, request.materia_id)
             return calificaciones_pb2.PromedioResponse(
-                promedio_real=float(total),
-                promedio_redondeado=redondeo(total),
+                promedio_real=data['promedio_real'],
+                promedio_redondeado=data['promedio_redondeado'],
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('Materia no encontrada.')
@@ -78,37 +122,27 @@ class CalificacionesServicer:
             return calificaciones_pb2.PromedioResponse()
 
     def GetEstadisticasMateria(self, request, context):
+        """Obtiene métricas grupales agregadas de la materia.
+
+        Args:
+            calificaciones_pb2.MateriaRequest: Petición con el materia_id.
+            grpc.ServicerContext: Contexto gRPC.
+
+        Returns:
+            calificaciones_pb2.StatsResponse: Respuesta con promedios y límites de notas.
+        """
         from src.grpc import calificaciones_pb2
         try:
-            config = PonderacionConfig.objects.prefetch_related(
-                'categorias__actividades'
-            ).get(materia_id=request.materia_id)
-
-            actividad_ids = [
-                act.id
-                for cat in config.categorias.all()
-                for act in cat.actividades.all()
-            ]
-
-            calificaciones = Calificacion.objects.filter(
-                actividad_id__in=actividad_ids
-            ).values_list('valor', flat=True)
-
-            valores = [float(v) for v in calificaciones]
-            if not valores:
-                return calificaciones_pb2.StatsResponse()
-
-            alumnos_unicos = Calificacion.objects.filter(
-                actividad_id__in=actividad_ids
-            ).values('alumno_id').distinct().count()
-
+            data = get_estadisticas_materia(request.materia_id)
+            if data['promedio_grupo'] is None:
+                return calificaciones_pb2.StatsResponse(total_alumnos=data['total_alumnos'])
             return calificaciones_pb2.StatsResponse(
-                promedio_grupo=sum(valores) / len(valores),
-                calificacion_max=max(valores),
-                calificacion_min=min(valores),
-                total_alumnos=alumnos_unicos,
+                promedio_grupo=data['promedio_grupo'],
+                calificacion_max=data['calificacion_max'],
+                calificacion_min=data['calificacion_min'],
+                total_alumnos=data['total_alumnos'],
             )
-        except PonderacionConfig.DoesNotExist:
+        except Ponderacion.DoesNotExist:
             import grpc
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details('Materia no encontrada.')

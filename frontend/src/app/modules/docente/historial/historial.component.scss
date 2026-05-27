@@ -1,0 +1,80 @@
+.page-enter { animation: fadeInUp .25s ease forwards; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 4px;
+}
+
+.page-subtitle { color: #64748B; font-size: 14px; }
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+:host ::ng-deep .date-picker { min-width: 240px; }
+:host ::ng-deep .materia-filter { min-width: 200px; }
+
+.stats-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 20px;
+  background: #fff;
+  border-radius: 10px;
+  border-top: 3px solid var(--sc);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  min-width: 100px;
+}
+
+.stat-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.stat-label { font-size: 11px; color: #64748B; margin-top: 2px; }
+
+.skeleton-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mono-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.empty-table-msg {
+  text-align: center;
+  padding: 48px;
+  color: #94A3B8;
+}

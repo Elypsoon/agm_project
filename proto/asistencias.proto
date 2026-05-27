@@ -1,15 +1,15 @@
 syntax = "proto3";
 
-package asistencias;
+package agm.asistencias;
 
 service AsistenciasService {
-    rpc GetAsistenciaAlumno(GetAsistenciaAlumnoRequest) returns (AsistenciaAlumnoResponse);
-    rpc GetEstadisticasAsistencia(GetEstadisticasRequest) returns (EstadisticasResponse);
+    rpc GetAsistenciaAlumno(GetAsistenciaAlumnoRequest) returns (AsistenciasAlumnoResponse);
+    rpc GetEstadisticasAsistencia(GetEstadisticasAsistenciaRequest) returns (EstadisticasAsistenciaResponse);
 }
 
 message GetAsistenciaAlumnoRequest {
-    int32 alumno_id  = 1;
-    int32 materia_id = 2;
+    string alumno_id  = 1;
+    string materia_id = 2;
 }
 
 message AsistenciaItem {
@@ -20,9 +20,9 @@ message AsistenciaItem {
     string fecha          = 5;
 }
 
-message AsistenciaAlumnoResponse {
-    int32  alumno_id       = 1;
-    int32  materia_id      = 2;
+message AsistenciasAlumnoResponse {
+    string alumno_id       = 1;
+    string materia_id      = 2;
     int32  total_clases    = 3;
     int32  total_presentes = 4;
     int32  total_retardos  = 5;
@@ -31,15 +31,15 @@ message AsistenciaAlumnoResponse {
     repeated AsistenciaItem asistencias = 8;
 }
 
-message GetEstadisticasRequest {
-    int32 materia_id = 1;
+message GetEstadisticasAsistenciaRequest {
+    string materia_id = 1;
 }
 
-message EstadisticasResponse {
-    int32 materia_id        = 1;
-    int32 total_sesiones    = 2;
-    int32 total_registros   = 3;
-    int32 total_presentes   = 4;
-    int32 total_retardos    = 5;
-    float porcentaje_global = 6;
+message EstadisticasAsistenciaResponse {
+    string materia_id        = 1;
+    int32  total_sesiones    = 2;
+    int32  total_registros   = 3;
+    int32  total_presentes   = 4;
+    int32  total_retardos    = 5;
+    float  porcentaje_global = 6;
 }

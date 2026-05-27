@@ -1,4 +1,10 @@
 import os
+import sys
+import django
+
+# Inicializar Django antes de importar cualquier modelo o componente que dependa de él
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(BASE_DIR)
 import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.core.settings')
 django.setup()
@@ -54,34 +60,71 @@ def _build_calificaciones_report_bytes(materia_id, ext):
     if not datos_materia or not datos_materia.get('alumnos'):
         return None
 
-    alumnos = _enriquecer_calificaciones_con_asistencia(datos_materia['alumnos'], materia_id)
     if ext == 'xlsx':
-        return generate_calificaciones_excel(materia_id, alumnos)
+        periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+        periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+        docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
+        
+        return generate_calificaciones_excel(
+            materia_id=materia_id,
+            datos_calificaciones=datos_materia,
+            periodo_nombre=periodo_nombre,
+            docente_nombre=docente_nombre
+        )
+
+    alumnos = _enriquecer_calificaciones_con_asistencia(datos_materia['alumnos'], materia_id)
     return generate_calificaciones_pdf(materia_id, alumnos)
 
 
 def _build_asistencias_report_bytes(materia_id, ext):
-    alumnos = AlumnosGRPCClient.obtener_alumnos_materia(materia_id)
-    if alumnos is None:
+    datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
+    if not datos_materia or not datos_materia.get('alumnos'):
         return None
 
-    datos_agregados = []
-    for alumno in alumnos:
+    # Obtener asistencias de todos los alumnos de la materia
+    datos_asistencias = []
+    for al in datos_materia['alumnos']:
         asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(
-            alumno_id=alumno['id'],
+            alumno_id=al['alumno_id'],
             materia_id=materia_id,
         )
-        datos_agregados.append({
-            'matricula': alumno.get('matricula', 'N/A'),
-            'nombre': alumno.get('nombre', 'Desconocido'),
-            'presentes': asistencia.get('total_presentes', 0) if asistencia else 0,
-            'retardos': asistencia.get('total_retardos', 0) if asistencia else 0,
-            'faltas': asistencia.get('total_ausentes', 0) if asistencia else 0,
-        })
+        if asistencia:
+            datos_asistencias.append(asistencia)
+        else:
+            datos_asistencias.append({
+                "alumno_id": al['alumno_id'],
+                "materia_id": materia_id,
+                "asistencias": []
+            })
+
+    periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
+    periodo_nombre = periodo_activo.get("nombre", "PRIMAVERA 2026")
+    docente_nombre = "M.C. LUIS YAEL MÉNDEZ SÁNCHEZ"
 
     if ext == 'xlsx':
-        return generate_asistencias_excel(materia_id, datos_agregados)
-    return generate_asistencias_pdf(materia_id, datos_agregados)
+        return generate_asistencias_excel(
+            materia_id=materia_id,
+            datos_calificaciones=datos_materia,
+            datos_asistencias=datos_asistencias,
+            periodo_nombre=periodo_nombre,
+            docente_nombre=docente_nombre
+        )
+    else:
+        datos_agregados = []
+        for al in datos_materia['alumnos']:
+            asist_sum = None
+            for sa in datos_asistencias:
+                if str(sa.get("alumno_id")) == str(al['alumno_id']):
+                    asist_sum = sa
+                    break
+            datos_agregados.append({
+                "matricula": al.get('matricula', 'N/A'),
+                "nombre": al.get('alumno_nombre', 'Desconocido'),
+                "presentes": asist_sum.get('total_presentes', 0) if asist_sum else 0,
+                "retardos": asist_sum.get('total_retardos', 0) if asist_sum else 0,
+                "faltas": asist_sum.get('total_ausentes', 0) if asist_sum else 0,
+            })
+        return generate_asistencias_pdf(materia_id, datos_agregados)
 
 
 def _build_rendimiento_report_bytes(materia_id, ext):

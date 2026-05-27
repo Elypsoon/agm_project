@@ -79,9 +79,9 @@ class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
                 fecha=a.sesion.fecha.isoformat(),
             ))
 
-        return asistencias_pb2.AsistenciaAlumnoResponse(
-            alumno_id=alumno_id,
-            materia_id=materia_id,
+        return asistencias_pb2.AsistenciasAlumnoResponse(
+            alumno_id=str(alumno_id),
+            materia_id=str(materia_id),
             total_clases=total_sesiones,
             total_presentes=presentes,
             total_retardos=retardos,
@@ -100,8 +100,8 @@ class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
         retardos = asistencias.filter(estado='retardo').count()
         porcentaje = (presentes + retardos) / total_registros * 100 if total_registros > 0 else 0.0
 
-        return asistencias_pb2.EstadisticasResponse(
-            materia_id=materia_id,
+        return asistencias_pb2.EstadisticasAsistenciaResponse(
+            materia_id=str(materia_id),
             total_sesiones=total_sesiones,
             total_registros=total_registros,
             total_presentes=presentes,

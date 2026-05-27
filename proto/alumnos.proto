@@ -20,6 +20,9 @@ service AlumnosService {
 
   // Obtener información de un docente por su ID
   rpc GetDocenteById (GetDocenteByIdRequest) returns (DocenteInfo);
+
+  // Obtener información de un docente por su nombre completo
+  rpc GetDocenteByName (GetDocenteByNameRequest) returns (DocenteInfo);
 }
 
 // ---------------------------------------------------------------------------
@@ -68,4 +71,8 @@ message DocenteInfo {
 
 message GetDocenteByIdRequest {
   string docente_id = 1;
+}
+
+message GetDocenteByNameRequest {
+  string nombre_completo = 1;
 }

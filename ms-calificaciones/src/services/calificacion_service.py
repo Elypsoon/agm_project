@@ -1,89 +1,232 @@
 from django.db import transaction
-from src.models.models import Actividad, PonderacionConfig, Calificacion
+
+from src.models.models import Actividad, Ponderacion, Calificacion
+
 from src.parsers.file_parser import parsear_archivo
-from src.grpc.alumnos_client import AlumnosClient
+
+from src.grpc.alumnos_client import AlumnosClient, AlumnosGrpcError
+
+from src.services.autorizacion_service import verificar_materia_abierta
+
 
 class ActividadNoEncontrada(Exception):
+    """Excepción cuando una actividad no existe en el microservicio."""
     pass
 
+
+class AlumnoNoInscrito(Exception):
+    """El alumno no está inscrito o no está activo en la materia."""
+    pass
+
+
+class ServicioExternoInaccesible(Exception):
+    """MS-3 no respondió correctamente; no se puede verificar la inscripción."""
+    pass
+
+
 def upsert_calificacion(actividad_id, alumno_id, valor):
-    with transaction.atomic():
-        try:
-            actividad = Actividad.objects.select_related('categoria__config').get(
-                id=actividad_id
-            )
-        except Actividad.DoesNotExist:
-            raise ActividadNoEncontrada(f'Actividad con ID {actividad_id} no encontrada.')
-        
-        config = PonderacionConfig.objects.select_for_update().get(
-            id=actividad.categoria.config_id
+    """Guarda o actualiza la calificación de un alumno en una actividad específica.
+
+    Verifica que la actividad exista, que la materia esté abierta y que el alumno
+    se encuentre inscrito en la materia (mediante gRPC a MS-3). Emplea bloqueo de
+    concurrencia mediante `select_for_update` sobre la categoría de ponderación.
+
+    Args:
+        actividad_id: Identificador único de la actividad evaluable.
+        alumno_id: Identificador único del alumno.
+        valor: Calificación numérica (rango de 0.00 a 100.00).
+
+    Returns:
+        tuple[Calificacion, bool]: Una tupla con el objeto Calificacion creado o
+            actualizado y un booleano indicando True si fue creado o False si fue actualizado.
+    """
+    try:
+        actividad = Actividad.objects.select_related('ponderacion').get(
+            id=actividad_id
+        )
+    except Actividad.DoesNotExist:
+        raise ActividadNoEncontrada(f'Actividad con ID {actividad_id} no encontrada.')
+
+    materia_id = actividad.ponderacion.materia_id
+
+    # Validar si la materia está abierta antes de modificar la calificación
+    verificar_materia_abierta(materia_id)
+
+    try:
+        inscrito = AlumnosClient().is_alumno_en_materia(alumno_id, materia_id)
+    except AlumnosGrpcError as exc:
+        raise ServicioExternoInaccesible(
+            f'No se pudo verificar la inscripción del alumno: {exc}'
         )
 
+    if not inscrito:
+        raise AlumnoNoInscrito(
+            f'El alumno {alumno_id} no está inscrito o no está activo '
+            f'en la materia {materia_id}.'
+        )
+
+    with transaction.atomic():
+        Ponderacion.objects.select_for_update().get(
+            id=actividad.ponderacion_id
+        )
         calificacion, created = Calificacion.objects.update_or_create(
             actividad=actividad,
             alumno_id=alumno_id,
             defaults={'valor': valor},
         )
 
-
-
     return calificacion, created
 
-def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
-    registros, _ = parsear_archivo(nombre_archivo, archivo_bytes)
 
-    # Obtener actividades de la materia indexadas por nombre (en minúsculas)
-    try:
-        config = PonderacionConfig.objects.prefetch_related(
-            'categorias__actividades'
-        ).get(materia_id=materia_id)
-    except PonderacionConfig.DoesNotExist:
+def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
+    """Importa calificaciones masivamente desde un archivo de MS Teams (CSV o XLSX).
+
+    Verifica que la materia esté abierta, procesa el archivo, mapea los estudiantes
+    (por correo, nombre o matrícula) y registra las calificaciones usando `bulk_create`
+    con resolución de conflictos de unicidad.
+
+    Si una actividad contenida en el archivo no existe en la materia, pero viene acompañada
+    por el nombre del criterio de evaluación (categoría de ponderación) y esta categoría es
+    válida y activa, la crea automáticamente de forma dinámica.
+
+    Args:
+        materia_id: Identificador único de la materia.
+        nombre_archivo: Nombre del archivo para identificar su formato.
+        archivo_bytes: Contenido binario del archivo subido.
+
+    Returns:
+        dict: Un diccionario con el reporte de la operación:
+            - importadas (int): Cantidad de calificaciones guardadas con éxito.
+            - actividades_creadas (int): Cantidad de actividades evaluables auto-creadas.
+            - errores (list[dict]): Lista de filas fallidas con detalles de la causa.
+    """
+    # Validar si la materia está abierta antes de importar calificaciones
+    verificar_materia_abierta(materia_id)
+
+    registros, errores_parseo = parsear_archivo(nombre_archivo, archivo_bytes)
+
+    # Obtener actividades de la materia indexadas por nombre
+    if not Ponderacion.objects.filter(materia_id=materia_id).exists():
         raise ValueError(f'No existe configuración de ponderación para la materia {materia_id}.')
 
-    actividades_por_nombre = {}
-    for categoria in config.categorias.all():
-        for actividad in categoria.actividades.all():
-            actividades_por_nombre[actividad.nombre.strip().lower()] = actividad
+    actividades = Actividad.objects.filter(ponderacion__materia_id=materia_id).select_related('ponderacion')
+    actividades_por_nombre = {actividad.nombre.strip().lower(): actividad for actividad in actividades}
 
-    # Obtener alumnos de la materia e indexarlos por matrícula
-    alumnos_lista = AlumnosClient().get_alumnos_by_materia(materia_id)
-    alumnos_por_matricula = {
-        a['matricula']: a['id'] for a in alumnos_lista
-    }
+    # Obtener alumnos inscritos de MS-3
+    try:
+        alumnos_lista = AlumnosClient().get_alumnos_by_materia(materia_id)
+    except AlumnosGrpcError as exc:
+        raise ServicioExternoInaccesible(
+            f'No se pudo obtener la lista de alumnos de MS-3: {exc}'
+        )
 
-    # Procesar cada registro
+    # Indexar alumnos para mapeo
+    alumnos_por_correo = {}
+    alumnos_por_nombre = {}
+    alumnos_por_matricula = {}
+
+    for a in alumnos_lista:
+        correo = a.get('correo', '').strip().lower()
+        if correo:
+            alumnos_por_correo[correo] = a
+        
+        nombre = a.get('nombre_completo', '').strip().lower()
+        if nombre:
+            alumnos_por_nombre[nombre] = a
+
+        matricula = a.get('matricula', '').strip()
+        if matricula:
+            alumnos_por_matricula[matricula] = a
+
     importadas = 0
-    errores = []
+    actividades_creadas = 0
+    errores = errores_parseo.copy()
     operaciones_actualizar = []
 
     for reg in registros:
-        matricula = reg['matricula']
+        correo_reg = reg['correo'].strip().lower()
+        nombre_reg = reg['nombre_completo'].strip().lower()
         nombre_act = reg['nombre_actividad'].strip().lower()
+        nombre_pond = reg.get('nombre_ponderacion', '').strip().lower()
         valor = reg['valor']
+        comentario = reg['comentario']
 
+        # Buscar la actividad; si no existe, intentar crearla
         actividad = actividades_por_nombre.get(nombre_act)
         if actividad is None:
+            # Necesitamos la categoría de ponderación para poder crear la actividad
+            if not nombre_pond:
+                errores.append({
+                    'correo': reg['correo'],
+                    'actividad': reg['nombre_actividad'],
+                    'motivo': (
+                        'Actividad no encontrada y el archivo no incluye la columna '
+                        '"Nombre del criterio de evaluación" para crearla automáticamente.'
+                    ),
+                })
+                continue
+
+            # Buscar la ponderación por nombre de categoría dentro de la materia
+            ponderacion = Ponderacion.objects.filter(
+                materia_id=materia_id,
+                activa=True,
+            ).filter(nombre_categoria__iexact=reg['nombre_ponderacion'].strip()).first()
+
+            if ponderacion is None:
+                errores.append({
+                    'correo': reg['correo'],
+                    'actividad': reg['nombre_actividad'],
+                    'motivo': (
+                        f'Categoría de ponderación "{reg["nombre_ponderacion"]}" '
+                        f'no encontrada o inactiva en la materia.'
+                    ),
+                })
+                continue
+
+            # Crear la actividad automáticamente
+            actividad = Actividad.objects.create(
+                ponderacion=ponderacion,
+                nombre=reg['nombre_actividad'].strip(),
+                fecha_vencimiento=reg.get('fecha_vencimiento'),
+                estado=reg.get('estado', 'pendiente') or 'pendiente',
+            )
+            # Agregar al índice local para no duplicar en filas siguientes del mismo archivo
+            actividades_por_nombre[nombre_act] = actividad
+            actividades_creadas += 1
+
+        # Actualizar fecha de vencimiento si viene en la importación y es distinta
+        fecha_venc = reg.get('fecha_vencimiento')
+        if fecha_venc and actividad.fecha_vencimiento != fecha_venc:
+            actividad.fecha_vencimiento = fecha_venc
+            actividad.save(update_fields=['fecha_vencimiento'])
+
+        # Buscar al alumno por correo, nombre o matrícula
+        alumno = alumnos_por_correo.get(correo_reg)
+        if alumno is None:
+            alumno = alumnos_por_nombre.get(nombre_reg)
+        if alumno is None:
+            # Extraer dígitos del correo como matrícula
+            digits = "".join(c for c in correo_reg.split('@')[0] if c.isdigit())
+            if digits:
+                alumno = alumnos_por_matricula.get(digits)
+
+        if alumno is None:
             errores.append({
-                'matricula': matricula,
+                'correo': reg['correo'],
                 'actividad': reg['nombre_actividad'],
-                'motivo': 'Actividad no encontrada en la configuración de la materia.',
+                'motivo': 'Alumno no encontrado o no inscrito en esta materia.',
             })
             continue
 
-        alumno_id = alumnos_por_matricula.get(matricula)
-        if alumno_id is None:
-            errores.append({
-                'matricula': matricula,
-                'actividad': reg['nombre_actividad'],
-                'motivo': 'Alumno no encontrado en la materia (matrícula no registrada).',
-            })
-            continue
+        alumno_id = alumno['id']
 
         operaciones_actualizar.append(
             Calificacion(
                 actividad=actividad,
                 alumno_id=alumno_id,
                 valor=valor,
+                fuente=Calificacion.Fuente.IMPORTADA,
+                observacion=comentario,
             )
         )
         importadas += 1
@@ -94,11 +237,12 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
                 operaciones_actualizar,
                 update_conflicts=True,
                 unique_fields=['actividad', 'alumno_id'],
-                update_fields=['valor'],
+                update_fields=['valor', 'fuente', 'observacion'],
             )
-
 
     return {
         'importadas': importadas,
+        'actividades_creadas': actividades_creadas,
         'errores': errores,
     }
+

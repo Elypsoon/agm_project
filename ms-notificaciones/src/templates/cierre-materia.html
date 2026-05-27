@@ -1,15 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Calificaciones Finales Publicadas</title>
+    <title>Publicación de Calificaciones Finales - AGM</title>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-    <div style="max-width: 600px; background: white; border: 1px solid #5cb85c; padding: 20px; margin: 0 auto; border-radius: 5px;">
-        <h2 style="color: #5cb85c; border-bottom: 2px solid #5cb85c; padding-bottom: 10px;">Materia Cerrada - Calificaciones Publicadas</h2>
-        <p>Estimado Alumno,</p>
-        <p>Le informamos que el docente ha realizado el cierre de la materia con ID: <strong>{{ materia_id }}</strong>[cite: 187].</p>
-        <p>Tus calificaciones parciales, asistencias y el promedio ponderado final redondeado ya se encuentran consolidados[cite: 114, 159]. Puedes ingresar a tu dashboard para consultar tu estado académico definitivo[cite: 130].</p>
+<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+    <div style="max-width: 600px; background: white; border: 1px solid #e2e8f0; border-top: 4px solid #2e7d32; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
+        <div style="background-color: #004b93; color: white; padding: 22px 15px; text-align: center;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: bold; letter-spacing: 1px;">SISTEMA ACADÉMICO AGM</h2>
+            <span style="font-size: 11px; opacity: 0.85; letter-spacing: 0.5px;">BENEMÉRITA UNIVERSIDAD AUTÓNOMA DE PUEBLA</span>
+        </div>
+        
+        <div style="padding: 30px 25px;">
+            <h3 style="color: #2e7d32; margin-top: 0; font-size: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">Calificaciones Publicadas</h3>
+            
+            <p style="color: #4a5568; line-height: 1.6;">Estimado(a) Alumno,</p>
+            <p style="color: #4a5568; line-height: 1.6;">Le informamos que su docente ha realizado formalmente el **cierre del curso** e ingresado las calificaciones definitivas para la materia:</p>
+            
+            <div style="background-color: #f0f9eb; border-left: 4px solid #2e7d32; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 0; font-size: 15px; color: #2d3748;"><strong>ID de la Materia:</strong> {{ materia_id }}</p>
+                <p style="margin: 8px 0 0 0; font-size: 13px; color: #718096; font-style: italic;">Estado del Curso: Concluido y Calificado</p>
+            </div>
+            
+            <p style="color: #4a5568; line-height: 1.6;">Tus calificaciones parciales, registro de asistencias y el **promedio ponderado final redondeado** han sido consolidados de forma definitiva en la base de datos de control escolar.</p>
+            
+            <p style="color: #4a5568; line-height: 1.6;">Ya puedes ingresar a tu portal de alumno para verificar tu kárdex y consultar tu estado académico definitivo.</p>
+            
+            <p style="color: #4a5568; line-height: 1.6;">Te invitamos a acceder a la plataforma para consultar tu kárdex detallado.</p>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 20px;">
+                <p style="color: #4a5568; line-height: 1.6; margin-bottom: 0;">Saludos cordiales,<br><strong>El equipo del Sistema AGM</strong></p>
+            </div>
+        </div>
+        
+        <div style="background-color: #f7fafc; padding: 15px 25px; text-align: center; border-top: 1px solid #edf2f7;">
+            <p style="color: #718096; font-size: 11px; margin: 0; line-height: 1.5;">
+                Este es un aviso automático generado por el Sistema Académico de Gestión de Calificaciones (AGM). Por favor, no responda a este correo.
+            </p>
+        </div>
     </div>
 </body>
 </html>

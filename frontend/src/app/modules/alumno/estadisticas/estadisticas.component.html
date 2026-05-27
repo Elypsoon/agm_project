@@ -1,0 +1,74 @@
+<div class="page-enter">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Estadísticas</h1>
+      <p class="page-subtitle">Evolución de tu rendimiento académico</p>
+    </div>
+    <p-select
+      id="periodo-select"
+      [options]="periodoOptions"
+      [(ngModel)]="selectedPeriodo"
+      styleClass="periodo-select" />
+  </div>
+
+  <!-- Summary Metrics -->
+  <div class="summary-grid">
+    @for (card of summaryCards; track card.label) {
+      <div class="sum-card" [style.--sc]="card.color">
+        <div class="sum-icon">
+          <i class="pi {{ card.icon }}"></i>
+        </div>
+        <div class="sum-body">
+          <span class="sum-val">{{ card.value }}</span>
+          <span class="sum-label">{{ card.label }}</span>
+        </div>
+        <div class="sum-trend" [class.up]="card.trendUp" [class.down]="!card.trendUp">
+          <i class="pi" [class.pi-trending-up]="card.trendUp" [class.pi-trending-down]="!card.trendUp"></i>
+          {{ card.trend }}
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+
+    <!-- Line Chart: Evolución del promedio -->
+    <div class="chart-card chart-full">
+      <div class="chart-header">
+        <h2 class="chart-title"><i class="pi pi-chart-line"></i> Evolución del Promedio por Semestre</h2>
+        <p-tag value="Histórico" severity="secondary" />
+      </div>
+      <p-chart type="line" [data]="lineData" [options]="lineOptions" height="240px" />
+    </div>
+
+    <!-- Bar Chart: Asistencia por materia -->
+    <div class="chart-card chart-half">
+      <div class="chart-header">
+        <h2 class="chart-title"><i class="pi pi-chart-bar"></i> Asistencia por Materia</h2>
+        <p-tag value="Este semestre" severity="info" />
+      </div>
+      <p-chart type="bar" [data]="barData" [options]="barOptions" height="260px" />
+    </div>
+
+    <!-- Doughnut: Distribución de calificaciones -->
+    <div class="chart-card chart-half">
+      <div class="chart-header">
+        <h2 class="chart-title"><i class="pi pi-chart-pie"></i> Estado de Materias</h2>
+      </div>
+      <p-chart type="doughnut" [data]="doughnutData" [options]="doughnutOptions" height="260px" />
+
+      <!-- Legend -->
+      <div class="legend">
+        @for (item of legendItems; track item.label) {
+          <div class="legend-item">
+            <div class="legend-dot" [style.background]="item.color"></div>
+            <span class="legend-label">{{ item.label }}</span>
+            <span class="legend-val">{{ item.value }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+</div>

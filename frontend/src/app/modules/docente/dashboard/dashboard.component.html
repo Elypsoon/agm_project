@@ -1,0 +1,68 @@
+<div class="page-enter">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Bienvenido, <strong>{{ userName() }}</strong></p>
+    </div>
+    <span class="today-badge">
+      <i class="pi pi-calendar"></i> {{ todayLabel }}
+    </span>
+  </div>
+
+  <!-- Metric Cards -->
+  <div class="metrics-grid">
+    @for (card of metricCards; track card.label) {
+      <div class="metric-card" [style.--accent]="card.color">
+        <div class="metric-icon-wrap">
+          <i class="pi {{ card.icon }}"></i>
+        </div>
+        <div class="metric-body">
+          <span class="metric-value">{{ card.value }}</span>
+          <span class="metric-label">{{ card.label }}</span>
+        </div>
+        <div class="metric-trend" [class.up]="card.trend >= 0" [class.down]="card.trend < 0">
+          <i class="pi" [class.pi-arrow-up]="card.trend >= 0" [class.pi-arrow-down]="card.trend < 0"></i>
+          {{ card.trendLabel }}
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h2 class="chart-title"><i class="pi pi-chart-bar"></i> Asistencia Semanal</h2>
+        <p-tag value="Esta semana" severity="info" />
+      </div>
+      <p-chart type="bar" [data]="barData" [options]="barOptions" height="220px" />
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h2 class="chart-title"><i class="pi pi-chart-pie"></i> Distribución de Alumnos</h2>
+        <p-tag value="Por materia" severity="secondary" />
+      </div>
+      <p-chart type="doughnut" [data]="doughnutData" [options]="doughnutOptions" height="220px" />
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <h2 class="section-title">Accesos Rápidos</h2>
+    <div class="actions-grid">
+      @for (action of quickActions; track action.label) {
+        <a class="action-card" [routerLink]="action.route">
+          <div class="action-icon" [style.background]="action.bg">
+            <i class="pi {{ action.icon }}" [style.color]="action.color"></i>
+          </div>
+          <span class="action-label">{{ action.label }}</span>
+          <i class="pi pi-chevron-right action-arrow"></i>
+        </a>
+      }
+    </div>
+  </div>
+
+</div>

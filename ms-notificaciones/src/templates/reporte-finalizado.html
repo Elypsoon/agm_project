@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte Académico Disponible - AGM</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+    <div style="max-width: 600px; background: white; border: 1px solid #e2e8f0; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
+        <div style="background-color: #004b93; color: white; padding: 22px 15px; text-align: center;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: bold; letter-spacing: 1px;">SISTEMA ACADÉMICO AGM</h2>
+            <span style="font-size: 11px; opacity: 0.85; letter-spacing: 0.5px;">BENEMÉRITA UNIVERSIDAD AUTÓNOMA DE PUEBLA</span>
+        </div>
+        
+        <div style="padding: 30px 25px;">
+            <h3 style="color: #004b93; margin-top: 0; font-size: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">¡Su reporte está listo!</h3>
+            
+            <p style="color: #4a5568; line-height: 1.6;">Estimado(a) Docente,</p>
+            <p style="color: #4a5568; line-height: 1.6;">Le informamos que el **Reporte Académico Consolidado** (que engloba la matriz de calificaciones escaladas a rango 0-1 y el desglose cronológico y numérico de asistencias) ha sido generado con éxito en segundo plano para su curso:</p>
+            
+            <div style="background-color: #f2f6fc; border-left: 4px solid #004b93; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 0 0 8px 0; font-weight: bold; color: #2d3748; font-size: 15px;">Detalles de la Materia:</p>
+                <ul style="margin: 0; padding-left: 20px; color: #4a5568; line-height: 1.5; font-size: 14px;">
+                    <li style="margin-bottom: 6px;"><strong>Curso:</strong> {{ materia_nombre }}</li>
+                    <li style="margin-bottom: 6px;"><strong>Formato del archivo:</strong> {{ formato }}</li>
+                    <li><strong>Estado de Generación:</strong> Completado</li>
+                </ul>
+            </div>
+            
+            <p style="color: #4a5568; line-height: 1.6;">El archivo correspondiente ha sido **adjuntado directamente a este correo** electrónico para su conveniencia y descarga inmediata. Asimismo, recuerde que el archivo se ha guardado en la plataforma académica, por lo que podrá descargarlo directamente desde su panel de docente.</p>
+            
+            <div style="background-color: #f7fafc; padding: 12px 15px; border-radius: 6px; border: 1px solid #e2e8f0; border-left: 4px solid #004b93; margin: 25px 0;">
+                <p style="color: #4a5568; font-size: 13px; line-height: 1.5; margin: 0;">
+                    <strong>💡 Información de Descarga:</strong> Para garantizar la seguridad y optimizar el rendimiento, el reporte estará disponible en la plataforma académica para su descarga inmediata sin tiempos de espera únicamente hasta el <strong>{{ fecha_expiracion }}</strong>.
+                </p>
+            </div>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 20px;">
+                <p style="color: #4a5568; line-height: 1.6; margin-bottom: 0;">Saludos cordiales,<br><strong>El equipo del Sistema AGM</strong></p>
+            </div>
+        </div>
+        
+        <div style="background-color: #f7fafc; padding: 15px 25px; text-align: center; border-top: 1px solid #edf2f7;">
+            <p style="color: #718096; font-size: 11px; margin: 0; line-height: 1.5;">
+                Este es un aviso automático generado por el Sistema Académico de Gestión de Calificaciones (AGM). Por favor, no responda a este correo.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

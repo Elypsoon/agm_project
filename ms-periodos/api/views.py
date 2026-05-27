@@ -24,7 +24,6 @@ from .serializers import (
 )
 from src.parsers.pdf_parser import ScheduleParser
 from src.utils.name_cleaner import clean_professor_name
-from src.utils.docente_sync import fetch_docente_id_by_name
 
 
 logger = logging.getLogger(__name__)
