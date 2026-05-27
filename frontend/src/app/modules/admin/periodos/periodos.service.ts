@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface Horario {
@@ -19,9 +19,11 @@ export interface Materia {
   nombre: string;
   seccion: string;
   docente_nombre: string | null;
+  docente_id: string | null;
   estado: string;
   campus: string;
   plan_estudios: string;
+  periodo: string;
   horarios?: Horario[];
 }
 
@@ -31,7 +33,8 @@ export interface Periodo {
   fecha_inicio: string;
   fecha_fin: string;
   estado: 'pendiente' | 'activo' | 'finalizada';
-  materias?: Materia[];
+  materias_count?: number;   // returned by list endpoint
+  materias?: Materia[];       // returned by retrieve (detail) endpoint
 }
 
 interface PaginatedPeriodosResponse {
@@ -125,9 +128,47 @@ export class PeriodosService {
     );
   }
 
+  deleteMateria(materiaId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/materias/${materiaId}/`);
+  }
+
+  createMateria(payload: any): Observable<Materia> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.post<Materia>(
+      `${this.baseUrl}/materias/`,
+      payload,
+      { headers }
+    );
+  }
+
   importPdf(periodoId: string, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post(`${this.baseUrl}/materias/importar-pdf/${periodoId}/`, formData);
+  }
+
+  getMaterias(page = 1, pageSize = 100): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/materias/?page=${page}&page_size=${pageSize}`);
+  }
+
+  async getAllMaterias(): Promise<Materia[]> {
+    let all: Materia[] = [];
+    let page = 1;
+    let hasNext = true;
+    while (hasNext) {
+      const res = await firstValueFrom(
+        this.http.get<any>(`${this.baseUrl}/materias/?page=${page}&page_size=100`)
+      );
+      if (res && res.results) {
+        all = [...all, ...res.results];
+        hasNext = !!res.next;
+        page++;
+      } else {
+        hasNext = false;
+      }
+    }
+    return all;
   }
 }

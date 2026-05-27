@@ -72,6 +72,22 @@ class PeriodoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(periodo)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['put'])
+    def desactivar(self, request, pk=None):
+        """
+        Desactiva un periodo específico (cambia su estado a FINALIZADA).
+        También actualiza el estado de todas sus materias a FINALIZADA.
+        """
+        periodo = self.get_object()
+        periodo.estado = EstadoPeriodo.FINALIZADA
+        periodo.save()
+        
+        # Update subject states
+        Materia.objects.filter(periodo=periodo).update(estado=EstadoMateria.FINALIZADA)
+        
+        serializer = self.get_serializer(periodo)
+        return Response(serializer.data)
+
     @action(detail=False, methods=['get'])
     def activo(self, request):
         """
