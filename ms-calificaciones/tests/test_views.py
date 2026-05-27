@@ -14,8 +14,10 @@ DOCENTE_ID = uuid.UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
 
 
 class TestCalificacionesViews(TestCase):
+    """Clase de pruebas de integración para los endpoints de la API REST del microservicio."""
 
     def setUp(self):
+        """Configura el cliente de pruebas de REST Framework e inicializa el mock de autenticación remota."""
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION='Bearer test_token')
 
@@ -30,10 +32,12 @@ class TestCalificacionesViews(TestCase):
         self.auth_patcher.start()
 
     def tearDown(self):
+        """Detiene el mock de autenticación remota."""
         self.auth_patcher.stop()
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_y_obtener_ponderacion_docente(self, mock_materia):
+        """Verifica que un docente autorizado pueda configurar y luego obtener el esquema de ponderaciones."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "nrc": "00000",
@@ -66,6 +70,7 @@ class TestCalificacionesViews(TestCase):
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_ponderacion_suma_incorrecta(self, mock_materia):
+        """Comprueba que se rechace la configuración de ponderación si la suma de porcentajes no es 100.00%."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -83,6 +88,7 @@ class TestCalificacionesViews(TestCase):
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_ponderacion_nombres_duplicados(self, mock_materia):
+        """Verifica que se rechace la creación de ponderaciones con nombres de categoría duplicados (incluso con mayúsculas/minúsculas)."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -100,6 +106,7 @@ class TestCalificacionesViews(TestCase):
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_ponderacion_materia_cerrada(self, mock_materia):
+        """Comprueba que se impida modificar o crear ponderaciones si el estado de la materia es cerrado."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -116,6 +123,7 @@ class TestCalificacionesViews(TestCase):
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_ponderacion_como_alumno_restringido(self, mock_materia):
+        """Valida que un usuario con rol 'alumno' no tenga autorización para crear/configurar ponderaciones."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -139,6 +147,7 @@ class TestCalificacionesViews(TestCase):
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_actividad_por_docente(self, mock_materia):
+        """Verifica que un docente pueda crear una actividad evaluable en una materia abierta."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -159,6 +168,7 @@ class TestCalificacionesViews(TestCase):
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_actividad_materia_cerrada(self, mock_materia):
+        """Comprueba que se impida la adición de actividades si la materia se encuentra cerrada."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -178,6 +188,7 @@ class TestCalificacionesViews(TestCase):
     @patch("src.grpc.alumnos_client.AlumnosClient.is_alumno_en_materia")
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_calificacion_por_docente(self, mock_materia, mock_alumno):
+        """Verifica que un docente pueda registrar o actualizar la calificación de un alumno inscrito."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -201,6 +212,7 @@ class TestCalificacionesViews(TestCase):
     @patch("src.grpc.alumnos_client.AlumnosClient.is_alumno_en_materia")
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_calificacion_materia_cerrada(self, mock_materia, mock_alumno):
+        """Comprueba que se prohíba calificar estudiantes si la materia se encuentra cerrada."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -223,6 +235,7 @@ class TestCalificacionesViews(TestCase):
     @patch("src.grpc.alumnos_client.AlumnosClient.get_alumnos_by_materia")
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_obtener_concentrado(self, mock_materia, mock_alumnos):
+        """Verifica la obtención del concentrado a través del endpoint REST como docente y su restricción para alumnos."""
         mock_materia.return_value = {"id": str(MATERIA_ID), "nombre": "Materia de Prueba", "estado": "abierta"}
         mock_alumnos.return_value = [
             {"id": str(ALUMNO_ID), "matricula": "202200001", "nombre_completo": "Alumno Uno"}
@@ -245,7 +258,7 @@ class TestCalificacionesViews(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(resp.data["materia_nombre"], "Materia de Prueba")
             self.assertEqual(len(resp.data["alumnos"]), 1)
-            self.assertEqual(resp.data["alumnos"][0]["promedio_redondeado"], 9)  # 85.00 → 8.5 en escala 0-10, fracción 0.5 >= 0.5 → techo → 9
+            self.assertEqual(resp.data["alumnos"][0]["promedio_redondeado"], 9)  # 85.00 -> 8.5 en escala 0-10, fracción >= 0.5 -> techo -> 9
 
         # Validar rechazo de GET al concentrado como Alumno
         with patch("src.utils.authentication.validar_token_en_auth", return_value={
@@ -258,10 +271,10 @@ class TestCalificacionesViews(TestCase):
             resp_alumno = self.client.get(f"/api/concentrado/{MATERIA_ID}/")
             self.assertEqual(resp_alumno.status_code, 403)
 
-
     @patch("src.grpc.alumnos_client.AlumnosClient.is_alumno_en_materia")
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_calificacion_alumno_no_inscrito(self, mock_materia, mock_alumno):
+        """Comprueba que se rechace (422 Unprocessable Entity) el calificar a un alumno que no está inscrito en la materia."""
         mock_materia.return_value = {
             "id": str(MATERIA_ID),
             "docente_id": str(DOCENTE_ID),
@@ -284,6 +297,7 @@ class TestCalificacionesViews(TestCase):
 
     @patch("src.grpc.periodos_client.PeriodosClient.get_materia_by_id")
     def test_crear_ponderacion_docente_no_autorizado(self, mock_materia):
+        """Verifica que se deniegue el acceso si un docente intenta operar sobre una materia que pertenece a otro docente."""
         # La materia le pertenece a un docente ajeno, pero el docente del token es DOCENTE_ID
         docente_ajeno = uuid.uuid4()
         mock_materia.return_value = {
@@ -302,6 +316,7 @@ class TestCalificacionesViews(TestCase):
         self.assertIn("No tienes autorización para operar sobre esta materia.", resp.data["detail"])
 
     def test_estadisticas_materia_rest(self):
+        """Verifica que el endpoint de estadísticas globales de la materia devuelva métricas precisas del grupo."""
         # Crear ponderación, actividad y calificación para la materia
         pond = Ponderacion.objects.create(materia_id=MATERIA_ID, nombre_categoria="Examen", porcentaje=100.00)
         act = Actividad.objects.create(ponderacion=pond, nombre="Examen Final", orden=0)
@@ -315,6 +330,7 @@ class TestCalificacionesViews(TestCase):
         self.assertEqual(resp.data["calificacion_min"], 85.0)
 
     def test_estadisticas_alumno_rest(self):
+        """Verifica que el endpoint de estadísticas individuales calcule correctamente los promedios reales y redondeados oficiales del estudiante."""
         pond = Ponderacion.objects.create(materia_id=MATERIA_ID, nombre_categoria="Tareas", porcentaje=100.00)
         act = Actividad.objects.create(ponderacion=pond, nombre="Tarea A", orden=0)
         Calificacion.objects.create(actividad=act, alumno_id=ALUMNO_ID, valor=92.50)
@@ -325,9 +341,9 @@ class TestCalificacionesViews(TestCase):
         self.assertEqual(resp.data["promedio_redondeado"], 9)  # BUAP: 92.5 -> 9.25 escala 0-10, fracción < 0.5 -> piso -> 9
 
     def test_estadisticas_materia_inexistente_rest(self):
+        """Comprueba que solicitar estadísticas grupales de una materia sin ponderación configurada retorne 404."""
         materia_falsa = uuid.uuid4()
         resp = self.client.get(f"/api/estadisticas/materia/{materia_falsa}/")
         self.assertEqual(resp.status_code, 404)
         self.assertIn("No existe configuración de ponderación para esta materia.", resp.data["detail"])
-
 

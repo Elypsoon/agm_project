@@ -1,0 +1,151 @@
+<p-toast />
+
+<div class="page-enter">
+  <div class="page-header">
+    <h1 class="page-title">Mi Código QR</h1>
+    <p class="page-subtitle">Presenta este código al docente para registrar tu asistencia</p>
+  </div>
+
+  <!-- Ingresar sesión -->
+  <div class="card mb-4" *ngIf="!sesionActiva()">
+    <div class="flex gap-2">
+      <input
+        pInputText
+        type="text"
+        placeholder="ID de sesión (UUID)"
+        [ngModel]="sesionId()"
+        (ngModelChange)="sesionId.set($event)"
+        class="flex-1"
+      />
+      <p-button label="Generar QR" icon="pi pi-qrcode" (onClick)="activarSesion()" />
+    </div>
+  </div>
+
+  <!-- QR activo -->
+  <div *ngIf="sesionActiva()" class="qr-layout">
+
+    <!-- QR Card -->
+    <div class="qr-card" [class.expiring]="secondsLeft() <= 10">
+
+      <!-- Usuario -->
+      <div class="qr-user-strip">
+        <div class="qr-avatar">{{ avatarLabel() }}</div>
+        <div class="qr-user-info">
+          <span class="qr-user-name">{{ userName() }}</span>
+          <span class="qr-user-id mono-id">{{ sesionId().substring(0, 12) }}...</span>
+        </div>
+        <p-tag value="Activo" severity="success" />
+      </div>
+
+      <!-- QR Code -->
+      <div *ngIf="cargando()" class="py-8 text-center">
+        <i class="pi pi-spin pi-spinner text-4xl" style="color: #F59E0B"></i>
+        <p class="mt-2 text-sm text-gray-400">Generando QR...</p>
+      </div>
+
+      <div class="qr-wrapper" *ngIf="!cargando() && qrData()">
+        <qrcode
+          [qrdata]="qrData()"
+          [width]="256"
+          [errorCorrectionLevel]="'M'"
+        />
+      </div>
+
+      <!-- Countdown -->
+      <div class="countdown-section" *ngIf="!cargando() && qrData()">
+        <div class="countdown-ring">
+          <svg class="ring-svg" width="60" height="60" viewBox="0 0 60 60">
+            <circle class="ring-bg" cx="30" cy="30" r="27"/>
+            <circle
+              class="ring-fill"
+              [class.ring-danger]="secondsLeft() <= 10"
+              cx="30" cy="30" r="27"
+              stroke-dasharray="169.6"
+              [attr.stroke-dashoffset]="dashOffset()"
+            />
+          </svg>
+          <div class="countdown-num" [class.text-danger]="secondsLeft() <= 10">
+            {{ secondsLeft() }}
+          </div>
+        </div>
+        <div class="countdown-label">
+          <p>El QR se renueva automáticamente</p>
+          <p class="countdown-sub">cada 30 segundos</p>
+        </div>
+      </div>
+
+      <!-- Botón renovar -->
+      <p-button
+        class="refresh-btn"
+        label="Renovar ahora"
+        icon="pi pi-refresh"
+        [text]="true"
+        (onClick)="refreshQr()"
+      />
+
+    </div>
+
+    <!-- Info panel -->
+    <div class="info-panel">
+      <div>
+        <h2 class="info-title">¿Cómo funciona?</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <span class="step-title">Abre esta pantalla</span>
+              <span class="step-desc">Navega a "Mi QR" en el menú lateral</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <span class="step-title">Muestra el código</span>
+              <span class="step-desc">Presenta la pantalla al docente</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <span class="step-title">El docente escanea</span>
+              <span class="step-desc">Apunta la cámara del escáner al QR</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+              <span class="step-title">Asistencia registrada</span>
+              <span class="step-desc">Recibirás confirmación inmediata</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="security-note">
+        <i class="pi pi-shield-check"></i>
+        <div>
+          <div class="security-title">QR Seguro</div>
+          <div class="security-desc">
+            Cada código incluye tu ID único y una marca de tiempo.
+            Se invalida automáticamente después de 60 segundos para evitar suplantación.
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="mat-info-title">Materias con asistencia hoy</p>
+        <div class="mat-info-item">
+          <div class="mat-dot" style="background: #F59E0B"></div>
+          <span>Desarrollo de Sistemas Distribuidos</span>
+          <span class="mat-hora">08:00</span>
+        </div>
+        <div class="mat-info-item">
+          <div class="mat-dot" style="background: #06B6D4"></div>
+          <span>Redes de Computadoras</span>
+          <span class="mat-hora">10:00</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

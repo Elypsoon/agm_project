@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ralumnos.proto\x12\x07\x61lumnos\"l\n\nAlumnoInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\tmatricula\x18\x02 \x01(\t\x12\x17\n\x0fnombre_completo\x18\x03 \x01(\t\x12\x0e\n\x06\x63orreo\x18\x04 \x01(\t\x12\x16\n\x0etipo_formacion\x18\x05 \x01(\t\"0\n\x1aGetAlumnosByMateriaRequest\x12\x12\n\nmateria_id\x18\x01 \x01(\t\"R\n\x1bGetAlumnosByMateriaResponse\x12$\n\x07\x61lumnos\x18\x01 \x03(\x0b\x32\x13.alumnos.AlumnoInfo\x12\r\n\x05total\x18\x02 \x01(\x05\")\n\x14GetAlumnoByIdRequest\x12\x11\n\talumno_id\x18\x01 \x01(\t\"A\n\x18IsAlumnoEnMateriaRequest\x12\x11\n\talumno_id\x18\x01 \x01(\t\x12\x12\n\nmateria_id\x18\x02 \x01(\t\"=\n\x19IsAlumnoEnMateriaResponse\x12\x10\n\x08inscrito\x18\x01 \x01(\x08\x12\x0e\n\x06\x61\x63tivo\x18\x02 \x01(\x08\"b\n\x0b\x44ocenteInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x17\n\x0fnombre_completo\x18\x02 \x01(\t\x12\x1c\n\x14\x63orreo_institucional\x18\x03 \x01(\t\x12\x10\n\x08\x63ubiculo\x18\x04 \x01(\t\"+\n\x15GetDocenteByIdRequest\x12\x12\n\ndocente_id\x18\x01 \x01(\t2\xdb\x02\n\x0e\x41lumnosService\x12`\n\x13GetAlumnosByMateria\x12#.alumnos.GetAlumnosByMateriaRequest\x1a$.alumnos.GetAlumnosByMateriaResponse\x12\x43\n\rGetAlumnoById\x12\x1d.alumnos.GetAlumnoByIdRequest\x1a\x13.alumnos.AlumnoInfo\x12Z\n\x11IsAlumnoEnMateria\x12!.alumnos.IsAlumnoEnMateriaRequest\x1a\".alumnos.IsAlumnoEnMateriaResponse\x12\x46\n\x0eGetDocenteById\x12\x1e.alumnos.GetDocenteByIdRequest\x1a\x14.alumnos.DocenteInfob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ralumnos.proto\x12\x07\x61lumnos\"l\n\nAlumnoInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\tmatricula\x18\x02 \x01(\t\x12\x17\n\x0fnombre_completo\x18\x03 \x01(\t\x12\x0e\n\x06\x63orreo\x18\x04 \x01(\t\x12\x16\n\x0etipo_formacion\x18\x05 \x01(\t\"0\n\x1aGetAlumnosByMateriaRequest\x12\x12\n\nmateria_id\x18\x01 \x01(\t\"R\n\x1bGetAlumnosByMateriaResponse\x12$\n\x07\x61lumnos\x18\x01 \x03(\x0b\x32\x13.alumnos.AlumnoInfo\x12\r\n\x05total\x18\x02 \x01(\x05\")\n\x14GetAlumnoByIdRequest\x12\x11\n\talumno_id\x18\x01 \x01(\t\"A\n\x18IsAlumnoEnMateriaRequest\x12\x11\n\talumno_id\x18\x01 \x01(\t\x12\x12\n\nmateria_id\x18\x02 \x01(\t\"=\n\x19IsAlumnoEnMateriaResponse\x12\x10\n\x08inscrito\x18\x01 \x01(\x08\x12\x0e\n\x06\x61\x63tivo\x18\x02 \x01(\x08\"b\n\x0b\x44ocenteInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x17\n\x0fnombre_completo\x18\x02 \x01(\t\x12\x1c\n\x14\x63orreo_institucional\x18\x03 \x01(\t\x12\x10\n\x08\x63ubiculo\x18\x04 \x01(\t\"+\n\x15GetDocenteByIdRequest\x12\x12\n\ndocente_id\x18\x01 \x01(\t\"2\n\x17GetDocenteByNameRequest\x12\x17\n\x0fnombre_completo\x18\x01 \x01(\t2\xa7\x03\n\x0e\x41lumnosService\x12`\n\x13GetAlumnosByMateria\x12#.alumnos.GetAlumnosByMateriaRequest\x1a$.alumnos.GetAlumnosByMateriaResponse\x12\x43\n\rGetAlumnoById\x12\x1d.alumnos.GetAlumnoByIdRequest\x1a\x13.alumnos.AlumnoInfo\x12Z\n\x11IsAlumnoEnMateria\x12!.alumnos.IsAlumnoEnMateriaRequest\x1a\".alumnos.IsAlumnoEnMateriaResponse\x12\x46\n\x0eGetDocenteById\x12\x1e.alumnos.GetDocenteByIdRequest\x1a\x14.alumnos.DocenteInfo\x12J\n\x10GetDocenteByName\x12 .alumnos.GetDocenteByNameRequest\x1a\x14.alumnos.DocenteInfob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -47,6 +47,8 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DOCENTEINFO']._serialized_end=541
   _globals['_GETDOCENTEBYIDREQUEST']._serialized_start=543
   _globals['_GETDOCENTEBYIDREQUEST']._serialized_end=586
-  _globals['_ALUMNOSSERVICE']._serialized_start=589
-  _globals['_ALUMNOSSERVICE']._serialized_end=936
+  _globals['_GETDOCENTEBYNAMEREQUEST']._serialized_start=588
+  _globals['_GETDOCENTEBYNAMEREQUEST']._serialized_end=638
+  _globals['_ALUMNOSSERVICE']._serialized_start=641
+  _globals['_ALUMNOSSERVICE']._serialized_end=1064
 # @@protoc_insertion_point(module_scope)

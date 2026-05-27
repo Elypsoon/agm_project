@@ -156,6 +156,16 @@ class AlumnoService:
         inscripcion.fecha_baja = datetime.now(timezone.utc)
         inscripcion.save(update_fields=["activo", "fecha_baja"])
 
+        # Publicar evento para notificar al docente de forma asíncrona
+        publish_event(
+            routing_key="enrollment.dropped",
+            payload={
+                "alumno_id": str(alumno_id),
+                "alumno_nombre": inscripcion.alumno.nombre_completo,
+                "materia_id": str(materia_id),
+            }
+        )
+
         return {
             "success": True,
             "data": {

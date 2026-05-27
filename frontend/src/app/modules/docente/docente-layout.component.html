@@ -1,0 +1,76 @@
+<p-toast position="top-right" />
+
+<div class="docente-shell" [class.sidebar-collapsed]="collapsed()">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-wrap">
+        <div class="logo-icon">
+          <i class="pi pi-graduation-cap"></i>
+        </div>
+        <span class="logo-text">AGM</span>
+      </div>
+      <button class="collapse-btn" (click)="toggleSidebar()" pTooltip="Colapsar menú" tooltipPosition="right">
+        <i class="pi" [class.pi-chevron-left]="!collapsed()" [class.pi-chevron-right]="collapsed()"></i>
+      </button>
+    </div>
+
+    <div class="sidebar-user">
+      <p-avatar [label]="avatarLabel()" size="large" shape="circle" styleClass="user-avatar" />
+      <div class="user-info">
+        <span class="user-name">{{ userName() }}</span>
+        <span class="user-role badge-role badge-role--docente">Docente</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      @for (item of navItems; track item.route) {
+        <a class="nav-item"
+           [routerLink]="item.route"
+           routerLinkActive="active"
+           [pTooltip]="collapsed() ? item.label : ''"
+           tooltipPosition="right">
+          <i class="pi {{ item.icon }} nav-icon"></i>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <a class="nav-item logout-item" (click)="logout()" style="cursor:pointer"
+         [pTooltip]="collapsed() ? 'Cerrar sesión' : ''" tooltipPosition="right">
+        <i class="pi pi-sign-out nav-icon"></i>
+        <span class="nav-label">Cerrar sesión</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main-area">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" (click)="toggleSidebar()">
+          <i class="pi pi-bars"></i>
+        </button>
+        <div class="breadcrumb">
+          <i class="pi pi-home" style="font-size:13px;color:#94A3B8"></i>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-page">{{ activePageLabel() }}</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="role-badge badge-role badge-role--docente">
+          <i class="pi pi-id-card"></i> Docente
+        </span>
+        <p-avatar [label]="avatarLabel()" size="normal" shape="circle" styleClass="topbar-avatar" />
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

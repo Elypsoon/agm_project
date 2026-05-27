@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x63\x61lificaciones.proto\x12\x0e\x63\x61lificaciones\"&\n\x10MateriaIdRequest\x12\x12\n\nmateria_id\x18\x01 \x01(\t\"=\n\x14\x41lumnoMateriaRequest\x12\x11\n\talumno_id\x18\x01 \x01(\t\x12\x12\n\nmateria_id\x18\x02 \x01(\t\"?\n\rActividadInfo\x12\x14\n\x0c\x61\x63tividad_id\x18\x01 \x01(\t\x12\x18\n\x10\x61\x63tividad_nombre\x18\x02 \x01(\t\"<\n\x15\x43\x61lificacionActividad\x12\x14\n\x0c\x61\x63tividad_id\x18\x01 \x01(\t\x12\r\n\x05valor\x18\x02 \x01(\x01\"x\n\x14\x43\x61tegoriaPonderacion\x12\x18\n\x10nombre_categoria\x18\x01 \x01(\t\x12\x12\n\nporcentaje\x18\x02 \x01(\x01\x12\x32\n\x0b\x61\x63tividades\x18\x03 \x03(\x0b\x32\x1d.calificaciones.ActividadInfo\"\xaa\x01\n\x0b\x41lumnoCalif\x12\x11\n\talumno_id\x18\x01 \x01(\t\x12\x15\n\ralumno_nombre\x18\x02 \x01(\t\x12\x15\n\rpromedio_real\x18\x03 \x01(\x01\x12\x1b\n\x13promedio_redondeado\x18\x04 \x01(\x05\x12=\n\x0e\x63\x61lificaciones\x18\x05 \x03(\x0b\x32%.calificaciones.CalificacionActividad\"\xa9\x01\n\x13\x43oncentradoResponse\x12\x12\n\nmateria_id\x18\x01 \x01(\t\x12\x16\n\x0emateria_nombre\x18\x02 \x01(\t\x12\x38\n\ncategorias\x18\x03 \x03(\x0b\x32$.calificaciones.CategoriaPonderacion\x12,\n\x07\x61lumnos\x18\x04 \x03(\x0b\x32\x1b.calificaciones.AlumnoCalif\"F\n\x10PromedioResponse\x12\x15\n\rpromedio_real\x18\x01 \x01(\x01\x12\x1b\n\x13promedio_redondeado\x18\x02 \x01(\x05\"r\n\rStatsResponse\x12\x16\n\x0epromedio_grupo\x18\x01 \x01(\x01\x12\x18\n\x10\x63\x61lificacion_max\x18\x02 \x01(\x01\x12\x18\n\x10\x63\x61lificacion_min\x18\x03 \x01(\x01\x12\x15\n\rtotal_alumnos\x18\x04 \x01(\x05\x32\xa8\x02\n\x15\x43\x61lificacionesService\x12W\n\x0eGetConcentrado\x12 .calificaciones.MateriaIdRequest\x1a#.calificaciones.ConcentradoResponse\x12[\n\x11GetPromedioAlumno\x12$.calificaciones.AlumnoMateriaRequest\x1a .calificaciones.PromedioResponse\x12Y\n\x16GetEstadisticasMateria\x12 .calificaciones.MateriaIdRequest\x1a\x1d.calificaciones.StatsResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x63\x61lificaciones.proto\x12\x0e\x63\x61lificaciones\"&\n\x10MateriaIdRequest\x12\x12\n\nmateria_id\x18\x01 \x01(\t\"=\n\x14\x41lumnoMateriaRequest\x12\x11\n\talumno_id\x18\x01 \x01(\t\x12\x12\n\nmateria_id\x18\x02 \x01(\t\"?\n\rActividadInfo\x12\x14\n\x0c\x61\x63tividad_id\x18\x01 \x01(\t\x12\x18\n\x10\x61\x63tividad_nombre\x18\x02 \x01(\t\"<\n\x15\x43\x61lificacionActividad\x12\x14\n\x0c\x61\x63tividad_id\x18\x01 \x01(\t\x12\r\n\x05valor\x18\x02 \x01(\x01\"x\n\x14\x43\x61tegoriaPonderacion\x12\x18\n\x10nombre_categoria\x18\x01 \x01(\t\x12\x12\n\nporcentaje\x18\x02 \x01(\x01\x12\x32\n\x0b\x61\x63tividades\x18\x03 \x03(\x0b\x32\x1d.calificaciones.ActividadInfo\"\xc4\x01\n\x0b\x41lumnoCalif\x12\x11\n\talumno_id\x18\x01 \x01(\t\x12\x15\n\ralumno_nombre\x18\x02 \x01(\t\x12\x15\n\rpromedio_real\x18\x03 \x01(\x01\x12\x1b\n\x13promedio_redondeado\x18\x04 \x01(\x05\x12=\n\x0e\x63\x61lificaciones\x18\x05 \x03(\x0b\x32%.calificaciones.CalificacionActividad\x12\x18\n\x10\x61lumno_matricula\x18\x06 \x01(\t\"\xa9\x01\n\x13\x43oncentradoResponse\x12\x12\n\nmateria_id\x18\x01 \x01(\t\x12\x16\n\x0emateria_nombre\x18\x02 \x01(\t\x12\x38\n\ncategorias\x18\x03 \x03(\x0b\x32$.calificaciones.CategoriaPonderacion\x12,\n\x07\x61lumnos\x18\x04 \x03(\x0b\x32\x1b.calificaciones.AlumnoCalif\"F\n\x10PromedioResponse\x12\x15\n\rpromedio_real\x18\x01 \x01(\x01\x12\x1b\n\x13promedio_redondeado\x18\x02 \x01(\x05\"r\n\rStatsResponse\x12\x16\n\x0epromedio_grupo\x18\x01 \x01(\x01\x12\x18\n\x10\x63\x61lificacion_max\x18\x02 \x01(\x01\x12\x18\n\x10\x63\x61lificacion_min\x18\x03 \x01(\x01\x12\x15\n\rtotal_alumnos\x18\x04 \x01(\x05\x32\xa8\x02\n\x15\x43\x61lificacionesService\x12W\n\x0eGetConcentrado\x12 .calificaciones.MateriaIdRequest\x1a#.calificaciones.ConcentradoResponse\x12[\n\x11GetPromedioAlumno\x12$.calificaciones.AlumnoMateriaRequest\x1a .calificaciones.PromedioResponse\x12Y\n\x16GetEstadisticasMateria\x12 .calificaciones.MateriaIdRequest\x1a\x1d.calificaciones.StatsResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,13 +32,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CATEGORIAPONDERACION']._serialized_start=270
   _globals['_CATEGORIAPONDERACION']._serialized_end=390
   _globals['_ALUMNOCALIF']._serialized_start=393
-  _globals['_ALUMNOCALIF']._serialized_end=563
-  _globals['_CONCENTRADORESPONSE']._serialized_start=566
-  _globals['_CONCENTRADORESPONSE']._serialized_end=735
-  _globals['_PROMEDIORESPONSE']._serialized_start=737
-  _globals['_PROMEDIORESPONSE']._serialized_end=807
-  _globals['_STATSRESPONSE']._serialized_start=809
-  _globals['_STATSRESPONSE']._serialized_end=923
-  _globals['_CALIFICACIONESSERVICE']._serialized_start=926
-  _globals['_CALIFICACIONESSERVICE']._serialized_end=1222
+  _globals['_ALUMNOCALIF']._serialized_end=589
+  _globals['_CONCENTRADORESPONSE']._serialized_start=592
+  _globals['_CONCENTRADORESPONSE']._serialized_end=761
+  _globals['_PROMEDIORESPONSE']._serialized_start=763
+  _globals['_PROMEDIORESPONSE']._serialized_end=833
+  _globals['_STATSRESPONSE']._serialized_start=835
+  _globals['_STATSRESPONSE']._serialized_end=949
+  _globals['_CALIFICACIONESSERVICE']._serialized_start=952
+  _globals['_CALIFICACIONESSERVICE']._serialized_end=1248
 # @@protoc_insertion_point(module_scope)

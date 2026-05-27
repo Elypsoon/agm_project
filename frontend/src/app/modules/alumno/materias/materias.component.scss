@@ -1,0 +1,88 @@
+.page-enter { animation: fadeInUp .25s ease forwards; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 24px; gap: 12px; flex-wrap: wrap;
+}
+
+.page-title {
+  font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 700;
+  color: #1E293B; margin-bottom: 4px;
+}
+
+.page-subtitle { color: #64748B; font-size: 14px; }
+
+/* Grid */
+.materias-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
+}
+
+/* Card */
+.mat-card {
+  border-radius: 16px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  transition: transform 300ms cubic-bezier(0.4,0,0.2,1), box-shadow 300ms;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+
+  &:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
+}
+
+.mat-card-inner { display: flex; flex-direction: column; height: 100%; }
+
+.mat-header {
+  background: linear-gradient(135deg, var(--mat-c), color-mix(in srgb, var(--mat-c) 70%, #000));
+  padding: 18px 18px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.mat-icon-wrap {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;
+  .pi { color: #fff; font-size: 18px; }
+}
+
+.mat-nombre {
+  font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600;
+  color: #1E293B; padding: 14px 18px 0; line-height: 1.35;
+}
+
+.mat-meta {
+  padding: 12px 18px; display: flex; flex-direction: column;
+  gap: 8px; flex: 1;
+}
+
+.mat-meta-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #64748B;
+  .pi { color: #94A3B8; font-size: 13px; width: 14px; }
+}
+
+.mat-footer {
+  padding: 12px 18px 16px; border-top: 1px solid #F1F5F9;
+}
+
+.progreso-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: #94A3B8; margin-bottom: 6px;
+}
+
+.progreso-bar {
+  height: 6px; background: #E2E8F0; border-radius: 999px; overflow: hidden;
+}
+
+.progreso-fill {
+  height: 100%; background: var(--mat-c); border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+.empty-state {
+  text-align: center; padding: 64px 24px; color: #94A3B8;
+  .empty-icon { font-size: 48px; display: block; margin-bottom: 16px; }
+  h3 { font-family: 'Outfit', sans-serif; font-size: 18px; color: #475569; margin-bottom: 8px; }
+  p { font-size: 14px; }
+}

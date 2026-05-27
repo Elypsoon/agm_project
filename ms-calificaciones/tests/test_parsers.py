@@ -16,8 +16,14 @@ XLSX_PATH = os.path.join(
 
 
 class TestFileParsers(TestCase):
+    """Clase de pruebas unitarias para los procesadores (parsers) de archivos de Teams."""
 
     def test_parsear_archivo_csv_real(self):
+        """Verifica la correcta extracción y mapeo de datos desde un archivo real exportado de Teams en formato CSV.
+
+        Comprueba que los correos, comentarios, estados y las notas numéricas se parseen
+        adecuadamente como objetos Decimal.
+        """
         if not os.path.exists(CSV_PATH):
             self.skipTest(f"El archivo CSV real no se encuentra en {CSV_PATH}")
 
@@ -45,6 +51,11 @@ class TestFileParsers(TestCase):
         self.assertIn('Excelente trabajo', gerson_reg[0]['comentario'])
 
     def test_parsear_archivo_xlsx_real(self):
+        """Verifica la correcta extracción y procesamiento de datos desde un archivo real de Teams en formato XLSX.
+
+        Valida que el engine openpyxl extraiga correctamente los registros de notas y que los
+        campos esenciales mantengan consistencia de tipos.
+        """
         if not os.path.exists(XLSX_PATH):
             self.skipTest(f"El archivo XLSX real no se encuentra en {XLSX_PATH}")
 
@@ -64,6 +75,7 @@ class TestFileParsers(TestCase):
         self.assertIsInstance(primer_registro['valor'], Decimal)
 
     def test_formato_no_soportado_lanza_excepcion(self):
+        """Comprueba que intentar parsear un archivo con extensión no soportada lance un ValueError."""
         with self.assertRaises(ValueError) as ctx:
             parsear_archivo("grupo.txt", b"datos")
         self.assertIn("Formato de archivo no soportado", str(ctx.exception))

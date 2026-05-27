@@ -43,6 +43,7 @@ message AlumnoCalif {
   double promedio_real = 3;
   int32 promedio_redondeado = 4;
   repeated CalificacionActividad calificaciones = 5;
+  string alumno_matricula = 6;
 }
 
 // Respuesta completa del concentrado: jerarquía de categorías (una vez)

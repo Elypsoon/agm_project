@@ -1,0 +1,85 @@
+<p-toast position="top-right" />
+
+<div class="page-enter">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Mis Materias</h1>
+      <p class="page-subtitle">Grupos asignados en el semestre actual</p>
+    </div>
+  </div>
+
+  <!-- Loading Skeleton -->
+  @if (loading()) {
+    <div class="skeleton-grid">
+      @for (i of [1,2,3]; track i) {
+        <p-skeleton height="180px" borderRadius="14px" />
+      }
+    </div>
+  } @else {
+
+    <!-- Stats summary -->
+    <div class="summary-bar">
+      <div class="summary-item">
+        <span class="summary-value">{{ materias().length }}</span>
+        <span class="summary-label">Materias</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <span class="summary-value">{{ totalAlumnos() }}</span>
+        <span class="summary-label">Alumnos en total</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <span class="summary-value">{{ periodoActual }}</span>
+        <span class="summary-label">Periodo</span>
+      </div>
+    </div>
+
+    <!-- Materias Grid -->
+    <div class="materias-grid">
+      @for (materia of materias(); track materia.id) {
+        <div class="materia-card" [style.--mat-color]="materia.color">
+          <div class="materia-card-top">
+            <div class="materia-color-bar"></div>
+            <div class="materia-header">
+              <h3 class="materia-nombre">{{ materia.nombre }}</h3>
+              <p-tag [value]="'NRC: ' + materia.nrc" styleClass="nrc-tag" />
+            </div>
+          </div>
+
+          <div class="materia-meta">
+            <div class="meta-item">
+              <i class="pi pi-clock"></i>
+              <span>{{ materia.horario }}</span>
+            </div>
+            <div class="meta-item">
+              <i class="pi pi-map-marker"></i>
+              <span>{{ materia.aula }}</span>
+            </div>
+            <div class="meta-item">
+              <i class="pi pi-users"></i>
+              <span><strong>{{ materia.totalAlumnos }}</strong> alumnos inscritos</span>
+            </div>
+          </div>
+
+          <div class="materia-footer">
+            <div class="alumnos-bar-wrap">
+              <div class="alumnos-bar">
+                <div class="alumnos-bar-fill" [style.width.%]="(materia.totalAlumnos / 45) * 100"></div>
+              </div>
+              <span class="cap-text">Cap. 45</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (materias().length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-book empty-icon"></i>
+        <h3>Sin materias asignadas</h3>
+        <p>No tienes materias registradas para este semestre.</p>
+      </div>
+    }
+  }
+</div>

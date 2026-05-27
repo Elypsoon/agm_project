@@ -1,10 +1,13 @@
+import os
 import grpc
 import logging
 from src.grpc import alumnos_pb2, alumnos_pb2_grpc
 
 logger = logging.getLogger(__name__)
 
-ALUMNOS_GRPC_SERVER = "127.0.0.1:50053"
+ALUMNOS_GRPC_HOST = os.getenv("ALUMNOS_GRPC_HOST", "ms-alumnos")
+ALUMNOS_GRPC_PORT = os.getenv("ALUMNOS_GRPC_PORT", "50053")
+ALUMNOS_GRPC_SERVER = f"{ALUMNOS_GRPC_HOST}:{ALUMNOS_GRPC_PORT}"
 
 def consultar_id_docente_grpc(nombre_limpio: str) -> str | None:
     """

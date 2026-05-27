@@ -1,0 +1,176 @@
+.page-enter { animation: fadeInUp .25s ease forwards; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 4px;
+}
+
+.page-subtitle { color: #64748B; font-size: 14px; }
+
+/* Summary Bar */
+.summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  margin-bottom: 24px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.summary-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.summary-label { font-size: 12px; color: #64748B; }
+
+.summary-divider {
+  width: 1px;
+  height: 36px;
+  background: #E2E8F0;
+}
+
+/* Skeleton */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* Materias Grid */
+.materias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.materia-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  transition: transform 300ms cubic-bezier(0.4,0,0.2,1), box-shadow 300ms;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+  }
+}
+
+.materia-card-top {
+  display: flex;
+  gap: 0;
+}
+
+.materia-color-bar {
+  width: 5px;
+  background: var(--mat-color);
+  flex-shrink: 0;
+}
+
+.materia-header {
+  flex: 1;
+  padding: 18px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.materia-nombre {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E293B;
+  line-height: 1.3;
+}
+
+:host ::ng-deep .nrc-tag .p-tag {
+  background: color-mix(in srgb, var(--mat-color, #06B6D4) 12%, transparent);
+  color: var(--mat-color, #06B6D4);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.materia-meta {
+  padding: 0 16px 14px 21px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748B;
+  .pi { color: #94A3B8; font-size: 13px; }
+}
+
+.materia-footer {
+  padding: 12px 16px 16px 21px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.alumnos-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alumnos-bar {
+  flex: 1;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.alumnos-bar-fill {
+  height: 100%;
+  background: var(--mat-color);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+.cap-text { font-size: 11px; color: #94A3B8; white-space: nowrap; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 64px 24px;
+  color: #94A3B8;
+
+  .empty-icon { font-size: 48px; display: block; margin-bottom: 16px; }
+  h3 { font-family: 'Outfit', sans-serif; font-size: 18px; color: #475569; margin-bottom: 8px; }
+  p { font-size: 14px; }
+}
