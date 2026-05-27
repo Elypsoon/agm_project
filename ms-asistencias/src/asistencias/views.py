@@ -301,3 +301,47 @@ class MisMateriasSesionView(APIView):
             [],
             "MS-2 no disponible y sin caché, use UUID manual."
         )
+    
+class SesionActivaView(APIView):
+    """
+    Retorna la sesión activa para una materia.
+    El alumno la usa para generar su QR sin necesitar el UUID de la sesión.
+    """
+    permission_classes = [EsDocenteOAlumno]
+
+    def get(self, request):
+        materia_id = request.query_params.get('materia_id')
+        if not materia_id:
+            return _response_error("Se requiere materia_id.", status.HTTP_400_BAD_REQUEST)
+
+        try:
+            materia_uuid = uuid.UUID(materia_id)
+        except ValueError:
+            return _response_error("materia_id inválido.", status.HTTP_400_BAD_REQUEST)
+
+        sesion = Sesion.objects.filter(
+            materia_id=materia_uuid,
+            estado='activa'
+        ).first()
+
+        if not sesion:
+            return _response_error(
+                "No hay sesión activa para esta materia.",
+                status.HTTP_404_NOT_FOUND
+            )
+
+        elapsed = (timezone.now() - sesion.hora_inicio).total_seconds()
+        if elapsed > sesion.duracion_segundos:
+            sesion.estado = 'cerrada'
+            sesion.hora_fin = timezone.now()
+            sesion.save(update_fields=['estado', 'hora_fin'])
+            cache.delete(_sesion_redis_key(str(sesion.id)))
+            return _response_error(
+                "La sesión expiró.",
+                status.HTTP_404_NOT_FOUND
+            )
+
+        return _response_ok(
+            SesionSerializer(sesion).data,
+            "Sesión activa encontrada."
+        )

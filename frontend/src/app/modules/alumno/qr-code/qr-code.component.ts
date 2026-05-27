@@ -5,17 +5,17 @@ import { QRCodeComponent } from 'angularx-qrcode';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
-import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../../core/services/auth.service';
-import { AsistenciasService } from '../../../core/services/asistencias.service';
+import { AsistenciasService, MateriaResumen } from '../../../core/services/asistencias.service';
 
 @Component({
   selector: 'app-qr-code',
   standalone: true,
   imports: [
     CommonModule, FormsModule, QRCodeComponent,
-    ButtonModule, TagModule, ToastModule, InputTextModule
+    ButtonModule, TagModule, ToastModule, SelectModule
   ],
   providers: [MessageService],
   templateUrl: './qr-code.component.html',
@@ -29,12 +29,20 @@ export class QrCodeComponent implements OnInit, OnDestroy {
   private intervalId: any = null;
   private readonly DURATION = 30;
 
-  // Estado
+  // Estado materias
+  materias = signal<MateriaResumen[]>([]);
+  materiaSeleccionada = signal<MateriaResumen | null>(null);
+  cargandoMaterias = signal<boolean>(false);
+  modoManual = signal<boolean>(false);
+  sesionIdManual = signal<string>('');
+
+  // Estado QR
   sesionId = signal<string>('');
   qrData = signal<string>('');
   secondsLeft = signal<number>(this.DURATION);
   cargando = signal<boolean>(false);
   sesionActiva = signal<boolean>(false);
+  buscandoSesion = signal<boolean>(false);
 
   readonly userName = computed(() => this.authService.currentUser()?.nombre ?? 'Alumno');
   readonly avatarLabel = computed(() => {
@@ -45,27 +53,84 @@ export class QrCodeComponent implements OnInit, OnDestroy {
       : n.substring(0, 2).toUpperCase();
   });
 
-  readonly countdownPct = computed(() => (this.secondsLeft() / this.DURATION) * 100);
   readonly dashOffset = computed(() => {
     const pct = 1 - (this.secondsLeft() / this.DURATION);
     return pct * 169.6;
   });
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.cargarMaterias();
+  }
+
+  cargarMaterias() {
+    this.cargandoMaterias.set(true);
+    this.asistenciasService.getMisMaterias().subscribe({
+      next: (res) => {
+        this.cargandoMaterias.set(false);
+        if (res.success && res.data.length > 0) {
+          this.materias.set(res.data);
+          this.modoManual.set(false);
+        } else {
+          this.modoManual.set(true);
+        }
+      },
+      error: () => {
+        this.cargandoMaterias.set(false);
+        this.modoManual.set(true);
+      }
+    });
+  }
 
   activarSesion() {
-    if (!this.sesionId()) {
+    if (this.modoManual()) {
+      if (!this.sesionIdManual()) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Campo requerido',
+          detail: 'Ingresa el ID de la sesión',
+          life: 3000
+        });
+        return;
+      }
+      this.sesionId.set(this.sesionIdManual());
+      this.sesionActiva.set(true);
+      this.generarQR();
+      this.startCountdown();
+      return;
+    }
+
+    if (!this.materiaSeleccionada()) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campo requerido',
-        detail: 'Ingresa el ID de la sesión activa',
+        detail: 'Selecciona una materia',
         life: 3000
       });
       return;
     }
-    this.sesionActiva.set(true);
-    this.generarQR();
-    this.startCountdown();
+
+    // Buscar sesión activa para la materia seleccionada
+    this.buscandoSesion.set(true);
+    this.asistenciasService.getSesionActiva(this.materiaSeleccionada()!.id).subscribe({
+      next: (res) => {
+        this.buscandoSesion.set(false);
+        if (res.success) {
+          this.sesionId.set(res.data.id);
+          this.sesionActiva.set(true);
+          this.generarQR();
+          this.startCountdown();
+        }
+      },
+      error: (err) => {
+        this.buscandoSesion.set(false);
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Sin sesión activa',
+          detail: err.message || 'No hay sesión activa para esta materia',
+          life: 4000
+        });
+      }
+    });
   }
 
   private generarQR() {
@@ -84,7 +149,7 @@ export class QrCodeComponent implements OnInit, OnDestroy {
         this.messageService.add({
           severity: 'error',
           summary: 'Sesión inválida',
-          detail: err.error?.message || 'La sesión no existe o ya cerró',
+          detail: err.message || 'La sesión no existe o ya cerró',
           life: 4000
         });
       }
@@ -113,12 +178,6 @@ export class QrCodeComponent implements OnInit, OnDestroy {
 
   private rotate() {
     this.generarQR();
-    this.messageService.add({
-      severity: 'info',
-      summary: 'QR renovado',
-      detail: 'Tu código de asistencia ha sido actualizado',
-      life: 2000
-    });
   }
 
   refreshQr() {
@@ -130,6 +189,8 @@ export class QrCodeComponent implements OnInit, OnDestroy {
     this.sesionActiva.set(false);
     this.qrData.set('');
     this.sesionId.set('');
+    this.materiaSeleccionada.set(null);
+    this.sesionIdManual.set('');
     this.stopCountdown();
   }
 
