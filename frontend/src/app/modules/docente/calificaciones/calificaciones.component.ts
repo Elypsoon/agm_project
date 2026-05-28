@@ -136,7 +136,7 @@ export class CalificacionesComponent implements OnInit {
     this.calificacionesService.getPeriodoActivo().subscribe({
       next: (periodo) => {
         this.periodoActivo.set(periodo);
-        // ID del docente autenticado (local_id guardado tras el login)
+        const email = this.authService.currentUser()?.email || '';
         const docenteId = this.authService.currentUser()?.id || null;
 
         if (email) {

@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "Instalando dependencias faltantes..."
-pip install requests --quiet --root-user-action=ignore
 
 echo "Aplicando migraciones"
 python manage.py migrate --noinput
