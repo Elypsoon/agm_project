@@ -1,6 +1,11 @@
 import csv
 import io
+import warnings
 from decimal import Decimal, InvalidOperation
+
+# Suppress annoying openpyxl UserWarnings about default styles and unknown extensions
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+
 import openpyxl
 
 def _normalizar(texto):

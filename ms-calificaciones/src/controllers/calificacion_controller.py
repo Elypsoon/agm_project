@@ -111,6 +111,7 @@ class ImportarCalificacionesView(APIView):
         """
         archivo = request.FILES.get('archivo')
         materia_id = request.data.get('materia_id')
+        criterio_evaluacion = request.data.get('criterio_evaluacion')
 
         if not archivo:
             return Response({'detail': 'Se requiere el campo "archivo".'}, status=400)
@@ -122,6 +123,7 @@ class ImportarCalificacionesView(APIView):
                 materia_id=materia_id,
                 nombre_archivo=archivo.name,
                 archivo_bytes=archivo.read(),
+                criterio_evaluacion=criterio_evaluacion,
             )
         except ValueError as exc:
             return Response({'detail': str(exc)}, status=400)
