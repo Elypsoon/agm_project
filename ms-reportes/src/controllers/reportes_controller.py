@@ -108,8 +108,29 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
             logger.info(f"[+] Hilo asíncrono (tipo: {tipo_reporte}) - Cache Miss para materia {materia_id}")
             datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
             if not datos_materia or not datos_materia.get('alumnos'):
-                logger.error(f"[-] Error en reporte asíncrono para materia {materia_id}: No hay calificaciones.")
-                return
+                # Intentar fallback a obtener alumnos desde MS-3 (Alumnos) directamente si no hay calificaciones
+                alumnos_res = AlumnosGRPCClient.obtener_alumnos_materia(materia_id)
+                if alumnos_res:
+                    logger.info(f"[+] Fallback exitoso a MS-3 para obtener alumnos inscritos en materia {materia_id}")
+                    alumnos = []
+                    for a in alumnos_res:
+                        alumnos.append({
+                            "alumno_id": a["id"],
+                            "alumno_nombre": a["nombre"],
+                            "matricula": a["matricula"] or "N/A",
+                            "promedio_real": 0.0,
+                            "promedio_redondeado": 0,
+                            "calificaciones": {}
+                        })
+                    datos_materia = {
+                        "materia_id": materia_id,
+                        "materia_nombre": materia_nombre,
+                        "alumnos": alumnos,
+                        "ponderaciones": []
+                    }
+                else:
+                    logger.error(f"[-] Error en reporte asíncrono para materia {materia_id}: No hay calificaciones ni alumnos inscritos.")
+                    return
 
             if tipo_reporte == 'calificaciones':
                 if ext == 'xlsx':
@@ -219,6 +240,7 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
             "email": dest_email,
             "materia_nombre": materia_nombre_upper,
             "formato": formato_display,
+            "tipo_reporte": tipo_reporte,
             "archivo_base64": archivo_base64,
             "archivo_nombre": archivo_nombre,
             "fecha_expiracion": fecha_expiracion_str
@@ -406,7 +428,27 @@ def descargar_asistencias(request, materia_id):
     # 3. Si no se proporcionó correo (descarga síncrona clásica del navegador)
     datos_materia = CalificacionesGRPCClient.obtener_concentrado_materia(materia_id)
     if not datos_materia or not datos_materia.get('alumnos'):
-        return Response({"error": "No hay calificaciones o alumnos registrados para obtener asistencias."}, status=404)
+        # Fallback a obtener alumnos desde MS-3 (Alumnos) directamente si no hay calificaciones
+        alumnos_res = AlumnosGRPCClient.obtener_alumnos_materia(materia_id)
+        if alumnos_res:
+            alumnos = []
+            for a in alumnos_res:
+                alumnos.append({
+                    "alumno_id": a["id"],
+                    "alumno_nombre": a["nombre"],
+                    "matricula": a["matricula"] or "N/A",
+                    "promedio_real": 0.0,
+                    "promedio_redondeado": 0,
+                    "calificaciones": {}
+                })
+            datos_materia = {
+                "materia_id": materia_id,
+                "materia_nombre": materia_nombre,
+                "alumnos": alumnos,
+                "ponderaciones": []
+            }
+        else:
+            return Response({"error": "No hay calificaciones o alumnos registrados para obtener asistencias."}, status=404)
 
     # Obtener asistencias de todos los alumnos de la materia
     datos_asistencias = []
@@ -600,20 +642,26 @@ def obtener_estadisticas_docente(request, id):
                     prom_g = sum(a['promedio_real'] for a in alumnos_base) / total_al if total_al > 0 else 0.0
                     aprob = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
                     tasa_aprob = (aprob / total_al) * 100 if total_al > 0 else 0.0
+                else:
+                    # Fallback robusto a MS-3 si no hay calificaciones configuradas
+                    alumnos_res = AlumnosGRPCClient.obtener_alumnos_materia(m_id) or []
+                    total_al = len(alumnos_res)
+                    prom_g = 0.0
+                    tasa_aprob = 0.0
                     
-                    asist_global = AsistenciasGRPCClient.obtener_estadisticas_asistencia(m_id)
-                    tasa_asist = asist_global.get('porcentaje_global', 0.0) if asist_global else 0.0
-                    
-                    p_id = m.get('periodo_id', 'N/A')
-                    
-                    EstadisticasSnapshot.objects.create(
-                        materia_id=m_id,
-                        periodo_id=p_id,
-                        promedio_grupo=round(prom_g, 2),
-                        tasa_aprobacion=round(tasa_aprob, 2),
-                        tasa_asistencia=round(tasa_asist, 2),
-                        total_alumnos=total_al,
-                    )
+                asist_global = AsistenciasGRPCClient.obtener_estadisticas_asistencia(m_id)
+                tasa_asist = asist_global.get('porcentaje_global', 0.0) if asist_global else 0.0
+                
+                p_id = m.get('periodo_id', 'N/A')
+                
+                EstadisticasSnapshot.objects.create(
+                    materia_id=m_id,
+                    periodo_id=p_id,
+                    promedio_grupo=round(prom_g, 2),
+                    tasa_aprobacion=round(tasa_aprob, 2),
+                    tasa_asistencia=round(tasa_asist, 2),
+                    total_alumnos=total_al,
+                )
             except Exception as e:
                 # Silenciar errores individuales de generación para no interrumpir el flujo
                 pass
@@ -658,8 +706,10 @@ def obtener_estadisticas_alumno(request, id):
     asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(alumno_id=id, materia_id=materia_id)
     periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
 
-    if promedio is None and asistencia is None:
-        return Response({"error": "No se pudo obtener estadísticas del alumno para la materia indicada."}, status=404)
+    if promedio is None:
+        promedio = {}
+    if asistencia is None:
+        asistencia = {}
 
     # 1. Recuperar o autogenerar proactivamente el snapshot del grupo para comparaciones
     periodo_id = periodo_activo.get('id', 'N/A')
@@ -674,18 +724,23 @@ def obtener_estadisticas_alumno(request, id):
                 prom_g = sum(a['promedio_real'] for a in alumnos_base) / total_al if total_al > 0 else 0.0
                 aprob = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
                 tasa_aprob = (aprob / total_al) * 100 if total_al > 0 else 0.0
+            else:
+                alumnos_res = AlumnosGRPCClient.obtener_alumnos_materia(materia_id) or []
+                total_al = len(alumnos_res)
+                prom_g = 0.0
+                tasa_aprob = 0.0
                 
-                asist_global = AsistenciasGRPCClient.obtener_estadisticas_asistencia(materia_id)
-                tasa_asist = asist_global.get('porcentaje_global', 0.0) if asist_global else 0.0
-                
-                snapshot = EstadisticasSnapshot.objects.create(
-                    materia_id=materia_id,
-                    periodo_id=periodo_id,
-                    promedio_grupo=round(prom_g, 2),
-                    tasa_aprobacion=round(tasa_aprob, 2),
-                    tasa_asistencia=round(tasa_asist, 2),
-                    total_alumnos=total_al,
-                )
+            asist_global = AsistenciasGRPCClient.obtener_estadisticas_asistencia(materia_id)
+            tasa_asist = asist_global.get('porcentaje_global', 0.0) if asist_global else 0.0
+            
+            snapshot = EstadisticasSnapshot.objects.create(
+                materia_id=materia_id,
+                periodo_id=periodo_id,
+                promedio_grupo=round(prom_g, 2),
+                tasa_aprobacion=round(tasa_aprob, 2),
+                tasa_asistencia=round(tasa_asist, 2),
+                total_alumnos=total_al,
+            )
         except Exception:
             pass
 

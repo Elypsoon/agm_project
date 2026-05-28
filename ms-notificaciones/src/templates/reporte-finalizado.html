@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte Académico Disponible - AGM</title>
+    <title>Reporte de {{ tipo_reporte|capfirst }} Disponible - AGM</title>
 </head>
 <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; margin: 0; -webkit-font-smoothing: antialiased;">
     <div style="max-width: 600px; background: white; border: 1px solid #e2e8f0; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
@@ -15,7 +15,7 @@
             <h3 style="color: #004b93; margin-top: 0; font-size: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">¡Su reporte está listo!</h3>
             
             <p style="color: #4a5568; line-height: 1.6;">Estimado(a) Docente,</p>
-            <p style="color: #4a5568; line-height: 1.6;">Le informamos que el **Reporte Académico Consolidado** (que engloba la matriz de calificaciones escaladas a rango 0-1 y el desglose cronológico y numérico de asistencias) ha sido generado con éxito en segundo plano para su curso:</p>
+            <p style="color: #4a5568; line-height: 1.6;">Le informamos que el **reporte de {{ tipo_reporte }}** ha sido generado con éxito para su curso:</p>
             
             <div style="background-color: #f2f6fc; border-left: 4px solid #004b93; padding: 15px; margin: 20px 0; border-radius: 4px;">
                 <p style="margin: 0 0 8px 0; font-weight: bold; color: #2d3748; font-size: 15px;">Detalles de la Materia:</p>

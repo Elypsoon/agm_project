@@ -168,15 +168,19 @@ class Command(BaseCommand):
                         ext = file_name.split('.')[-1].lower()
                         mime_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if ext == 'xlsx' else 'application/pdf'
                         
+                        tipo_reporte_val = payload.get('tipo_reporte', 'calificaciones')
+                        tipo_str = 'Asistencias' if tipo_reporte_val == 'asistencias' else 'Calificaciones'
+                        
                         success = send_academic_email(
                             template_name='reporte-finalizado',
                             context={
                                 'materia_nombre': payload.get('materia_nombre', 'Materia Desconocida'),
                                 'formato': payload.get('formato', 'XLSX'),
+                                'tipo_reporte': tipo_str.lower(),
                                 'fecha_expiracion': payload.get('fecha_expiracion', 'las próximas 24 horas')
                             },
                             to_email=email_destinatario,
-                            subject=f'Reporte Académico Disponible - {payload.get("materia_nombre", "Materia")}',
+                            subject=f'Reporte de {tipo_str} Disponible - {payload.get("materia_nombre", "Materia")}',
                             tipo='reporte_finalizado',
                             attachments=[(file_name, file_bytes, mime_type)]
                         )
