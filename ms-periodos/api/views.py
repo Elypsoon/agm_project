@@ -310,7 +310,6 @@ class MateriaViewSet(viewsets.ModelViewSet):
             ]
             
             if payload_materias:
-                # This naturally fires off RabbitMQ using your team's utilities!
                 publish_imported_materias_event(str(periodo.id), payload_materias)
 
             return Response({
