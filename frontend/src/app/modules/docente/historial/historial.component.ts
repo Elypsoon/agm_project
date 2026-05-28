@@ -105,14 +105,15 @@ export class HistorialComponent implements OnInit {
           this.historialCompleto.set(res.data);
           this.procesarPeriodos(res.data);
         } else {
-          this.cargarMockCompleto();
+          this.historialCompleto.set([]);
+          this.periodos.set([]);
         }
         this.loading.set(false);
       },
       error: (err: any) => {
         console.error('[-] Error al obtener historial de reportes:', err);
-        // Fallback robusto a datos Mock interactivos si el backend no está disponible
-        this.cargarMockCompleto();
+        this.historialCompleto.set([]);
+        this.periodos.set([]);
         this.loading.set(false);
       }
     });

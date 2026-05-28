@@ -82,12 +82,11 @@ export class EstadisticasComponent implements OnInit {
           nombre: i.materia_nombre
         }));
 
-        this.materias.set(options.length > 0 ? options : this.mockMateriasOptions());
+        this.materias.set(options);
         this.procesarRuta();
       },
       error: () => {
-        // Fallback a mock en desarrollo si falla ms-alumnos
-        this.materias.set(this.mockMateriasOptions());
+        this.materias.set([]);
         this.procesarRuta();
       }
     });
@@ -117,14 +116,13 @@ export class EstadisticasComponent implements OnInit {
         if (res.success && res.data) {
           this.stats.set(res.data);
         } else {
-          this.stats.set(this.generarMockStats(materiaId));
+          this.stats.set(null);
         }
         this.loading.set(false);
       },
       error: (err: any) => {
         console.error('[-] Error al obtener estadísticas del alumno:', err);
-        // Fallback de contingencia a mock interactivo premium
-        this.stats.set(this.generarMockStats(materiaId));
+        this.stats.set(null);
         this.loading.set(false);
       }
     });

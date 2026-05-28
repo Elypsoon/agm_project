@@ -35,7 +35,7 @@ def generate_calificaciones_pdf(materia_id, datos, materia_nombre=None, periodo_
     for alumno in datos:
         table_data.append([
             str(alumno.get('matricula', 'N/A')),
-            str(alumno.get('nombre', 'Desconocido')),
+            str(alumno.get('alumno_nombre') or alumno.get('nombre') or 'Desconocido'),
             f"{alumno.get('asistencia', 0)}%",
             str(alumno.get('calificacion', 0.0))
         ])
@@ -89,7 +89,7 @@ def generate_asistencias_pdf(materia_id, datos, materia_nombre=None, periodo_nom
     for alumno in datos:
         table_data.append([
             str(alumno.get('matricula', 'N/A')),
-            str(alumno.get('nombre', 'Desconocido')),
+            str(alumno.get('alumno_nombre') or alumno.get('nombre') or 'Desconocido'),
             str(alumno.get('presentes', 0)),
             str(alumno.get('retardos', 0)),
             str(alumno.get('faltas', 0))
@@ -151,7 +151,7 @@ def generate_rendimiento_pdf(materia_id, resumen, alumnos):
     for alumno in alumnos:
         table_data.append([
             str(alumno.get('matricula', 'N/A')),
-            str(alumno.get('nombre', 'Desconocido')),
+            str(alumno.get('alumno_nombre') or alumno.get('nombre') or 'Desconocido'),
             f"{alumno.get('asistencia', 0.0)}%",
             str(alumno.get('calificacion', 0.0)),
             str(alumno.get('presentes', 0)),

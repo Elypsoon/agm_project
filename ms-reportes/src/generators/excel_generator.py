@@ -54,8 +54,9 @@ def generate_calificaciones_excel(materia_id, datos_calificaciones, periodo_nomb
     ]
     
     for idx, text in enumerate(cabecera_textos, start=1):
-        range_str = f"C{idx}:{header_end_letter}{idx}"
-        ws_calif.merge_cells(range_str)
+        if last_col_idx - 1 >= 3:
+            range_str = f"C{idx}:{header_end_letter}{idx}"
+            ws_calif.merge_cells(range_str)
         cell = ws_calif[f"C{idx}"]
         cell.value = text
         cell.font = Font(name="Calibri", size=11, bold=True)
@@ -149,7 +150,7 @@ def generate_calificaciones_excel(materia_id, datos_calificaciones, periodo_nomb
     
     for al in alumnos:
         matricula = al.get("matricula", "N/A")
-        nombre = al.get("alumno_nombre", "Desconocido")
+        nombre = al.get("alumno_nombre") or al.get("nombre") or "Desconocido"
         alumno_calificaciones = al.get("calificaciones", {})
         
         ws_calif.cell(row=row_idx, column=1, value=matricula).alignment = Alignment(horizontal="center")
@@ -292,7 +293,7 @@ def generate_asistencias_excel(materia_id, datos_calificaciones, datos_asistenci
     for al in alumnos:
         al_id = str(al.get("alumno_id"))
         matricula = al.get("matricula", "N/A")
-        nombre = al.get("alumno_nombre", "Desconocido")
+        nombre = al.get("alumno_nombre") or al.get("nombre") or "Desconocido"
         
         ws_asist.cell(row=row_idx, column=1, value=matricula).alignment = Alignment(horizontal="center")
         ws_asist.cell(row=row_idx, column=2, value=nombre).alignment = Alignment(horizontal="left")
@@ -361,7 +362,7 @@ def generate_rendimiento_excel(materia_id, resumen, alumnos):
     for alumno in alumnos:
         ws.append([
             alumno.get('matricula', 'N/A'),
-            alumno.get('nombre', 'Desconocido'),
+            alumno.get('alumno_nombre') or alumno.get('nombre') or 'Desconocido',
             alumno.get('asistencia', 0.0),
             alumno.get('calificacion', 0.0),
             alumno.get('presentes', 0),

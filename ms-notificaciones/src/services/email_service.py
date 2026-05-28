@@ -36,12 +36,12 @@ def send_academic_email(tipo_notificacion=None, context=None, destinatario_email
         
         # Adjuntar archivos opcionales si se suministran
         if attachments:
-            logger.info(f"[Email Service] Se detectaron {len(attachments)} archivos para adjuntar.")
+            print(f"[Email Service] Se detectaron {len(attachments)} archivos para adjuntar.", flush=True)
             for file_name, file_content, mime_type in attachments:
-                logger.info(f"[Email Service] Adjuntando archivo: {file_name} ({mime_type}), size={len(file_content) if file_content else 0} bytes")
+                print(f"[Email Service] Adjuntando archivo: {file_name} ({mime_type}), size={len(file_content) if file_content else 0} bytes", flush=True)
                 email.attach(file_name, file_content, mime_type)
         else:
-            logger.info("[Email Service] No se suministraron archivos para adjuntar.")
+            print("[Email Service] No se suministraron archivos para adjuntar.", flush=True)
                 
         # 3. Intentar enviar el correo
         email.send(fail_silently=False)

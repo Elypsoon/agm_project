@@ -47,6 +47,8 @@ def _enriquecer_con_asistencia(alumnos, materia_id):
         alumno['retardos'] = asistencia.get('total_retardos', 0) if asistencia else 0
         alumno['faltas'] = asistencia.get('total_ausentes', 0) if asistencia else 0
         alumno['calificacion'] = round(alumno.get('promedio_real', 0.0), 2)
+        # Robust name key fallback
+        alumno['nombre'] = alumno.get('alumno_nombre') or alumno.get('nombre') or 'Desconocido'
         enriched.append(alumno)
     return enriched
 
