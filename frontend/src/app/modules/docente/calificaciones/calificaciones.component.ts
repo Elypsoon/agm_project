@@ -740,6 +740,4 @@ export class CalificacionesComponent implements OnInit {
       }
     });
   }
-
-
 }
