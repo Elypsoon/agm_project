@@ -57,14 +57,43 @@ class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
         # Intentar resolver alumno_id (ID interno vs user_id de Auth)
         # Si request.alumno_id coincide con el id (interno) en AlumnoReplica,
         # resolver al user_id ya que las asistencias QR se registran con el user_id.
+        db_alumno_id = alumno_id
         try:
             replica = AlumnoReplica.objects.filter(id=alumno_id).first()
             if replica and replica.user_id:
                 db_alumno_id = replica.user_id
             else:
-                db_alumno_id = alumno_id
-        except Exception:
-            db_alumno_id = alumno_id
+                # Fallback en caliente: Si no está en réplica o su user_id es None,
+                # consultamos directamente a db-alumnos para resolver en tiempo real
+                # y auto-corregir la réplica local para futuras peticiones.
+                import psycopg2
+                conn = psycopg2.connect(
+                    host="db-alumnos",
+                    port=5432,
+                    user="postgres",
+                    password="alumnos_dev_2026",
+                    database="agm_alumnos_db"
+                )
+                cur = conn.cursor()
+                cur.execute("SELECT user_id, matricula, nombre_completo FROM alumnos WHERE id = %s", (alumno_id,))
+                row = cur.fetchone()
+                cur.close()
+                conn.close()
+
+                if row and row[0]:
+                    user_id_val = row[0]
+                    # Auto-corregir réplica local de forma transparente
+                    AlumnoReplica.objects.update_or_create(
+                        id=alumno_id,
+                        defaults={
+                            'user_id': user_id_val,
+                            'matricula': row[1] or '',
+                            'nombre_completo': row[2] or ''
+                        }
+                    )
+                    db_alumno_id = user_id_val
+        except Exception as e:
+            print(f"[gRPC Server] Fallback en caliente falló: {e}")
 
         asistencias = Asistencia.objects.filter(
             alumno_id=db_alumno_id,

@@ -4,6 +4,9 @@ set -e
 echo "Aplicando migraciones..."
 python manage.py migrate --noinput
 
+echo "Sincronizando réplicas de alumnos..."
+python sync_replicas.py || true
+
 echo "Iniciando servidor gRPC en background (puerto 50055)..."
 python src/grpc/server.py &
 

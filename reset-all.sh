@@ -15,7 +15,7 @@ docker compose up --build -d
 
 # 3. Esperar a que el contenedor de ms-auth esté listo
 echo -n "Esperando a que el microservicio de autenticación esté listo para aceptar comandos..."
-until docker exec ms-auth python manage.py shell -c "import django" >/dev/null 2>&1; do
+until docker exec ms-auth python manage.py shell -c "from src.models.models import User; list(User.objects.all()[:1])" >/dev/null 2>&1; do
     echo -n "."
     sleep 2
 done

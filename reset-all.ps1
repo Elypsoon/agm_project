@@ -18,7 +18,7 @@ Write-Host "Esperando a que el microservicio de autenticación esté listo para 
 do {
     Start-Sleep -Seconds 2
     Write-Host "." -NoNewline
-    $null = docker exec ms-auth python manage.py shell -c "import django" 2>$null
+    $null = docker exec ms-auth python manage.py shell -c "from src.models.models import User; list(User.objects.all()[:1])" 2>$null
 } while ($LASTEXITCODE -ne 0)
 Write-Host ""
 
