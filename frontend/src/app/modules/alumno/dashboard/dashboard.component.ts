@@ -9,6 +9,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { AuthService } from '../../../core/services/auth.service';
 import { AlumnosService } from '../../../core/services/alumnos.service';
 import { ReportesService } from '../../../core/services/reportes.service';
+import { CalificacionesService } from '../../../core/services/calificaciones.service';
 import { PeriodosService } from '../../admin/periodos/periodos.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -24,6 +25,7 @@ export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private alumnosService = inject(AlumnosService);
   private reportesService = inject(ReportesService);
+  private calificacionesService = inject(CalificacionesService);
   private periodosService = inject(PeriodosService);
 
   loading = signal(true);
@@ -51,12 +53,8 @@ export class DashboardComponent implements OnInit {
     { label: 'Semestre',       value: '6° semestre',    icon: 'pi-users',    color: '#22C55E', bg: 'rgba(34,197,94,0.1)'  },
   ];
 
-  activities = [
-    { title: 'Examen — Redes de Computadoras',    meta: 'Jue 29 May, 10:00–12:00',   type: 'Examen',  severity: 'danger'    as any, color: '#EF4444' },
-    { title: 'Entrega proyecto — Servicios Web',  meta: 'Vie 30 May, 23:59',          type: 'Tarea',   severity: 'warn'      as any, color: '#F59E0B' },
-    { title: 'Clase — Base de Datos',             meta: 'Lun 2 Jun, 13:00–14:30',     type: 'Clase',   severity: 'info'      as any, color: '#06B6D4' },
-    { title: 'Revisión de calificaciones',        meta: 'Mié 4 Jun, 09:00',           type: 'Admin',   severity: 'secondary' as any, color: '#94A3B8' },
-  ];
+  /** Actividades pendientes (sin calificación) del alumno. */
+  activities: { title: string; meta: string; type: string; severity: any; color: string }[] = [];
 
   /** Número de materias en el radar — controla el tipo de gráfico. */
   subjectCount = signal(5);
@@ -193,15 +191,21 @@ export class DashboardComponent implements OnInit {
                       return;
                     }
 
-                    // 4. Consultar estadísticas de materias en paralelo
-                    const requests = inscripciones.map(insc => 
+                    // 4. Consultar estadísticas KPI y desglose de actividades en paralelo
+                    const requests = inscripciones.map(insc =>
                       this.reportesService.obtenerEstadisticasAlumno(realId, insc.materia_id).pipe(
                         catchError(() => of(null))
                       )
                     );
 
-                    forkJoin(requests).subscribe({
-                      next: (statsList) => {
+                    const desgloseRequests = inscripciones.map(insc =>
+                      this.calificacionesService.getEstadisticasAlumno(realId, insc.materia_id).pipe(
+                        catchError(() => of(null))
+                      )
+                    );
+
+                    forkJoin([forkJoin(requests), forkJoin(desgloseRequests)]).subscribe({
+                      next: ([statsList, desgloseList]) => {
                         let sumPromedio = 0;
                         let countPromedio = 0;
                         let sumAsistencia = 0;
@@ -327,6 +331,39 @@ export class DashboardComponent implements OnInit {
                             backgroundColor: 'rgba(245, 158, 11, 0.7)',
                           }]
                         };
+
+                        // ── Actividades pendientes (sin calificación) ─────────────────
+                        const CATEGORY_COLORS: Record<string, { severity: any; color: string }> = {
+                          'examen':   { severity: 'danger',  color: '#EF4444' },
+                          'tarea':    { severity: 'warn',    color: '#F59E0B' },
+                          'quiz':     { severity: 'info',    color: '#06B6D4' },
+                          'proyecto': { severity: 'success', color: '#22C55E' },
+                        };
+                        const DEFAULT_ACT_STYLE = { severity: 'secondary' as any, color: '#94A3B8' };
+                        const pendingActivities: { title: string; meta: string; type: string; severity: any; color: string }[] = [];
+
+                        desgloseList.forEach((desgloseRes: any, idx: number) => {
+                          const materiaName = inscripciones[idx]?.materia_nombre || 'Materia';
+                          if (!desgloseRes || !desgloseRes.desglose) return;
+                          desgloseRes.desglose.forEach((cat: any) => {
+                            const catKey = cat.ponderacion?.toLowerCase() || '';
+                            const style = Object.entries(CATEGORY_COLORS)
+                              .find(([key]) => catKey.includes(key))?.[1] ?? DEFAULT_ACT_STYLE;
+                            (cat.calificaciones || []).forEach((cal: any) => {
+                              if (cal.valor === null || cal.valor === undefined) {
+                                pendingActivities.push({
+                                  title: `${cal.actividad} — ${materiaName}`,
+                                  meta: cat.ponderacion,
+                                  type: cat.ponderacion,
+                                  severity: style.severity,
+                                  color: style.color,
+                                });
+                              }
+                            });
+                          });
+                        });
+                        // Limitar a 8 items para no desbordar el dashboard
+                        this.activities = pendingActivities.slice(0, 8);
 
                         this.loading.set(false);
                       },
