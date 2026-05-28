@@ -14,7 +14,7 @@ class AsistenciasGRPCClient:
         target = AsistenciasGRPCClient.get_target()
         with grpc.insecure_channel(target) as channel:
             stub = asistencias_pb2_grpc.AsistenciasServiceStub(channel)
-            request = asistencias_pb2.GetEstadisticasRequest(materia_id=_safe_int(materia_id))
+            request = asistencias_pb2.GetEstadisticasAsistenciaRequest(materia_id=str(materia_id))
             try:
                 response = stub.GetEstadisticasAsistencia(request, timeout=3)
                 return {
@@ -34,8 +34,8 @@ class AsistenciasGRPCClient:
         with grpc.insecure_channel(target) as channel:
             stub = asistencias_pb2_grpc.AsistenciasServiceStub(channel)
             request = asistencias_pb2.GetAsistenciaAlumnoRequest(
-                alumno_id=_safe_int(alumno_id),
-                materia_id=_safe_int(materia_id)
+                alumno_id=str(alumno_id),
+                materia_id=str(materia_id)
             )
             try:
                 response = stub.GetAsistenciaAlumno(request, timeout=3)
@@ -60,10 +60,3 @@ class AsistenciasGRPCClient:
                 }
             except grpc.RpcError:
                 return None
-
-
-def _safe_int(value, default=0):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default

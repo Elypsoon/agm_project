@@ -45,7 +45,7 @@ import django
 django.setup()
 
 from django.conf import settings
-from src.asistencias.models import Sesion, Asistencia
+from src.asistencias.models import Sesion, Asistencia, AlumnoReplica
 
 
 class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
@@ -54,8 +54,20 @@ class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
         alumno_id = request.alumno_id
         materia_id = request.materia_id
 
+        # Intentar resolver alumno_id (ID interno vs user_id de Auth)
+        # Si request.alumno_id coincide con el id (interno) en AlumnoReplica,
+        # resolver al user_id ya que las asistencias QR se registran con el user_id.
+        try:
+            replica = AlumnoReplica.objects.filter(id=alumno_id).first()
+            if replica and replica.user_id:
+                db_alumno_id = replica.user_id
+            else:
+                db_alumno_id = alumno_id
+        except Exception:
+            db_alumno_id = alumno_id
+
         asistencias = Asistencia.objects.filter(
-            alumno_id=alumno_id,
+            alumno_id=db_alumno_id,
             materia_id=materia_id,
         ).select_related('sesion').order_by('-hora_registro')
 

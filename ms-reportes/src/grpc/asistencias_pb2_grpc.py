@@ -5,7 +5,7 @@ import warnings
 
 from . import asistencias_pb2 as asistencias__pb2
 
-GRPC_GENERATED_VERSION = '1.80.0'
+GRPC_GENERATED_VERSION = '1.67.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in proto/asistencias_pb2_grpc.py depends on'
+        + f' but the generated code in asistencias_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -35,14 +35,14 @@ class AsistenciasServiceStub(object):
             channel: A grpc.Channel.
         """
         self.GetAsistenciaAlumno = channel.unary_unary(
-                '/asistencias.AsistenciasService/GetAsistenciaAlumno',
+                '/agm.asistencias.AsistenciasService/GetAsistenciaAlumno',
                 request_serializer=asistencias__pb2.GetAsistenciaAlumnoRequest.SerializeToString,
-                response_deserializer=asistencias__pb2.AsistenciaAlumnoResponse.FromString,
+                response_deserializer=asistencias__pb2.AsistenciasAlumnoResponse.FromString,
                 _registered_method=True)
         self.GetEstadisticasAsistencia = channel.unary_unary(
-                '/asistencias.AsistenciasService/GetEstadisticasAsistencia',
-                request_serializer=asistencias__pb2.GetEstadisticasRequest.SerializeToString,
-                response_deserializer=asistencias__pb2.EstadisticasResponse.FromString,
+                '/agm.asistencias.AsistenciasService/GetEstadisticasAsistencia',
+                request_serializer=asistencias__pb2.GetEstadisticasAsistenciaRequest.SerializeToString,
+                response_deserializer=asistencias__pb2.EstadisticasAsistenciaResponse.FromString,
                 _registered_method=True)
 
 
@@ -67,18 +67,18 @@ def add_AsistenciasServiceServicer_to_server(servicer, server):
             'GetAsistenciaAlumno': grpc.unary_unary_rpc_method_handler(
                     servicer.GetAsistenciaAlumno,
                     request_deserializer=asistencias__pb2.GetAsistenciaAlumnoRequest.FromString,
-                    response_serializer=asistencias__pb2.AsistenciaAlumnoResponse.SerializeToString,
+                    response_serializer=asistencias__pb2.AsistenciasAlumnoResponse.SerializeToString,
             ),
             'GetEstadisticasAsistencia': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEstadisticasAsistencia,
-                    request_deserializer=asistencias__pb2.GetEstadisticasRequest.FromString,
-                    response_serializer=asistencias__pb2.EstadisticasResponse.SerializeToString,
+                    request_deserializer=asistencias__pb2.GetEstadisticasAsistenciaRequest.FromString,
+                    response_serializer=asistencias__pb2.EstadisticasAsistenciaResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'asistencias.AsistenciasService', rpc_method_handlers)
+            'agm.asistencias.AsistenciasService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('asistencias.AsistenciasService', rpc_method_handlers)
+    server.add_registered_method_handlers('agm.asistencias.AsistenciasService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -99,9 +99,9 @@ class AsistenciasService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/asistencias.AsistenciasService/GetAsistenciaAlumno',
+            '/agm.asistencias.AsistenciasService/GetAsistenciaAlumno',
             asistencias__pb2.GetAsistenciaAlumnoRequest.SerializeToString,
-            asistencias__pb2.AsistenciaAlumnoResponse.FromString,
+            asistencias__pb2.AsistenciasAlumnoResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -126,9 +126,9 @@ class AsistenciasService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/asistencias.AsistenciasService/GetEstadisticasAsistencia',
-            asistencias__pb2.GetEstadisticasRequest.SerializeToString,
-            asistencias__pb2.EstadisticasResponse.FromString,
+            '/agm.asistencias.AsistenciasService/GetEstadisticasAsistencia',
+            asistencias__pb2.GetEstadisticasAsistenciaRequest.SerializeToString,
+            asistencias__pb2.EstadisticasAsistenciaResponse.FromString,
             options,
             channel_credentials,
             insecure,
