@@ -14,10 +14,11 @@ import { DialogModule } from 'primeng/dialog';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { MessageService } from 'primeng/api';
 
-import { AlumnosService } from '../../../core/services/alumnos.service';
+import { AlumnosService, ImportResponse } from '../../../core/services/alumnos.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DocentesService } from '../../../core/services/docentes.service';
 import { PeriodosService } from '../../admin/periodos/periodos.service';
+
 
 interface MateriaCard {
   id: string;
@@ -251,9 +252,10 @@ export class MateriasComponent implements OnInit {
       next: (res) => {
         this.importLoading = false;
         if (res.success) {
-          const nuevos = res.data?.nuevos ?? 0;
-          const actualizados = res.data?.actualizados ?? 0;
-          this.uploadSuccess = `Importación exitosa. Nuevos alumnos: ${nuevos}, actualizados: ${actualizados}.`;
+          const nuevos = res.data?.alumnos_nuevos ?? 0;
+          const inscritos = res.data?.inscripciones_nuevas ?? 0;
+          const yaInscritos = res.data?.ya_inscritos ?? 0;
+          this.uploadSuccess = `Importación exitosa. Alumnos nuevos: ${nuevos}, inscripciones nuevas: ${inscritos}, ya inscritos: ${yaInscritos}.`;
           this.messageService.add({
             severity: 'success',
             summary: 'Alumnos importados',
