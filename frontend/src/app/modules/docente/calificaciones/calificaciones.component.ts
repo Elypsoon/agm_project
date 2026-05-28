@@ -457,6 +457,10 @@ export class CalificacionesComponent implements OnInit {
     if (file) {
       this.importSelectedFile = file;
     }
+    // Limpiar el valor para permitir seleccionar el mismo archivo de nuevo
+    if (event.target) {
+      event.target.value = '';
+    }
   }
 
   ejecutarImportacion() {
@@ -491,8 +495,8 @@ export class CalificacionesComponent implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error en Importación',
-          detail: err.error?.detail || 'Ocurrió un error al procesar el archivo Excel.',
-          life: 5000
+          detail: err.message || 'Ocurrió un error al procesar el archivo Excel.',
+          life: 8000
         });
       }
     });

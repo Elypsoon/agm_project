@@ -353,3 +353,13 @@
     }
   }
 }
+
+/* Eliminar barras de desplazamiento en modales y permitir que los dropdowns se desplieguen fuera sin recortarse */
+::ng-deep {
+  .p-dialog-content {
+    overflow: visible !important;
+  }
+  .form-dialog-content {
+    overflow: visible !important;
+  }
+}

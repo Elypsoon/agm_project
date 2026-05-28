@@ -209,7 +209,7 @@
 </div>
 
 <!-- Modal 1: Configurar Esquema de Ponderación -->
-<p-dialog header="Configurar Criterios de Ponderación" [(visible)]="showPondDialog" [modal]="true" [style]="{width: '520px'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
+<p-dialog header="Configurar Criterios de Ponderación" [(visible)]="showPondDialog" [modal]="true" [style]="{width: '520px'}" [contentStyle]="{'overflow': 'visible'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
   <div class="pond-dialog-content">
     <p class="dialog-desc">Estructura las categorías de evaluación de la materia. La suma de todas las categorías activas debe ser exactamente 100%.</p>
     
@@ -247,11 +247,11 @@
 </p-dialog>
 
 <!-- Modal 2: Agregar Nueva Actividad Evaluativa -->
-<p-dialog header="Agregar Nueva Actividad Evaluativa" [(visible)]="showActDialog" [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
+<p-dialog header="Agregar Nueva Actividad Evaluativa" [(visible)]="showActDialog" [modal]="true" [style]="{width: '450px'}" [contentStyle]="{'overflow': 'visible'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
   <div class="form-dialog-content">
     <div class="field-group">
       <label for="act-category" class="field-label">Categoría de Ponderación *</label>
-      <p-select id="act-category" [options]="ponderacionOptions()" optionLabel="nombre" optionValue="id" [(ngModel)]="nuevaActividad.ponderacion_id" placeholder="Selecciona una categoría" styleClass="w-full" />
+      <p-select id="act-category" [options]="ponderacionOptions()" optionLabel="nombre" optionValue="id" [(ngModel)]="nuevaActividad.ponderacion_id" placeholder="Selecciona una categoría" styleClass="w-full" appendTo="body" />
     </div>
 
     <div class="field-group">
@@ -272,13 +272,13 @@
 </p-dialog>
 
 <!-- Modal 3: Importar Calificaciones desde Teams (Excel) -->
-<p-dialog header="Importar Calificaciones desde Teams (Excel)" [(visible)]="showImportDialog" [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
+<p-dialog header="Importar Calificaciones desde Teams (Excel)" [(visible)]="showImportDialog" [modal]="true" [style]="{width: '450px'}" [contentStyle]="{'overflow': 'visible'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
   <div class="form-dialog-content">
     <p class="dialog-desc">Sube la plantilla de Excel descargada de Teams. Las notas se mapearán automáticamente utilizando la matrícula del alumno.</p>
     
     <div class="field-group">
       <label for="import-category" class="field-label">Criterio / Categoría de Destino *</label>
-      <p-select id="import-category" [options]="ponderaciones()" optionLabel="nombre" optionValue="nombre" [(ngModel)]="importSelectedCriterio" placeholder="Selecciona la categoría" styleClass="w-full" />
+      <p-select id="import-category" [options]="ponderaciones()" optionLabel="nombre" optionValue="nombre" [(ngModel)]="importSelectedCriterio" placeholder="Selecciona la categoría" styleClass="w-full" appendTo="body" />
     </div>
 
     <div class="field-group file-field">

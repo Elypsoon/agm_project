@@ -151,6 +151,9 @@ class AlumnosServiceServicer:
                     docente = Docente.objects.filter(correo_institucional__iexact=identifier).first()
 
             if not docente:
+                docente = Docente.objects.filter(user_id=docente_id).first()
+
+            if not docente:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 context.set_details("Docente no encontrado")
                 return alumnos_pb2.DocenteInfo()

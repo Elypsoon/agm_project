@@ -77,25 +77,28 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
             horarios = []
             for horario in materia.horarios.all():
                 horario_info = periodos_pb2.HorarioInfo(
+                    id=str(horario.id),
                     dia=horario.dia or "",
                     hora_inicio=horario.hora_inicio or "",
                     hora_fin=horario.hora_fin or "",
                     salon=horario.salon or "",
                     es_virtual=horario.es_virtual,
-                    profesor=materia.docente_nombre or ""
                 )
                 horarios.append(horario_info)
             
             return periodos_pb2.MateriaInfo(
                 id=str(materia.id),
                 nrc=materia.nrc,
-                nombre=materia.nombre,
                 clave=materia.clave or "",
+                nombre=materia.nombre,
                 seccion=materia.seccion or "",
                 docente_id=str(materia.docente_id) if materia.docente_id else "",
+                docente_nombre=materia.docente_nombre or "POR ASIGNAR",
                 periodo_id=str(materia.periodo_id),
-                horarios=horarios,
                 estado=materia.estado,
+                campus=materia.campus or "",
+                plan_estudios=materia.plan_estudios or "",
+                horarios=horarios,
             )
         except Materia.DoesNotExist:
             context.set_code(grpc.StatusCode.NOT_FOUND)
