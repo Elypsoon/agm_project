@@ -70,26 +70,48 @@ export class EstadisticasComponent implements OnInit {
 
   ngOnInit() {
     const user = this.authService.currentUser();
-    const userId = user?.id || 'alumno-1';
-    this.alumnoId.set(userId);
+    const email = user?.email;
+    
+    if (email) {
+      this.alumnosService.getAlumnos({ search: email, limit: 1 }).subscribe({
+        next: (searchRes) => {
+          if (searchRes.success && searchRes.data.alumnos.length > 0) {
+            const realId = searchRes.data.alumnos[0].id;
+            this.alumnoId.set(realId);
+            
+            // Cargar materias inscritas del alumno para el dropdown selector
+            this.alumnosService.getAlumno(realId).subscribe({
+              next: (res) => {
+                const inscripciones = res.data.inscripciones?.filter(i => i.activo) ?? [];
+                const options: MateriaOption[] = inscripciones.map(i => ({
+                  id: i.materia_id,
+                  nombre: i.materia_nombre
+                }));
 
-    // Cargar materias inscritas del alumno para el dropdown selector
-    this.alumnosService.getAlumno(userId).subscribe({
-      next: (res) => {
-        const inscripciones = res.data.inscripciones?.filter(i => i.activo) ?? [];
-        const options: MateriaOption[] = inscripciones.map(i => ({
-          id: i.materia_id,
-          nombre: i.materia_nombre
-        }));
-
-        this.materias.set(options);
-        this.procesarRuta();
-      },
-      error: () => {
-        this.materias.set([]);
-        this.procesarRuta();
-      }
-    });
+                this.materias.set(options);
+                this.procesarRuta();
+              },
+              error: () => {
+                this.materias.set([]);
+                this.procesarRuta();
+              }
+            });
+          } else {
+            this.materias.set([]);
+            this.procesarRuta();
+          }
+        },
+        error: () => {
+          this.materias.set([]);
+          this.procesarRuta();
+        }
+      });
+    } else {
+      const userId = user?.id || 'alumno-1';
+      this.alumnoId.set(userId);
+      this.materias.set([]);
+      this.procesarRuta();
+    }
   }
 
   private procesarRuta() {

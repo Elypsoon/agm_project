@@ -163,14 +163,10 @@
               <!-- Footer e interacciones (sólo activas en periodo actual) -->
               <div class="card-action-bar">
                 @if (isCurrentPeriodActive()) {
-                  <button class="action-btn text-info" pTooltip="Ver lista de alumnos" tooltipPosition="bottom">
-                    <i class="pi pi-users"></i>
-                    <span>Ver alumnos</span>
-                  </button>
-                  <button class="action-btn text-warning" pTooltip="Administrar ponderaciones" tooltipPosition="bottom">
-                    <i class="pi pi-sliders-h"></i>
-                    <span>Ponderaciones</span>
-                  </button>
+                  <span class="historical-footer" style="color: #22C55E;">
+                    <i class="pi pi-play-circle" style="color: #22C55E;"></i>
+                    Periodo activo en curso
+                  </span>
                 } @else {
                   <span class="historical-footer">
                     <i class="pi pi-lock"></i>

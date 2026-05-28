@@ -679,7 +679,6 @@ def obtener_estadisticas_docente(request, id):
     # Fetch active period using gRPC
     periodo_activo = None
     try:
-        from src.grpc.periodos_client import PeriodosGRPCClient
         periodo_activo = PeriodosGRPCClient.obtener_periodo_activo()
     except Exception as e:
         print(f"[-] Error al consultar periodo activo de MS-2 vía gRPC: {e}")
@@ -751,8 +750,12 @@ def obtener_estadisticas_alumno(request, id):
             status=400
         )
 
-    promedio = CalificacionesGRPCClient.obtener_promedio_alumno(alumno_id=id, materia_id=materia_id)
-    asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(alumno_id=id, materia_id=materia_id)
+    # Resolve the internal Alumno ID (database PK) from the user's Auth ID using gRPC
+    alumno_info = AlumnosGRPCClient.obtener_alumno_por_id(id)
+    real_alumno_id = alumno_info["id"] if alumno_info else id
+
+    promedio = CalificacionesGRPCClient.obtener_promedio_alumno(alumno_id=real_alumno_id, materia_id=materia_id)
+    asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(alumno_id=real_alumno_id, materia_id=materia_id)
     periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
 
     if promedio is None:
@@ -836,7 +839,7 @@ def obtener_estadisticas_alumno(request, id):
                 actividades_totales += len(p.get("actividades", []))
 
             for al in datos_concentrado.get("alumnos", []):
-                if str(al.get("alumno_id")) == str(id):
+                if str(al.get("alumno_id")) == str(real_alumno_id):
                     alumno_calificaciones = al.get("calificaciones", {})
                     for act_id, valor in alumno_calificaciones.items():
                         if valor is not None:
