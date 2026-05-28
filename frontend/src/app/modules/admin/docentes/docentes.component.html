@@ -115,23 +115,25 @@
 
 <!-- ── Assign Materia Dialog ── -->
 <p-dialog
-  [header]="'Asignar Materia — ' + (selectedDocente?.nombre || '')"
+  [header]="'Asignar Materias — ' + (selectedDocente?.nombre || '')"
   [(visible)]="showAssignDialog"
   [modal]="true"
-  [style]="{ width: '500px' }"
+  [style]="{ width: '650px' }"
+  [contentStyle]="{ 'overflow': 'visible' }"
   [draggable]="false">
 
   <div class="assign-body">
-    <label class="form-label">Selecciona la materia a asignar</label>
-    <p-select
+    <label class="form-label">Selecciona las materias a asignar</label>
+    <p-multiselect
       [options]="materiaOptions"
-      [(ngModel)]="selectedMateria"
+      [(ngModel)]="selectedMaterias"
       optionLabel="label"
       optionValue="value"
-      placeholder="— Seleccionar materia —"
+      placeholder="— Selecciona una o más materias —"
       styleClass="w-full"
       [filter]="true"
-      filterPlaceholder="Buscar materia..." />
+      filterPlaceholder="Buscar materia..."
+      appendTo="body" />
   </div>
 
   <ng-template pTemplate="footer">

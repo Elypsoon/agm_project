@@ -3,7 +3,10 @@
 import grpc
 import warnings
 
-from . import periodos_pb2 as proto_dot_periodos__pb2
+try:
+    import periodos_pb2 as periodos__pb2
+except ImportError:
+    from src.grpc import periodos_pb2 as periodos__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +21,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in proto/periodos_pb2_grpc.py depends on'
+        + ' but the generated code in periodos_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,18 +39,18 @@ class PeriodosServiceStub(object):
         """
         self.GetMateriaById = channel.unary_unary(
                 '/periodos.PeriodosService/GetMateriaById',
-                request_serializer=proto_dot_periodos__pb2.MateriaIdRequest.SerializeToString,
-                response_deserializer=proto_dot_periodos__pb2.MateriaInfo.FromString,
+                request_serializer=periodos__pb2.MateriaIdRequest.SerializeToString,
+                response_deserializer=periodos__pb2.MateriaInfo.FromString,
                 _registered_method=True)
         self.GetMateriasByDocente = channel.unary_unary(
                 '/periodos.PeriodosService/GetMateriasByDocente',
-                request_serializer=proto_dot_periodos__pb2.DocenteIdRequest.SerializeToString,
-                response_deserializer=proto_dot_periodos__pb2.MateriasListResponse.FromString,
+                request_serializer=periodos__pb2.DocenteIdRequest.SerializeToString,
+                response_deserializer=periodos__pb2.MateriasListResponse.FromString,
                 _registered_method=True)
         self.GetPeriodoActivo = channel.unary_unary(
                 '/periodos.PeriodosService/GetPeriodoActivo',
-                request_serializer=proto_dot_periodos__pb2.Empty.SerializeToString,
-                response_deserializer=proto_dot_periodos__pb2.PeriodoInfo.FromString,
+                request_serializer=periodos__pb2.Empty.SerializeToString,
+                response_deserializer=periodos__pb2.PeriodoInfo.FromString,
                 _registered_method=True)
 
 
@@ -78,18 +81,18 @@ def add_PeriodosServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetMateriaById': grpc.unary_unary_rpc_method_handler(
                     servicer.GetMateriaById,
-                    request_deserializer=proto_dot_periodos__pb2.MateriaIdRequest.FromString,
-                    response_serializer=proto_dot_periodos__pb2.MateriaInfo.SerializeToString,
+                    request_deserializer=periodos__pb2.MateriaIdRequest.FromString,
+                    response_serializer=periodos__pb2.MateriaInfo.SerializeToString,
             ),
             'GetMateriasByDocente': grpc.unary_unary_rpc_method_handler(
                     servicer.GetMateriasByDocente,
-                    request_deserializer=proto_dot_periodos__pb2.DocenteIdRequest.FromString,
-                    response_serializer=proto_dot_periodos__pb2.MateriasListResponse.SerializeToString,
+                    request_deserializer=periodos__pb2.DocenteIdRequest.FromString,
+                    response_serializer=periodos__pb2.MateriasListResponse.SerializeToString,
             ),
             'GetPeriodoActivo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetPeriodoActivo,
-                    request_deserializer=proto_dot_periodos__pb2.Empty.FromString,
-                    response_serializer=proto_dot_periodos__pb2.PeriodoInfo.SerializeToString,
+                    request_deserializer=periodos__pb2.Empty.FromString,
+                    response_serializer=periodos__pb2.PeriodoInfo.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -117,8 +120,8 @@ class PeriodosService(object):
             request,
             target,
             '/periodos.PeriodosService/GetMateriaById',
-            proto_dot_periodos__pb2.MateriaIdRequest.SerializeToString,
-            proto_dot_periodos__pb2.MateriaInfo.FromString,
+            periodos__pb2.MateriaIdRequest.SerializeToString,
+            periodos__pb2.MateriaInfo.FromString,
             options,
             channel_credentials,
             insecure,
@@ -144,8 +147,8 @@ class PeriodosService(object):
             request,
             target,
             '/periodos.PeriodosService/GetMateriasByDocente',
-            proto_dot_periodos__pb2.DocenteIdRequest.SerializeToString,
-            proto_dot_periodos__pb2.MateriasListResponse.FromString,
+            periodos__pb2.DocenteIdRequest.SerializeToString,
+            periodos__pb2.MateriasListResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -171,8 +174,8 @@ class PeriodosService(object):
             request,
             target,
             '/periodos.PeriodosService/GetPeriodoActivo',
-            proto_dot_periodos__pb2.Empty.SerializeToString,
-            proto_dot_periodos__pb2.PeriodoInfo.FromString,
+            periodos__pb2.Empty.SerializeToString,
+            periodos__pb2.PeriodoInfo.FromString,
             options,
             channel_credentials,
             insecure,

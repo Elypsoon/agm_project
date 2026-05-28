@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { extractErrorMessage } from '../../../core/utils/error-utils';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
@@ -69,7 +70,7 @@ export class LoginComponent {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+        this.errorMessage.set(extractErrorMessage(err, 'Error al iniciar sesión. Verifica tus credenciales.'));
       }
     });
   }
