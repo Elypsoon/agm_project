@@ -36,32 +36,32 @@ class Command(BaseCommand):
 
         channel = connection.channel()
 
-        # Exchange for course/period events
-        channel.exchange_declare(exchange='periodos_exchange', exchange_type='topic', durable=True)
+        channel.exchange_declare(exchange='agm.events', exchange_type='topic', durable=True)
         
-        queue_name = 'periodos_resolved_docentes_queue'
+        queue_name = 'ms_periodos_response_queue'
         channel.queue_declare(queue=queue_name, durable=True)
         
-        # Bind queue to listen specifically for the reply event topic
         channel.queue_bind(
-            exchange='periodos_exchange',
+            exchange='agm.events',
             queue=queue_name,
-            routing_key='docentes.ids.resueltos'
+            routing_key='alumnos.docentes.linked'
         )
 
         def callback(ch, method, properties, body):
             try:
                 payload = json.loads(body)
-                mappings = payload.get('mappings', [])
-                logger.info(f"Received resolving map event cluster containing {len(mappings)} items.")
+                vinculos = payload.get('vinculos', [])
+                periodo_id = payload.get('periodo_id') 
+                
+                logger.info(f"Received resolving map event cluster containing {len(vinculos)} items.")
 
                 updated_count = 0
-                for mapping in mappings:
-                    nrc = mapping.get('nrc')
-                    docente_id = mapping.get('docente_id')
+                for vinculo in vinculos:
+                    nrc = vinculo.get('nrc')
+                    docente_id = vinculo.get('docente_id')
 
                     if nrc and docente_id:
-                        materias = Materia.objects.filter(nrc=nrc, docente_id__isnull=True)
+                        materias = Materia.objects.filter(nrc=nrc, periodo_id=periodo_id)
                         if materias.exists():
                             materias.update(docente_id=docente_id)
                             updated_count += materias.count()
