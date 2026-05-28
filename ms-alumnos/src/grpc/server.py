@@ -70,6 +70,9 @@ class AlumnosServiceServicer:
             alumno = Alumno.objects.filter(id=alumno_id).first()
 
             if not alumno:
+                alumno = Alumno.objects.filter(user_id=alumno_id).first()
+
+            if not alumno:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 context.set_details("Alumno no encontrado")
                 return alumnos_pb2.AlumnoInfo()
