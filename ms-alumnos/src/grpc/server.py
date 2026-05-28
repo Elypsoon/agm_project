@@ -128,13 +128,27 @@ class AlumnosServiceServicer:
             return alumnos_pb2.IsAlumnoEnMateriaResponse()
 
     def GetDocenteById(self, request, context):
-        """Obtener informacion de un docente por su ID."""
+        """Obtener informacion de un docente por su ID (o user_id / email)."""
         from src.models.docente import Docente
         from src.grpc import alumnos_pb2
 
         try:
-            docente_id = UUID(request.docente_id)
-            docente = Docente.objects.filter(id=docente_id).first()
+            identifier = request.docente_id
+            docente = None
+
+            # 1. Intentar buscar por UUID de docente (PK) o user_id
+            try:
+                docente_id = UUID(identifier)
+                docente = Docente.objects.filter(id=docente_id).first()
+                if not docente:
+                    docente = Docente.objects.filter(user_id=docente_id).first()
+            except ValueError:
+                # No es un UUID válido, buscar por correo
+                pass
+
+            # 2. Intentar buscar por correo institucional
+            if not docente:
+                docente = Docente.objects.filter(correo_institucional=identifier).first()
 
             if not docente:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -148,10 +162,6 @@ class AlumnosServiceServicer:
                 cubiculo=docente.cubiculo or "",
             )
 
-        except ValueError:
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details("docente_id no es un UUID valido")
-            return alumnos_pb2.DocenteInfo()
         except Exception as e:
             logger.error(f"gRPC GetDocenteById error: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
