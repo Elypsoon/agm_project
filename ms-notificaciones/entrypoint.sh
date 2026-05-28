@@ -6,8 +6,6 @@ if [ "$#" -eq 0 ] || [ "$1" = "sh" ]; then
     echo "Aplicando migraciones"
     python manage.py migrate --noinput
 
-    echo "Iniciando servidor gRPC en segundo plano..."
-    PYTHONPATH=. python src/grpc/server.py &
 
     echo "Iniciando Consumidor RabbitMQ en segundo plano..."
     python manage.py run_consumer &
