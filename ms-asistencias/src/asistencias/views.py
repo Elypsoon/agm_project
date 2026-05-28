@@ -19,9 +19,7 @@ from rest_framework.response import Response
 
 from .crypto import encrypt_qr_payload
 
-from .grpc_clients import get_materias_by_docente
-
-from .grpc_clients import get_materias_by_docente, get_alumno_nombre
+from .grpc_clients import get_materias_by_docente, get_alumno_nombre, get_docente_id_by_email_or_user_id
 
 from .models import Sesion, Asistencia
 from .serializers import (
@@ -273,7 +271,21 @@ class MisMateriasSesionView(APIView):
     permission_classes = [EsDocente]
 
     def get(self, request):
-        docente_id = str(request.user.user_id)
+        user_id = str(request.user.user_id)
+        email = getattr(request.user, 'email', '')
+
+        # Intentar resolver el docente_id real usando email o user_id
+        docente_id = None
+        if email:
+            docente_id = get_docente_id_by_email_or_user_id(email)
+        
+        if not docente_id:
+            docente_id = get_docente_id_by_email_or_user_id(user_id)
+
+        if not docente_id:
+            # Fallback al user_id si no se pudo resolver (por caída de gRPC, etc.)
+            docente_id = user_id
+
         cache_key = f"materias_docente:{docente_id}"
 
         # 1. Intentar obtener del caché
