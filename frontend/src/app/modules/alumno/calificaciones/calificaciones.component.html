@@ -5,7 +5,12 @@
       <p class="page-subtitle">Desglose parcial — Primavera 2026</p>
     </div>
     <div class="promedio-badge">
-      <span class="promedio-val">{{ promedioGeneral() }}</span>
+      <span class="promedio-val">
+        {{ promedioGeneral() }}
+        @if (promedioGeneral() !== '—' && anyPartial()) {
+          <span class="partial-indicator" title="Promedio general parcial (sujeto a cambios)">*</span>
+        }
+      </span>
       <span class="promedio-label">Promedio general</span>
     </div>
   </div>
@@ -71,6 +76,9 @@
                     [class.grade-pending]="row.promedio === null">
               {{ row.promedio !== null ? (row.promedio | number:'1.1-1') : '—' }}
             </strong>
+            @if (row.promedio !== null && isPartial(row)) {
+              <span class="partial-indicator" title="Promedio parcial (sujeto a cambios)">*</span>
+            }
           </td>
           <td style="text-align:center">
             <p-tag [value]="estadoLabel(row.estado)" [severity]="estadoSeverity(row.estado)" />
@@ -101,7 +109,7 @@
                         @for (calif of cat.calificaciones; track calif.actividad) {
                           <li class="actividad-item">
                             <span class="act-name">{{ calif.actividad }}</span>
-                            <span class="act-val">{{ calif.valor / 10 | number:'1.1-1' }}</span>
+                            <span class="act-val">{{ calif.valor !== null && calif.valor !== undefined ? (calif.valor / 10 | number:'1.1-1') : '—' }}</span>
                           </li>
                         } @empty {
                           <li class="empty-activities-item">
@@ -114,9 +122,9 @@
                     <div class="card-cat-footer">
                       <span class="promedio-cat-label">Promedio Categoría</span>
                       <span class="promedio-cat-val"
-                            [class.promedio-cat-val--ok]="cat.promedio_categoria >= 60"
-                            [class.promedio-cat-val--fail]="cat.promedio_categoria < 60">
-                        {{ cat.promedio_categoria / 10 | number:'1.1-1' }}
+                            [class.promedio-cat-val--ok]="cat.promedio_categoria !== null && cat.promedio_categoria >= 60"
+                            [class.promedio-cat-val--fail]="cat.promedio_categoria !== null && cat.promedio_categoria < 60">
+                        {{ cat.promedio_categoria !== null && cat.promedio_categoria !== undefined ? (cat.promedio_categoria / 10 | number:'1.1-1') : '—' }}
                       </span>
                     </div>
                   </div>

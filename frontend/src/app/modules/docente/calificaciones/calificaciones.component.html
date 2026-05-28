@@ -142,14 +142,20 @@
         }
 
         <td style="text-align:center">
-          <strong [class.low-grade]="row.promedio_real < 60">
-            {{ row.promedio_real | number:'1.1-2' }}
+          <strong [class.low-grade]="row.promedio_real !== null && row.promedio_real < 60">
+            {{ row.promedio_real !== null ? (row.promedio_real | number:'1.1-2') : '—' }}
           </strong>
+          @if (row.promedio_real !== null && isPartial(row)) {
+            <span class="partial-indicator" pTooltip="Promedio parcial (sujeto a cambios)" tooltipPosition="top">*</span>
+          }
         </td>
         <td style="text-align:center">
-          <strong [class.low-grade]="row.promedio_redondeado < 6" style="font-size: 1.1em; color: var(--primary-color)">
-            {{ row.promedio_redondeado }}
+          <strong [class.low-grade]="row.promedio_redondeado !== null && row.promedio_redondeado < 6" style="font-size: 1.1em; color: var(--primary-color)">
+            {{ row.promedio_redondeado !== null ? row.promedio_redondeado : '—' }}
           </strong>
+          @if (row.promedio_redondeado !== null && isPartial(row)) {
+            <span class="partial-indicator" pTooltip="Promedio parcial (sujeto a cambios)" tooltipPosition="top">*</span>
+          }
         </td>
         <td style="text-align:center">
           <p-tag [value]="estadoLabel(row)" [severity]="estadoSeverity(row)" />

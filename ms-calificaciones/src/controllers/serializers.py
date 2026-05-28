@@ -48,7 +48,9 @@ class CalificacionInputSerializer(serializers.Serializer):
         max_digits=5,
         decimal_places=2,
         min_value=Decimal('0.00'),
-        max_value=Decimal('100.00')
+        max_value=Decimal('100.00'),
+        allow_null=True,
+        required=False
     )
     observacion = serializers.CharField(max_length=1000, required=False, allow_blank=True, default='')
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -48,6 +48,8 @@ export class CalificacionesComponent implements OnInit {
     return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
   };
 
+  readonly anyPartial = computed(() => this.calificaciones().some(r => this.isPartial(r)));
+
   barOptions = {
     plugins: { legend: { display: false } },
     scales: {
@@ -73,70 +75,85 @@ export class CalificacionesComponent implements OnInit {
   });
 
   ngOnInit() {
-    const userId = this.authService.currentUser()?.id;
-    if (userId) {
-      this.alumnosService.getAlumno(userId).subscribe({
-        next: (alumnoRes) => {
-          const activeInscripciones = alumnoRes.data.inscripciones?.filter(i => i.activo) ?? [];
-          
-          if (activeInscripciones.length === 0) {
-            this.calificaciones.set([]);
-            this.loading.set(false);
-            return;
-          }
+    const user = this.authService.currentUser();
+    const email = user?.email;
 
-          // Fetch statistics for each enrolled course in parallel using forkJoin
-          const requests = activeInscripciones.map(insc => 
-            this.calificacionesService.getEstadisticasAlumno(userId, insc.materia_id).pipe(
-              catchError((error) => {
-                // Return an empty model on 404/other error to stay fully resilient
-                return of({
-                  materia_id: insc.materia_id,
-                  promedio_real: null,
-                  promedio_redondeado: null,
-                  desglose: []
-                });
-              })
-            )
-          );
-
-          forkJoin(requests).subscribe({
-            next: (statsList) => {
-              const rows: CalificacionRow[] = activeInscripciones.map((insc, idx) => {
-                const stats = statsList[idx];
-                const desglose = stats?.desglose ?? [];
+    if (email) {
+      this.alumnosService.getAlumnos({ search: email, limit: 1 }).subscribe({
+        next: (searchRes) => {
+          if (searchRes.success && searchRes.data.alumnos.length > 0) {
+            const realId = searchRes.data.alumnos[0].id;
+            
+            this.alumnosService.getAlumno(realId).subscribe({
+              next: (alumnoRes) => {
+                const activeInscripciones = alumnoRes.data.inscripciones?.filter(i => i.activo) ?? [];
                 
-                const mappedGrades = this.mapDesglose(desglose);
-                
-                // Convert promedio_real from scale 0-100 to scale 0-10
-                const promedio = stats?.promedio_real !== null && stats?.promedio_real !== undefined
-                  ? stats.promedio_real / 10 
-                  : null;
-                
-                let estado: 'aprobado' | 'reprobado' | 'en_curso' = 'en_curso';
-                if (promedio !== null) {
-                  estado = promedio >= 6.0 ? 'aprobado' : 'reprobado';
+                if (activeInscripciones.length === 0) {
+                  this.calificaciones.set([]);
+                  this.loading.set(false);
+                  return;
                 }
 
-                return {
-                  materia: insc.materia_nombre || 'Materia',
-                  docente: insc.docente_nombre || 'Por asignar',
-                  parcial1: mappedGrades.parcial1,
-                  parcial2: mappedGrades.parcial2,
-                  parcial3: mappedGrades.parcial3,
-                  promedio: promedio,
-                  estado: estado,
-                  desglose: desglose
-                };
-              });
+                // Fetch statistics for each enrolled course in parallel using forkJoin
+                const requests = activeInscripciones.map(insc => 
+                  this.calificacionesService.getEstadisticasAlumno(realId, insc.materia_id).pipe(
+                    catchError((error) => {
+                      // Return an empty model on 404/other error to stay fully resilient
+                      return of({
+                        materia_id: insc.materia_id,
+                        promedio_real: null,
+                        promedio_redondeado: null,
+                        desglose: []
+                      });
+                    })
+                  )
+                );
 
-              this.calificaciones.set(rows);
-              this.loading.set(false);
-            },
-            error: () => {
-              this.loadMockOrEmpty();
-            }
-          });
+                forkJoin(requests).subscribe({
+                  next: (statsList) => {
+                    const rows: CalificacionRow[] = activeInscripciones.map((insc, idx) => {
+                      const stats = statsList[idx];
+                      const desglose = stats?.desglose ?? [];
+                      
+                      const mappedGrades = this.mapDesglose(desglose);
+                      
+                      // Use absolute rounded average in scale 0-10
+                      const promedio = stats?.promedio_redondeado !== null && stats?.promedio_redondeado !== undefined
+                        ? stats.promedio_redondeado 
+                        : null;
+                      
+                      let estado: 'aprobado' | 'reprobado' | 'en_curso' = 'en_curso';
+                      if (promedio !== null) {
+                        estado = promedio >= 6 ? 'aprobado' : 'reprobado';
+                      }
+
+                      return {
+                        materia: insc.materia_nombre || 'Materia',
+                        docente: insc.docente_nombre || 'Por asignar',
+                        parcial1: mappedGrades.parcial1,
+                        parcial2: mappedGrades.parcial2,
+                        parcial3: mappedGrades.parcial3,
+                        promedio: promedio,
+                        estado: estado,
+                        desglose: desglose
+                      };
+                    });
+
+                    this.calificaciones.set(rows);
+                    this.loading.set(false);
+                  },
+                  error: () => {
+                    this.loadMockOrEmpty();
+                  }
+                });
+              },
+              error: () => {
+                this.loadMockOrEmpty();
+              }
+            });
+          } else {
+            this.loadMockOrEmpty();
+          }
         },
         error: () => {
           this.loadMockOrEmpty();
@@ -163,13 +180,13 @@ export class CalificacionesComponent implements OnInit {
     const c2 = findByName('2') || findByName('parcial 2') || findByName('p2');
     const c3 = findByName('3') || findByName('parcial 3') || findByName('p3');
 
-    if (c1) p1 = c1.promedio_categoria / 10;
-    if (c2) p2 = c2.promedio_categoria / 10;
-    if (c3) p3 = c3.promedio_categoria / 10;
+    if (c1) p1 = (c1.promedio_categoria !== null && c1.promedio_categoria !== undefined) ? c1.promedio_categoria / 10 : null;
+    if (c2) p2 = (c2.promedio_categoria !== null && c2.promedio_categoria !== undefined) ? c2.promedio_categoria / 10 : null;
+    if (c3) p3 = (c3.promedio_categoria !== null && c3.promedio_categoria !== undefined) ? c3.promedio_categoria / 10 : null;
 
-    if (p1 === null && desglose[0]) p1 = desglose[0].promedio_categoria / 10;
-    if (p2 === null && desglose[1]) p2 = desglose[1].promedio_categoria / 10;
-    if (p3 === null && desglose[2]) p3 = desglose[2].promedio_categoria / 10;
+    if (p1 === null && desglose[0]) p1 = (desglose[0].promedio_categoria !== null && desglose[0].promedio_categoria !== undefined) ? desglose[0].promedio_categoria / 10 : null;
+    if (p2 === null && desglose[1]) p2 = (desglose[1].promedio_categoria !== null && desglose[1].promedio_categoria !== undefined) ? desglose[1].promedio_categoria / 10 : null;
+    if (p3 === null && desglose[2]) p3 = (desglose[2].promedio_categoria !== null && desglose[2].promedio_categoria !== undefined) ? desglose[2].promedio_categoria / 10 : null;
 
     return { parcial1: p1, parcial2: p2, parcial3: p3 };
   }
@@ -197,5 +214,18 @@ export class CalificacionesComponent implements OnInit {
       aprobado: 'success', reprobado: 'danger', en_curso: 'info'
     };
     return map[estado] ?? 'secondary';
+  }
+
+  isPartial(row: CalificacionRow): boolean {
+    let totalActs = 0;
+    let gradedActs = 0;
+    if (!row.desglose) return false;
+    for (const cat of row.desglose) {
+      if (cat.calificaciones) {
+        totalActs += cat.calificaciones.length;
+        gradedActs += cat.calificaciones.filter((c: any) => c.valor !== null && c.valor !== undefined).length;
+      }
+    }
+    return gradedActs > 0 && gradedActs < totalActs;
   }
 }

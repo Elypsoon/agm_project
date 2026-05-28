@@ -58,7 +58,7 @@ class CalificacionesServicer:
                 calificaciones_pb = [
                     calificaciones_pb2.CalificacionActividad(
                         actividad_id=c['actividad_id'],
-                        valor=c['valor'],
+                        valor=c['valor'] if c['valor'] is not None else -1.0,
                     )
                     for c in a['calificaciones']
                 ]
@@ -67,8 +67,8 @@ class CalificacionesServicer:
                         alumno_id=a['alumno_id'],
                         alumno_matricula=a['alumno_matricula'],
                         alumno_nombre=a['alumno_nombre'],
-                        promedio_real=a['promedio_real'],
-                        promedio_redondeado=a['promedio_redondeado'],
+                        promedio_real=a['promedio_real'] if a['promedio_real'] is not None else -1.0,
+                        promedio_redondeado=a['promedio_redondeado'] if a['promedio_redondeado'] is not None else -1,
                         calificaciones=calificaciones_pb,
                     )
                 )
@@ -106,8 +106,8 @@ class CalificacionesServicer:
         try:
             data = get_estadisticas_alumno(request.alumno_id, request.materia_id)
             return calificaciones_pb2.PromedioResponse(
-                promedio_real=data['promedio_real'],
-                promedio_redondeado=data['promedio_redondeado'],
+                promedio_real=data['promedio_real'] if data['promedio_real'] is not None else -1.0,
+                promedio_redondeado=data['promedio_redondeado'] if data['promedio_redondeado'] is not None else -1,
             )
         except Ponderacion.DoesNotExist:
             import grpc
@@ -134,12 +134,10 @@ class CalificacionesServicer:
         from src.grpc import calificaciones_pb2
         try:
             data = get_estadisticas_materia(request.materia_id)
-            if data['promedio_grupo'] is None:
-                return calificaciones_pb2.StatsResponse(total_alumnos=data['total_alumnos'])
             return calificaciones_pb2.StatsResponse(
-                promedio_grupo=data['promedio_grupo'],
-                calificacion_max=data['calificacion_max'],
-                calificacion_min=data['calificacion_min'],
+                promedio_grupo=data['promedio_grupo'] if data['promedio_grupo'] is not None else -1.0,
+                calificacion_max=data['calificacion_max'] if data['calificacion_max'] is not None else -1.0,
+                calificacion_min=data['calificacion_min'] if data['calificacion_min'] is not None else -1.0,
                 total_alumnos=data['total_alumnos'],
             )
         except Ponderacion.DoesNotExist:

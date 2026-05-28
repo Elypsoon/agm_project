@@ -84,30 +84,65 @@ def build_concentrado(materia_id):
     alumnos_result = []
     for alumno in alumnos:
         alumno_id = str(alumno['id'])
-        total = Decimal('0.00')
+        total_weight = Decimal('0.00')
+        weighted_sum = Decimal('0.00')
+        weighted_sum_absolute = Decimal('0.00')
+        total_configured_weight = Decimal('0.00')
         califs_alumno = []
+        total_graded = 0
 
         for pond in ponderaciones_list:
             actividades = list(pond.actividades.all())
-            if not actividades:
-                promedio_cat = Decimal('0.00')
-            else:
+            promedio_cat = Decimal('0.00')
+            has_grades_in_cat = False
+
+            if actividades:
                 suma = Decimal('0.00')
+                suma_abs = Decimal('0.00')
+                count_graded = 0
                 for actividad in actividades:
                     act_id = str(actividad.id)
-                    valor = calificaciones.get((act_id, alumno_id), Decimal('0.00'))
-                    suma += valor
-                    califs_alumno.append({
-                        'actividad_id': act_id,
-                        'valor': float(valor),
-                    })
-                promedio_cat = suma / Decimal(len(actividades))
+                    valor = calificaciones.get((act_id, alumno_id), None)
+                    if valor is not None:
+                        suma += valor
+                        suma_abs += valor
+                        count_graded += 1
+                        total_graded += 1
+                        califs_alumno.append({
+                            'actividad_id': act_id,
+                            'valor': float(valor),
+                        })
+                    else:
+                        califs_alumno.append({
+                            'actividad_id': act_id,
+                            'valor': None,
+                        })
+                if count_graded > 0:
+                    promedio_cat = suma / Decimal(count_graded)
+                    has_grades_in_cat = True
 
-            porcentaje = pond.porcentaje / Decimal('100.00')
-            total += promedio_cat * porcentaje
+                # Absolute average of category (treating None as 0)
+                promedio_cat_abs = suma_abs / Decimal(len(actividades))
+                porcentaje = pond.porcentaje / Decimal('100.00')
+                weighted_sum_absolute += promedio_cat_abs * porcentaje
+                total_configured_weight += porcentaje
 
-        promedio_real = float(total.quantize(Decimal('0.01')))
-        promedio_redondeado = redondeo(total)
+            if has_grades_in_cat:
+                porcentaje = pond.porcentaje / Decimal('100.00')
+                weighted_sum += promedio_cat * porcentaje
+                total_weight += porcentaje
+
+        if total_graded > 0 and total_weight > 0:
+            total = weighted_sum / total_weight
+            promedio_real = float(total.quantize(Decimal('0.01')))
+        else:
+            promedio_real = None
+
+        if total_graded > 0 and total_configured_weight > 0:
+            total_abs = weighted_sum_absolute / total_configured_weight
+            promedio_redondeado = redondeo(total_abs)
+        else:
+            promedio_redondeado = None
 
         alumnos_result.append({
             'alumno_id': alumno_id,

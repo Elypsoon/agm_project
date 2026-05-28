@@ -30,8 +30,8 @@ export interface ComparativaGrupo {
 }
 
 export interface CalificacionesKPI {
-  promedio_real: number;
-  promedio_redondeado: number;
+  promedio_real: number | null;
+  promedio_redondeado: number | null;
   comparativa_grupo: ComparativaGrupo;
 }
 
