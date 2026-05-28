@@ -30,8 +30,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         );
       }
 
-      const message = err.error?.message || err.error?.detail || err.error?.error || err.statusText || 'Error desconocido';
-      return throwError(() => new Error(message));
+      return throwError(() => err);
     })
   );
 };

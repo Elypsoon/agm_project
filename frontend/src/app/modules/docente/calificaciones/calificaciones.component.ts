@@ -222,6 +222,13 @@ export class CalificacionesComponent implements OnInit {
     if (!this.selectedMateriaId) return;
     this.loading.set(true);
 
+    // Reset previous states to avoid showing stale data from another materia during loading or error
+    this.concentrado.set(null);
+    this.ponderaciones.set([]);
+    this.esquemaBloqueado.set(false);
+    this.allActividades.set([]);
+    this.hasPonderaciones.set(false);
+
     forkJoin({
       concentrado: this.calificacionesService.getConcentrado(this.selectedMateriaId),
       ponderaciones: this.calificacionesService.getPonderaciones(this.selectedMateriaId)

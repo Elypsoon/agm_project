@@ -107,10 +107,19 @@ class AlumnoDetailView(APIView):
     """GET /alumnos/<uuid>/ — Detalle con inscripciones."""
 
     def get(self, request, alumno_id):
+        from django.core.exceptions import ValidationError
         try:
-            alumno = Alumno.objects.prefetch_related("inscripciones").get(id=alumno_id)
-        except Alumno.DoesNotExist:
-            return Response({"detail": "Alumno no encontrado"}, status=404)
+            # Intentar buscar por id o por user_id de forma flexible
+            alumno = Alumno.objects.prefetch_related("inscripciones").filter(
+                Q(id=alumno_id) | Q(user_id=alumno_id)
+            ).first()
+            if not alumno:
+                raise Alumno.DoesNotExist
+        except (Alumno.DoesNotExist, ValidationError, ValueError):
+            try:
+                alumno = Alumno.objects.prefetch_related("inscripciones").get(correo=alumno_id)
+            except Alumno.DoesNotExist:
+                return Response({"detail": "Alumno no encontrado"}, status=404)
 
         serializer = AlumnoDetalleSerializer(alumno)
         return Response({
