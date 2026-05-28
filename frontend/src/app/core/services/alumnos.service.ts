@@ -48,8 +48,10 @@ export interface ImportResponse {
   success: boolean;
   message: string;
   data?: {
-    nuevos: number;
-    actualizados: number;
+    alumnos_nuevos: number;
+    inscripciones_nuevas: number;
+    ya_inscritos: number;
+    total_extraidos: number;
     errores: number;
   };
 }
