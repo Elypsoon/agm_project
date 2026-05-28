@@ -88,10 +88,6 @@ def get_materias_by_docente(docente_id: str) -> list:
 
 
 def get_alumno_nombre(alumno_id: str) -> str:
-    """
-    Llama a MS-3 via gRPC para obtener el nombre del alumno.
-    Si MS-3 no está disponible retorna string vacío como fallback.
-    """
     host = config('MS_ALUMNOS_GRPC_HOST', default='ms-alumnos')
     port = config('MS_ALUMNOS_GRPC_PORT', default='50053')
 
@@ -112,6 +108,7 @@ def get_alumno_nombre(alumno_id: str) -> str:
             alumnos_pb2.GetAlumnoByIdRequest(alumno_id=str(alumno_id)),
             timeout=2
         )
+        print(f"[DEBUG] MS-3 nombre: {response.nombre_completo}, matricula: {response.matricula}")
 
         return response.nombre_completo or ''
 

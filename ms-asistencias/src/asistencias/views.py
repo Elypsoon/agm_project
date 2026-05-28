@@ -152,6 +152,8 @@ class RegistrarAsistenciaView(APIView):
 
         # Obtener nombre del alumno via gRPC a MS-3 (con fallback a matrícula)
         nombre_alumno = get_alumno_nombre(str(alumno_id)) or matricula
+        print(f"[DEBUG] nombre_alumno: {nombre_alumno}, alumno_id: {alumno_id}")
+
 
         data = AsistenciaSerializer(asistencia).data
         data['nombre_alumno'] = nombre_alumno
