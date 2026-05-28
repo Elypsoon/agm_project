@@ -30,6 +30,7 @@ message HorarioInfo {
   string hora_fin = 4;    // e.g., "1059"
   string salon = 5;       // e.g., "12EMA4/208" or "POR ASIGNAR"
   bool es_virtual = 6;
+  string profesor = 7;    // Docente name
 }
 
 message MateriaInfo {

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0eperiodos.proto\x12\x08periodos\"&\n\x10MateriaIdRequest\x12\x12\n\nmateria_id\x18\x01 \x01(\t\"&\n\x10\x44ocenteIdRequest\x12\x12\n\ndocente_id\x18\x01 \x01(\t\"\x07\n\x05\x45mpty\"p\n\x0bHorarioInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0b\n\x03\x64ia\x18\x02 \x01(\t\x12\x13\n\x0bhora_inicio\x18\x03 \x01(\t\x12\x10\n\x08hora_fin\x18\x04 \x01(\t\x12\r\n\x05salon\x18\x05 \x01(\t\x12\x12\n\nes_virtual\x18\x06 \x01(\x08\"\xf6\x01\n\x0bMateriaInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0b\n\x03nrc\x18\x02 \x01(\t\x12\r\n\x05\x63lave\x18\x03 \x01(\t\x12\x0e\n\x06nombre\x18\x04 \x01(\t\x12\x0f\n\x07seccion\x18\x05 \x01(\t\x12\x12\n\ndocente_id\x18\x06 \x01(\t\x12\x16\n\x0e\x64ocente_nombre\x18\x07 \x01(\t\x12\x12\n\nperiodo_id\x18\x08 \x01(\t\x12\x0e\n\x06\x65stado\x18\t \x01(\t\x12\x0e\n\x06\x63\x61mpus\x18\n \x01(\t\x12\x15\n\rplan_estudios\x18\x0b \x01(\t\x12\'\n\x08horarios\x18\x0c \x03(\x0b\x32\x15.periodos.HorarioInfo\"?\n\x14MateriasListResponse\x12\'\n\x08materias\x18\x01 \x03(\x0b\x32\x15.periodos.MateriaInfo\"b\n\x0bPeriodoInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0e\n\x06nombre\x18\x02 \x01(\t\x12\x14\n\x0c\x66\x65\x63ha_inicio\x18\x03 \x01(\t\x12\x11\n\tfecha_fin\x18\x04 \x01(\t\x12\x0e\n\x06\x65stado\x18\x05 \x01(\t2\xe6\x01\n\x0fPeriodosService\x12\x43\n\x0eGetMateriaById\x12\x1a.periodos.MateriaIdRequest\x1a\x15.periodos.MateriaInfo\x12R\n\x14GetMateriasByDocente\x12\x1a.periodos.DocenteIdRequest\x1a\x1e.periodos.MateriasListResponse\x12:\n\x10GetPeriodoActivo\x12\x0f.periodos.Empty\x1a\x15.periodos.PeriodoInfob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0eperiodos.proto\x12\x08periodos\"&\n\x10MateriaIdRequest\x12\x12\n\nmateria_id\x18\x01 \x01(\t\"&\n\x10\x44ocenteIdRequest\x12\x12\n\ndocente_id\x18\x01 \x01(\t\"\x07\n\x05\x45mpty\"\x82\x01\n\x0bHorarioInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0b\n\x03\x64ia\x18\x02 \x01(\t\x12\x13\n\x0bhora_inicio\x18\x03 \x01(\t\x12\x10\n\x08hora_fin\x18\x04 \x01(\t\x12\r\n\x05salon\x18\x05 \x01(\t\x12\x12\n\nes_virtual\x18\x06 \x01(\x08\x12\x10\n\x08profesor\x18\x07 \x01(\t\"\xf6\x01\n\x0bMateriaInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0b\n\x03nrc\x18\x02 \x01(\t\x12\r\n\x05\x63lave\x18\x03 \x01(\t\x12\x0e\n\x06nombre\x18\x04 \x01(\t\x12\x0f\n\x07seccion\x18\x05 \x01(\t\x12\x12\n\ndocente_id\x18\x06 \x01(\t\x12\x16\n\x0e\x64ocente_nombre\x18\x07 \x01(\t\x12\x12\n\nperiodo_id\x18\x08 \x01(\t\x12\x0e\n\x06\x65stado\x18\t \x01(\t\x12\x0e\n\x06\x63\x61mpus\x18\n \x01(\t\x12\x15\n\rplan_estudios\x18\x0b \x01(\t\x12\'\n\x08horarios\x18\x0c \x03(\x0b\x32\x15.periodos.HorarioInfo\"?\n\x14MateriasListResponse\x12\'\n\x08materias\x18\x01 \x03(\x0b\x32\x15.periodos.MateriaInfo\"b\n\x0bPeriodoInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0e\n\x06nombre\x18\x02 \x01(\t\x12\x14\n\x0c\x66\x65\x63ha_inicio\x18\x03 \x01(\t\x12\x11\n\tfecha_fin\x18\x04 \x01(\t\x12\x0e\n\x06\x65stado\x18\x05 \x01(\t2\xe6\x01\n\x0fPeriodosService\x12\x43\n\x0eGetMateriaById\x12\x1a.periodos.MateriaIdRequest\x1a\x15.periodos.MateriaInfo\x12R\n\x14GetMateriasByDocente\x12\x1a.periodos.DocenteIdRequest\x1a\x1e.periodos.MateriasListResponse\x12:\n\x10GetPeriodoActivo\x12\x0f.periodos.Empty\x1a\x15.periodos.PeriodoInfob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,14 +37,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DOCENTEIDREQUEST']._serialized_end=106
   _globals['_EMPTY']._serialized_start=108
   _globals['_EMPTY']._serialized_end=115
-  _globals['_HORARIOINFO']._serialized_start=117
-  _globals['_HORARIOINFO']._serialized_end=229
-  _globals['_MATERIAINFO']._serialized_start=232
-  _globals['_MATERIAINFO']._serialized_end=478
-  _globals['_MATERIASLISTRESPONSE']._serialized_start=480
-  _globals['_MATERIASLISTRESPONSE']._serialized_end=543
-  _globals['_PERIODOINFO']._serialized_start=545
-  _globals['_PERIODOINFO']._serialized_end=643
-  _globals['_PERIODOSSERVICE']._serialized_start=646
-  _globals['_PERIODOSSERVICE']._serialized_end=876
+  _globals['_HORARIOINFO']._serialized_start=118
+  _globals['_HORARIOINFO']._serialized_end=248
+  _globals['_MATERIAINFO']._serialized_start=251
+  _globals['_MATERIAINFO']._serialized_end=497
+  _globals['_MATERIASLISTRESPONSE']._serialized_start=499
+  _globals['_MATERIASLISTRESPONSE']._serialized_end=562
+  _globals['_PERIODOINFO']._serialized_start=564
+  _globals['_PERIODOINFO']._serialized_end=662
+  _globals['_PERIODOSSERVICE']._serialized_start=665
+  _globals['_PERIODOSSERVICE']._serialized_end=895
 # @@protoc_insertion_point(module_scope)
