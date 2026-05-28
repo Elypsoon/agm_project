@@ -112,7 +112,7 @@ class AsistenciasServicer(asistencias_pb2_grpc.AsistenciasServiceServicer):
 
 def serve():
     port = settings.GRPC_PORT
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=50))
     asistencias_pb2_grpc.add_AsistenciasServiceServicer_to_server(AsistenciasServicer(), server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
