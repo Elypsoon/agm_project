@@ -24,6 +24,7 @@ export interface Asistencia {
   alumno_id: string;
   materia_id: string;
   matricula: string;
+  nombre_alumno?: string;
   estado: 'presente' | 'retardo' | 'ausente';
   hora_registro: string;
 }

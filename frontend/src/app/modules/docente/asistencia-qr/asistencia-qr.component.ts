@@ -48,7 +48,7 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
 
   // Estado del escáner
   status = signal<ScanStatus>('idle');
-  scanHistory = signal<{ matricula: string; estado: string; timestamp: string }[]>([]);
+  scanHistory = signal<{ nombre: string; matricula: string; estado: string; timestamp: string }[]>([]);
 
   private stream: MediaStream | null = null;
   private animationId: number | null = null;
@@ -255,6 +255,7 @@ export class AsistenciaQrComponent implements OnInit, OnDestroy {
             hour: '2-digit', minute: '2-digit'
           });
           this.scanHistory.update(h => [{
+            nombre: res.data.nombre_alumno || res.data.matricula,
             matricula: res.data.matricula,
             estado: res.data.estado,
             timestamp

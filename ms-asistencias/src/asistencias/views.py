@@ -21,6 +21,8 @@ from .crypto import encrypt_qr_payload
 
 from .grpc_clients import get_materias_by_docente
 
+from .grpc_clients import get_materias_by_docente, get_alumno_nombre
+
 from .models import Sesion, Asistencia
 from .serializers import (
     SesionSerializer,
@@ -148,7 +150,11 @@ class RegistrarAsistenciaView(APIView):
             qr_token_hash=token_hash,
         )
 
+        # Obtener nombre del alumno via gRPC a MS-3 (con fallback a matrícula)
+        nombre_alumno = get_alumno_nombre(str(alumno_id)) or matricula
+
         data = AsistenciaSerializer(asistencia).data
+        data['nombre_alumno'] = nombre_alumno
         return _response_ok(data, f"Asistencia registrada: {estado}.", status.HTTP_201_CREATED)
 
 

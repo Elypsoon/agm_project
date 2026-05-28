@@ -85,3 +85,36 @@ def get_materias_by_docente(docente_id: str) -> list:
     except Exception as e:
         print(f"[gRPC Client] MS-2 no disponible: {str(e)}")
         return []
+
+
+def get_alumno_nombre(alumno_id: str) -> str:
+    """
+    Llama a MS-3 via gRPC para obtener el nombre del alumno.
+    Si MS-3 no está disponible retorna string vacío como fallback.
+    """
+    host = config('MS_ALUMNOS_GRPC_HOST', default='ms-alumnos')
+    port = config('MS_ALUMNOS_GRPC_PORT', default='50053')
+
+    try:
+        grpc = _load_grpc()
+        grpc_generated_path = '/app/src/grpc/grpc_generated'
+
+        if grpc_generated_path not in sys.path:
+            sys.path.insert(0, grpc_generated_path)
+
+        import alumnos_pb2
+        import alumnos_pb2_grpc
+
+        channel = grpc.insecure_channel(f'{host}:{port}')
+        stub = alumnos_pb2_grpc.AlumnosServiceStub(channel)
+
+        response = stub.GetAlumnoById(
+            alumnos_pb2.GetAlumnoByIdRequest(alumno_id=str(alumno_id)),
+            timeout=2
+        )
+
+        return response.nombre_completo or ''
+
+    except Exception as e:
+        print(f"[gRPC Client] MS-3 no disponible: {str(e)}")
+        return ''

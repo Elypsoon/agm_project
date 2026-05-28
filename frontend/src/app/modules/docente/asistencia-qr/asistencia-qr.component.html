@@ -182,11 +182,11 @@
           [class.history-success]="item.estado === 'presente'"
         >
           <div class="history-avatar">
-            {{ item.matricula.substring(0, 2).toUpperCase() }}
+            {{ (item.nombre || item.matricula || 'AL').substring(0, 2).toUpperCase() }}
           </div>
           <div class="history-info">
-            <span class="history-name">{{ item.matricula }}</span>
-            <span class="history-time">{{ item.timestamp }}</span>
+            <span class="history-name">{{ item.nombre || item.matricula }}</span>
+            <span class="history-time">{{ item.matricula }} · {{ item.timestamp }}</span>
           </div>
           <p-tag
             [value]="item.estado"
