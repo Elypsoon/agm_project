@@ -124,6 +124,8 @@ services:
     ports:
       - "3004:3004"
       - "50054:50054"
+    volumes:
+      - ./ms-calificaciones:/app # Hot-reload en desarrollo
     environment:
       - DB_HOST=db-calificaciones
       - DB_PORT=5432
