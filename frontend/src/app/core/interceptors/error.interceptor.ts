@@ -31,13 +31,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       const message = err.error?.message || err.error?.detail || err.error?.error || err.statusText || 'Error desconocido';
-      const customError = new Error(message);
-      // Preservar propiedades útiles del error HTTP original para uso en los componentes
-      Object.defineProperties(customError, {
-        status: { value: err.status, enumerable: true },
-        error: { value: err.error, enumerable: true }
-      });
-      return throwError(() => customError);
+      return throwError(() => new Error(message));
     })
   );
 };

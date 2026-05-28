@@ -18,11 +18,11 @@ import { ReportesService } from '../../../core/services/reportes.service';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { DocentesService } from '../../../core/services/docentes.service';
-import { 
-  CalificacionesService, 
-  ConcentradoResponse, 
-  ActividadHeader, 
-  AlumnoConcentrado, 
+import {
+  CalificacionesService,
+  ConcentradoResponse,
+  ActividadHeader,
+  AlumnoConcentrado,
   CategoriaPonderacion,
   PonderacionResponse
 } from '../../../core/services/calificaciones.service';
@@ -37,7 +37,7 @@ interface MateriaOption {
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, SelectModule, TagModule,
-    ButtonModule, InputNumberModule, InputTextModule, ToastModule, 
+    ButtonModule, InputNumberModule, InputTextModule, ToastModule,
     SkeletonModule, DialogModule, TooltipModule, MenuModule
   ],
   providers: [MessageService],
@@ -105,21 +105,21 @@ export class CalificacionesComponent implements OnInit {
   actividadAEliminar = signal<{ id: string; nombre: string } | null>(null);
 
   // Estadísticas locales basadas en los alumnos cargados
-  readonly aprobados = computed(() => 
+  readonly aprobados = computed(() =>
     this.concentrado()?.alumnos.filter(c => this.tieneCalificaciones(c) && c.promedio_redondeado >= 6).length || 0
   );
-  readonly reprobados = computed(() => 
+  readonly reprobados = computed(() =>
     this.concentrado()?.alumnos.filter(c => this.tieneCalificaciones(c) && c.promedio_redondeado < 6).length || 0
   );
-  readonly sinCalificar = computed(() => 
+  readonly sinCalificar = computed(() =>
     this.concentrado()?.alumnos.filter(c => !this.tieneCalificaciones(c)).length || 0
   );
 
-  readonly totalPonderaciones = computed(() => 
+  readonly totalPonderaciones = computed(() =>
     this.newPonderaciones().reduce((sum, item) => sum + item.porcentaje, 0)
   );
 
-  readonly ponderacionOptions = computed(() => 
+  readonly ponderacionOptions = computed(() =>
     this.ponderaciones().map(p => ({
       id: p.id,
       nombre: `${p.nombre} (${p.porcentaje}%)`
@@ -136,8 +136,7 @@ export class CalificacionesComponent implements OnInit {
     this.calificacionesService.getPeriodoActivo().subscribe({
       next: (periodo) => {
         this.periodoActivo.set(periodo);
-        const email = this.authService.currentUser()?.email || '';
-        const docenteId = this.authService.currentUser()?.id || null;
+        const email = this.authService.currentUser()?.email;
 
         if (email) {
           // 2. Obtener el perfil del docente para conseguir el docente_id real (ms-alumnos)
@@ -457,10 +456,6 @@ export class CalificacionesComponent implements OnInit {
     if (file) {
       this.importSelectedFile = file;
     }
-    // Limpiar el valor para permitir seleccionar el mismo archivo de nuevo
-    if (event.target) {
-      event.target.value = '';
-    }
   }
 
   ejecutarImportacion() {
@@ -495,8 +490,8 @@ export class CalificacionesComponent implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error en Importación',
-          detail: err.message || 'Ocurrió un error al procesar el archivo Excel.',
-          life: 8000
+          detail: err.error?.detail || 'Ocurrió un error al procesar el archivo Excel.',
+          life: 5000
         });
       }
     });
@@ -566,7 +561,7 @@ export class CalificacionesComponent implements OnInit {
     this.setGrade(row, actividadId, valor);
   }
 
-  onRowEditInit(row: AlumnoConcentrado) {}
+  onRowEditInit(row: AlumnoConcentrado) { }
 
   onRowEditSave(row: AlumnoConcentrado) {
     const s = new Set(this.editedRows());
@@ -644,9 +639,9 @@ export class CalificacionesComponent implements OnInit {
 
   exportarCalificaciones(formato: 'pdf' | 'xlsx') {
     if (!this.selectedMateriaId) return;
-    
+
     const email = this.authService.currentUser()?.email || 'docente@buap.mx';
-    
+
     this.messageService.add({
       severity: 'info',
       summary: 'Exportando',
@@ -696,9 +691,9 @@ export class CalificacionesComponent implements OnInit {
 
   exportarAsistencias(formato: 'pdf' | 'xlsx') {
     if (!this.selectedMateriaId) return;
-    
+
     const email = this.authService.currentUser()?.email || 'docente@buap.mx';
-    
+
     this.messageService.add({
       severity: 'info',
       summary: 'Exportando',
@@ -747,4 +742,5 @@ export class CalificacionesComponent implements OnInit {
   }
 
 
+}
 }

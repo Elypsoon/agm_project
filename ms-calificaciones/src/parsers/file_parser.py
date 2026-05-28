@@ -1,11 +1,7 @@
 import csv
 import io
-import warnings
 from decimal import Decimal, InvalidOperation
 import openpyxl
-
-# Ignorar advertencias inofensivas de openpyxl sobre estilos por defecto o extensiones no soportadas
-warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 def _normalizar(texto):
     """Normaliza un texto para facilitar la comparación de cabeceras de columnas.
@@ -60,91 +56,35 @@ def parsear_archivo(nombre_archivo, archivo_bytes):
     else:
         raise ValueError(f"Formato de archivo no soportado: .{extension}. Use .xlsx o .csv")
 
-    # Encontrar la fila de cabecera con flexibilidad de idiomas (Español/Inglés) y variaciones de formato
+    # Encontrar la fila de cabecera
     cabecera_idx = -1
     for idx, fila in enumerate(filas_raw):
+        # Buscar la fila que contenga 'Nombre completo' y 'Dirección de correo'
         fila_norm = [_normalizar(c) for c in fila]
-        # Buscar indicios de una fila de cabeceras que contenga columnas clave de identificación
-        tiene_nombre = any('nombre' in c or 'name' in c for c in fila_norm)
-        tiene_correo = any('correo' in c or 'email' in c or 'dirección' in c or 'direccion' in c for c in fila_norm)
-        if tiene_nombre and tiene_correo:
+        if 'nombre completo' in fila_norm and 'dirección de correo' in fila_norm:
             cabecera_idx = idx
             break
 
     if cabecera_idx == -1:
-        raise ValueError(
-            "No se encontró la fila de cabecera con datos de estudiantes en el archivo. "
-            "Asegúrese de que contenga columnas como 'Nombre completo' y 'Dirección de correo'."
-        )
+        raise ValueError("No se encontró la fila de cabecera con 'Nombre completo' en el archivo.")
 
     cabecera = filas_raw[cabecera_idx]
     cabecera_norm = [_normalizar(c) for c in cabecera]
 
-    # Mapear dinámicamente los índices de las columnas mediante coincidencia parcial y de fallbacks
-    col_correo = -1
-    col_nombre = -1
-    col_tarea = -1
-    col_puntos = -1
-    col_criterio = -1
-    col_comentarios = -1
-    col_estado = -1
-    col_vencimiento = -1
+    # Mapear los índices de las columnas
+    try:
+        col_correo = cabecera_norm.index('dirección de correo')
+        col_nombre = cabecera_norm.index('nombre completo')
+        col_tarea = cabecera_norm.index('tareas')
+        col_puntos = cabecera_norm.index('puntos')
+    except ValueError as e:
+        raise ValueError(f"Falta una columna requerida en el archivo de Teams: {e}")
 
-    for idx, col in enumerate(cabecera_norm):
-        if not col:
-            continue
-        
-        # Correo / Email
-        if 'correo' in col or 'email' in col:
-            col_correo = idx
-        
-        # Criterio de evaluación / Rubrica / Ponderación (debe ir antes de 'nombre' para evitar falsas coincidencias en 'nombre del criterio')
-        elif 'criterio' in col or 'rubric' in col or 'ponderacion' in col:
-            col_criterio = idx
-        
-        # Nombre Completo
-        elif 'nombre completo' in col or 'full name' in col:
-            col_nombre = idx
-        elif 'nombre' in col or 'name' in col:
-            if col_nombre == -1:  # Fallback si no hay coincidencia exacta de nombre completo
-                col_nombre = idx
-        
-        # Tareas
-        elif 'tarea' in col or 'task' in col:
-            col_tarea = idx
-        
-        # Puntos / Calificación / Nota
-        elif 'punto' in col or 'point' in col or 'nota' in col or 'calificacion' in col or 'grade' in col:
-            col_puntos = idx
-        
-        # Comentarios / Feedback
-        elif 'comentario' in col or 'feedback' in col:
-            col_comentarios = idx
-        
-        # Estado
-        elif 'estado' in col or 'status' in col:
-            col_estado = idx
-        
-        # Fecha de vencimiento / Due Date
-        elif 'vencimiento' in col or 'due' in col:
-            col_vencimiento = idx
-
-    # Validar columnas requeridas
-    columnas_faltantes = []
-    if col_correo == -1:
-        columnas_faltantes.append("Dirección de correo")
-    if col_nombre == -1:
-        columnas_faltantes.append("Nombre completo")
-    if col_tarea == -1:
-        columnas_faltantes.append("Tareas")
-    if col_puntos == -1:
-        columnas_faltantes.append("Puntos")
-
-    if columnas_faltantes:
-        raise ValueError(
-            f"Falta una o más columnas requeridas en el archivo de Teams: {', '.join(columnas_faltantes)}. "
-            f"Columnas detectadas en el archivo: {', '.join([c for c in cabecera if c])}"
-        )
+    # Columnas opcionales
+    col_criterio = cabecera_norm.index('nombre del criterio de evaluación') if 'nombre del criterio de evaluación' in cabecera_norm else -1
+    col_comentarios = cabecera_norm.index('comentarios') if 'comentarios' in cabecera_norm else -1
+    col_estado = cabecera_norm.index('estado') if 'estado' in cabecera_norm else -1
+    col_vencimiento = cabecera_norm.index('fecha de vencimiento') if 'fecha de vencimiento' in cabecera_norm else -1
 
     registros = []
     errores = []

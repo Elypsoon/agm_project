@@ -8,218 +8,199 @@
     </div>
     <div style="display: flex; gap: 8px; align-items: center;">
       @if (selectedMateriaId && hasPonderaciones()) {
-        <p-button 
-          label="Editar Criterios" 
-          icon="pi pi-cog" 
-          severity="secondary" 
-          styleClass="mr-2" 
-          [disabled]="esquemaBloqueado()"
-          [pTooltip]="esquemaBloqueado() ? 'Criterios bloqueados porque ya existen calificaciones registradas.' : 'Modificar los porcentajes o categorías de evaluación'"
-          tooltipPosition="bottom"
-          (onClick)="abrirEditarPonderacionesModal()" />
-        <p-button label="Importar Excel" icon="pi pi-file-excel" severity="secondary" styleClass="mr-2" (onClick)="abrirImportarModal()" />
-        <p-button label="Añadir Actividad" icon="pi pi-plus" severity="secondary" styleClass="mr-2" (onClick)="abrirActividadModal()" />
+      <p-button label="Editar Criterios" icon="pi pi-cog" severity="secondary" styleClass="mr-2"
+        [disabled]="esquemaBloqueado()"
+        [pTooltip]="esquemaBloqueado() ? 'Criterios bloqueados porque ya existen calificaciones registradas.' : 'Modificar los porcentajes o categorías de evaluación'"
+        tooltipPosition="bottom" (onClick)="abrirEditarPonderacionesModal()" />
+      <p-button label="Importar Excel" icon="pi pi-file-excel" severity="secondary" styleClass="mr-2"
+        (onClick)="abrirImportarModal()" />
+      <p-button label="Añadir Actividad" icon="pi pi-plus" severity="secondary" styleClass="mr-2"
+        (onClick)="abrirActividadModal()" />
       }
       @if (selectedMateriaId) {
-        <p-button label="Exportar Calificaciones" icon="pi pi-download" severity="info" [outlined]="true" (onClick)="menuCalif.toggle($event)" />
-        <p-menu #menuCalif [model]="itemsCalificaciones" [popup]="true" appendTo="body" />
+      <p-button label="Exportar Calificaciones" icon="pi pi-download" severity="info" [outlined]="true"
+        (onClick)="menuCalif.toggle($event)" />
+      <p-menu #menuCalif [model]="itemsCalificaciones" [popup]="true" />
 
-        <p-button label="Exportar Asistencias" icon="pi pi-calendar" severity="success" [outlined]="true" (onClick)="menuAsist.toggle($event)" />
-        <p-menu #menuAsist [model]="itemsAsistencias" [popup]="true" appendTo="body" />
+      <p-button label="Exportar Asistencias" icon="pi pi-calendar" severity="success" [outlined]="true"
+        (onClick)="menuAsist.toggle($event)" />
+      <p-menu #menuAsist [model]="itemsAsistencias" [popup]="true" />
       }
-      <p-button label="Guardar cambios" icon="pi pi-save"
-        [disabled]="!editedRows().size"
+      <p-button label="Guardar cambios" icon="pi pi-save" [disabled]="!editedRows().size"
         (onClick)="guardarCambios()" />
     </div>
   </div>
 
   <!-- Selector de materia -->
   <div class="filter-bar">
-    <p-select
-      id="materia-select"
-      [options]="materiaOptions()"
-      optionLabel="nombre"
-      optionValue="id"
-      [(ngModel)]="selectedMateriaId"
-      placeholder="Selecciona una materia"
-      (onChange)="onMateriaChange()"
+    <p-select id="materia-select" [options]="materiaOptions()" optionLabel="nombre" optionValue="id"
+      [(ngModel)]="selectedMateriaId" placeholder="Selecciona una materia" (onChange)="onMateriaChange()"
       styleClass="materia-select" />
 
     @if (selectedMateriaId && hasPonderaciones() && allActividades().length > 0) {
-      <div class="stats-chips">
-        <span class="chip chip--success">
-          <i class="pi pi-check-circle"></i>
-          {{ aprobados() }} aprobados
-        </span>
-        <span class="chip chip--danger">
-          <i class="pi pi-times-circle"></i>
-          {{ reprobados() }} reprobados
-        </span>
-        <span class="chip chip--info">
-          <i class="pi pi-clock"></i>
-          {{ sinCalificar() }} sin calificar
-        </span>
-      </div>
+    <div class="stats-chips">
+      <span class="chip chip--success">
+        <i class="pi pi-check-circle"></i>
+        {{ aprobados() }} aprobados
+      </span>
+      <span class="chip chip--danger">
+        <i class="pi pi-times-circle"></i>
+        {{ reprobados() }} reprobados
+      </span>
+      <span class="chip chip--info">
+        <i class="pi pi-clock"></i>
+        {{ sinCalificar() }} sin calificar
+      </span>
+    </div>
     }
   </div>
 
   <!-- Tabla -->
   @if (loading()) {
-    <div class="skeleton-table">
-      @for (i of [1,2,3,4,5]; track i) {
-        <p-skeleton height="48px" borderRadius="8px" />
-      }
-    </div>
-  } @else if (selectedMateriaId) {
-    
-    @if (!hasPonderaciones()) {
-      <!-- Estado vacío: sin esquema de ponderaciones -->
-      <div class="empty-state page-enter">
-        <i class="pi pi-percentage empty-icon" style="color: var(--primary-color)"></i>
-        <h3>Materia sin Esquema de Ponderación</h3>
-        <p>Para poder registrar actividades y evaluar a los estudiantes, primero debes configurar la estructura de criterios de evaluación de esta materia.</p>
-        <p class="empty-subtitle">Crea las categorías necesarias (como Exámenes, Tareas, Proyectos, etc.) y asigna sus porcentajes para sumar el 100%.</p>
-        <p-button label="Configurar Criterios ahora" icon="pi pi-cog" (onClick)="abrirPonderacionesModal()" styleClass="mt-2" />
-      </div>
-    } @else if (allActividades().length === 0) {
-      <!-- Estado vacío: sin actividades registradas -->
-      <div class="empty-state page-enter">
-        <i class="pi pi-calendar-plus empty-icon" style="color: var(--primary-color)"></i>
-        <h3>Sin Actividades Registradas</h3>
-        <p>Ya configuraste tus criterios de ponderación, pero aún no has registrado ninguna actividad para evaluar.</p>
-        <p-button label="Agregar mi Primera Actividad" icon="pi pi-plus" (onClick)="abrirActividadModal()" />
-      </div>
-    } @else {
-      <!-- Vista real de Calificaciones con Tabla Dinámica -->
-      <p-table
-        id="tabla-calificaciones"
-        [value]="concentrado()?.alumnos || []"
-        [paginator]="true"
-        [rows]="15"
-        [rowsPerPageOptions]="[10, 15, 25]"
-        editMode="row"
-        dataKey="alumno_id"
-        styleClass="p-datatable-gridlines"
-        [tableStyle]="{'min-width': '700px'}">
-
-        <ng-template #header>
-          <tr>
-            <th style="width:3rem">#</th>
-            <th pSortableColumn="alumno_matricula">Matrícula <p-sortIcon field="alumno_matricula"/></th>
-            <th pSortableColumn="alumno_nombre">Alumno <p-sortIcon field="alumno_nombre"/></th>
-            
-            <!-- Encabezados dinámicos de actividades -->
-            @for (act of allActividades(); track act.actividad_id) {
-              <th style="text-align:center">
-                <div class="th-activity-container">
-                  <span class="activity-name">{{ act.actividad_nombre }}</span>
-                  <button 
-                    type="button"
-                    class="btn-delete-activity" 
-                    pTooltip="Eliminar actividad" 
-                    tooltipPosition="top"
-                    (click)="solicitarEliminarActividad(act.actividad_id, act.actividad_nombre)">
-                    <i class="pi pi-trash"></i>
-                  </button>
-                </div>
-              </th>
-            }
-            
-            <th style="text-align:center">Promedio (100)</th>
-            <th style="text-align:center">Nota (10)</th>
-            <th style="text-align:center">Estado</th>
-            <th style="text-align:center">Editar</th>
-          </tr>
-        </ng-template>
-
-        <ng-template #body let-row let-editing="editing" let-ri="rowIndex">
-          <tr [pEditableRow]="row">
-            <td class="row-num">{{ ri + 1 }}</td>
-            <td><span class="mono-id">{{ row.alumno_matricula }}</span></td>
-            <td>{{ row.alumno_nombre }}</td>
-            
-            <!-- Celdas dinámicas de calificaciones por actividad -->
-            @for (act of allActividades(); track act.actividad_id) {
-              <td style="text-align:center">
-                <p-cellEditor>
-                  <ng-template #input>
-                    <p-inputNumber 
-                      [ngModel]="getGrade(row, act.actividad_id)"
-                      [min]="0" 
-                      [max]="100"
-                      [maxFractionDigits]="2" 
-                      styleClass="cal-input"
-                      (ngModelChange)="onCalChange(row, act.actividad_id, $event)" />
-                  </ng-template>
-                  <ng-template #output>
-                    <span [class.low-grade]="getGrade(row, act.actividad_id) !== null && getGrade(row, act.actividad_id)! < 60">
-                      {{ getGrade(row, act.actividad_id) !== null ? (getGrade(row, act.actividad_id) | number:'1.1-2') : '—' }}
-                    </span>
-                  </ng-template>
-                </p-cellEditor>
-              </td>
-            }
-
-            <td style="text-align:center">
-              <strong [class.low-grade]="row.promedio_real < 60">
-                {{ row.promedio_real | number:'1.1-2' }}
-              </strong>
-            </td>
-            <td style="text-align:center">
-              <strong [class.low-grade]="row.promedio_redondeado < 6" style="font-size: 1.1em; color: var(--primary-color)">
-                {{ row.promedio_redondeado }}
-              </strong>
-            </td>
-            <td style="text-align:center">
-              <p-tag
-                [value]="estadoLabel(row)"
-                [severity]="estadoSeverity(row)" />
-            </td>
-            <td style="text-align:center">
-              @if (!editing) {
-                <p-button icon="pi pi-pencil" [text]="true" size="small"
-                  pInitEditableRow (onClick)="onRowEditInit(row)" />
-              } @else {
-                <p-button icon="pi pi-check" [text]="true" severity="success" size="small"
-                  pSaveEditableRow (onClick)="onRowEditSave(row)" />
-                <p-button icon="pi pi-times" [text]="true" severity="danger" size="small"
-                  pCancelEditableRow (onClick)="onRowEditCancel(row)" />
-              }
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template #emptymessage>
-          <tr>
-            <td [attr.colspan]="allActividades().length + 6" style="text-align:center;padding:48px;color:#94A3B8">
-              <i class="pi pi-users" style="font-size:32px;display:block;margin-bottom:12px"></i>
-              No hay alumnos inscritos en esta materia
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
+  <div class="skeleton-table">
+    @for (i of [1,2,3,4,5]; track i) {
+    <p-skeleton height="48px" borderRadius="8px" />
     }
+  </div>
+  } @else if (selectedMateriaId) {
+
+  @if (!hasPonderaciones()) {
+  <!-- Estado vacío: sin esquema de ponderaciones -->
+  <div class="empty-state page-enter">
+    <i class="pi pi-percentage empty-icon" style="color: var(--primary-color)"></i>
+    <h3>Materia sin Esquema de Ponderación</h3>
+    <p>Para poder registrar actividades y evaluar a los estudiantes, primero debes configurar la estructura de criterios
+      de evaluación de esta materia.</p>
+    <p class="empty-subtitle">Crea las categorías necesarias (como Exámenes, Tareas, Proyectos, etc.) y asigna sus
+      porcentajes para sumar el 100%.</p>
+    <p-button label="Configurar Criterios ahora" icon="pi pi-cog" (onClick)="abrirPonderacionesModal()"
+      styleClass="mt-2" />
+  </div>
+  } @else if (allActividades().length === 0) {
+  <!-- Estado vacío: sin actividades registradas -->
+  <div class="empty-state page-enter">
+    <i class="pi pi-calendar-plus empty-icon" style="color: var(--primary-color)"></i>
+    <h3>Sin Actividades Registradas</h3>
+    <p>Ya configuraste tus criterios de ponderación, pero aún no has registrado ninguna actividad para evaluar.</p>
+    <p-button label="Agregar mi Primera Actividad" icon="pi pi-plus" (onClick)="abrirActividadModal()" />
+  </div>
   } @else {
-    <div class="empty-state">
-      <i class="pi pi-book empty-icon"></i>
-      <h3>Selecciona una materia</h3>
-      <p>Elige una materia del selector para ver y editar las calificaciones.</p>
-    </div>
+  <!-- Vista real de Calificaciones con Tabla Dinámica -->
+  <p-table id="tabla-calificaciones" [value]="concentrado()?.alumnos || []" [paginator]="true" [rows]="15"
+    [rowsPerPageOptions]="[10, 15, 25]" editMode="row" dataKey="alumno_id" styleClass="p-datatable-gridlines"
+    [tableStyle]="{'min-width': '700px'}">
+
+    <ng-template #header>
+      <tr>
+        <th style="width:3rem">#</th>
+        <th pSortableColumn="alumno_matricula">Matrícula <p-sortIcon field="alumno_matricula" /></th>
+        <th pSortableColumn="alumno_nombre">Alumno <p-sortIcon field="alumno_nombre" /></th>
+
+        <!-- Encabezados dinámicos de actividades -->
+        @for (act of allActividades(); track act.actividad_id) {
+        <th style="text-align:center">
+          <div class="th-activity-container">
+            <span class="activity-name">{{ act.actividad_nombre }}</span>
+            <button type="button" class="btn-delete-activity" pTooltip="Eliminar actividad" tooltipPosition="top"
+              (click)="solicitarEliminarActividad(act.actividad_id, act.actividad_nombre)">
+              <i class="pi pi-trash"></i>
+            </button>
+          </div>
+        </th>
+        }
+
+        <th style="text-align:center">Promedio (100)</th>
+        <th style="text-align:center">Nota (10)</th>
+        <th style="text-align:center">Estado</th>
+        <th style="text-align:center">Editar</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-row let-editing="editing" let-ri="rowIndex">
+      <tr [pEditableRow]="row">
+        <td class="row-num">{{ ri + 1 }}</td>
+        <td><span class="mono-id">{{ row.alumno_matricula }}</span></td>
+        <td>{{ row.alumno_nombre }}</td>
+
+        <!-- Celdas dinámicas de calificaciones por actividad -->
+        @for (act of allActividades(); track act.actividad_id) {
+        <td style="text-align:center">
+          <p-cellEditor>
+            <ng-template #input>
+              <p-inputNumber [ngModel]="getGrade(row, act.actividad_id)" [min]="0" [max]="100" [maxFractionDigits]="2"
+                styleClass="cal-input" (ngModelChange)="onCalChange(row, act.actividad_id, $event)" />
+            </ng-template>
+            <ng-template #output>
+              <span
+                [class.low-grade]="getGrade(row, act.actividad_id) !== null && getGrade(row, act.actividad_id)! < 60">
+                {{ getGrade(row, act.actividad_id) !== null ? (getGrade(row, act.actividad_id) | number:'1.1-2') : '—'
+                }}
+              </span>
+            </ng-template>
+          </p-cellEditor>
+        </td>
+        }
+
+        <td style="text-align:center">
+          <strong [class.low-grade]="row.promedio_real < 60">
+            {{ row.promedio_real | number:'1.1-2' }}
+          </strong>
+        </td>
+        <td style="text-align:center">
+          <strong [class.low-grade]="row.promedio_redondeado < 6" style="font-size: 1.1em; color: var(--primary-color)">
+            {{ row.promedio_redondeado }}
+          </strong>
+        </td>
+        <td style="text-align:center">
+          <p-tag [value]="estadoLabel(row)" [severity]="estadoSeverity(row)" />
+        </td>
+        <td style="text-align:center">
+          @if (!editing) {
+          <p-button icon="pi pi-pencil" [text]="true" size="small" pInitEditableRow (onClick)="onRowEditInit(row)" />
+          } @else {
+          <p-button icon="pi pi-check" [text]="true" severity="success" size="small" pSaveEditableRow
+            (onClick)="onRowEditSave(row)" />
+          <p-button icon="pi pi-times" [text]="true" severity="danger" size="small" pCancelEditableRow
+            (onClick)="onRowEditCancel(row)" />
+          }
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+      <tr>
+        <td [attr.colspan]="allActividades().length + 6" style="text-align:center;padding:48px;color:#94A3B8">
+          <i class="pi pi-users" style="font-size:32px;display:block;margin-bottom:12px"></i>
+          No hay alumnos inscritos en esta materia
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+  }
+  } @else {
+  <div class="empty-state">
+    <i class="pi pi-book empty-icon"></i>
+    <h3>Selecciona una materia</h3>
+    <p>Elige una materia del selector para ver y editar las calificaciones.</p>
+  </div>
   }
 </div>
 
 <!-- Modal 1: Configurar Esquema de Ponderación -->
-<p-dialog header="Configurar Criterios de Ponderación" [(visible)]="showPondDialog" [modal]="true" [style]="{width: '520px'}" [contentStyle]="{'overflow': 'visible'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
+<p-dialog header="Configurar Criterios de Ponderación" [(visible)]="showPondDialog" [modal]="true"
+  [style]="{width: '520px'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
   <div class="pond-dialog-content">
-    <p class="dialog-desc">Estructura las categorías de evaluación de la materia. La suma de todas las categorías activas debe ser exactamente 100%.</p>
-    
+    <p class="dialog-desc">Estructura las categorías de evaluación de la materia. La suma de todas las categorías
+      activas debe ser exactamente 100%.</p>
+
     <div class="pond-rows">
       @for (pond of newPonderaciones(); track $index) {
-        <div class="pond-row-item">
-          <input pInputText [(ngModel)]="pond.nombre" placeholder="Ej. Exámenes" class="pond-name-input" />
-          <p-inputNumber [(ngModel)]="pond.porcentaje" suffix="%" [min]="0" [max]="100" styleClass="pond-pct-input" (ngModelChange)="onPorcentajeChange()" />
-          <p-button icon="pi pi-trash" severity="danger" [text]="true" (onClick)="removePonderacionRow($index)" />
-        </div>
+      <div class="pond-row-item">
+        <input pInputText [(ngModel)]="pond.nombre" placeholder="Ej. Exámenes" class="pond-name-input" />
+        <p-inputNumber [(ngModel)]="pond.porcentaje" suffix="%" [min]="0" [max]="100" styleClass="pond-pct-input"
+          (ngModelChange)="onPorcentajeChange()" />
+        <p-button icon="pi pi-trash" severity="danger" [text]="true" (onClick)="removePonderacionRow($index)" />
+      </div>
       }
     </div>
 
@@ -232,14 +213,13 @@
     <div class="pond-summary">
       <div class="summary-text">
         <span>Suma Total:</span>
-        <strong [class.success-pct]="totalPonderaciones() === 100"
-                [class.danger-pct]="totalPonderaciones() !== 100">
+        <strong [class.success-pct]="totalPonderaciones() === 100" [class.danger-pct]="totalPonderaciones() !== 100">
           {{ totalPonderaciones() }}%
         </strong>
       </div>
     </div>
   </div>
-  
+
   <ng-template #footer>
     <p-button label="Cancelar" icon="pi pi-times" [text]="true" (onClick)="showPondDialog.set(false)" />
     <p-button label="Guardar Esquema" icon="pi pi-check" (onClick)="guardarPonderaciones()" />
@@ -247,21 +227,25 @@
 </p-dialog>
 
 <!-- Modal 2: Agregar Nueva Actividad Evaluativa -->
-<p-dialog header="Agregar Nueva Actividad Evaluativa" [(visible)]="showActDialog" [modal]="true" [style]="{width: '450px'}" [contentStyle]="{'overflow': 'visible'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
+<p-dialog header="Agregar Nueva Actividad Evaluativa" [(visible)]="showActDialog" [modal]="true"
+  [style]="{width: '450px'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
   <div class="form-dialog-content">
     <div class="field-group">
       <label for="act-category" class="field-label">Categoría de Ponderación *</label>
-      <p-select id="act-category" [options]="ponderacionOptions()" optionLabel="nombre" optionValue="id" [(ngModel)]="nuevaActividad.ponderacion_id" placeholder="Selecciona una categoría" styleClass="w-full" appendTo="body" />
+      <p-select id="act-category" [options]="ponderacionOptions()" optionLabel="nombre" optionValue="id"
+        [(ngModel)]="nuevaActividad.ponderacion_id" placeholder="Selecciona una categoría" styleClass="w-full" />
     </div>
 
     <div class="field-group">
       <label for="act-name" class="field-label">Nombre de la Actividad *</label>
-      <input pInputText id="act-name" [(ngModel)]="nuevaActividad.nombre" placeholder="Ej. Tarea 1: Práctica SQL" class="w-full" />
+      <input pInputText id="act-name" [(ngModel)]="nuevaActividad.nombre" placeholder="Ej. Tarea 1: Práctica SQL"
+        class="w-full" />
     </div>
 
     <div class="field-group">
       <label for="act-desc" class="field-label">Descripción (Opcional)</label>
-      <input pInputText id="act-desc" [(ngModel)]="nuevaActividad.descripcion" placeholder="Breve descripción de la actividad" class="w-full" />
+      <input pInputText id="act-desc" [(ngModel)]="nuevaActividad.descripcion"
+        placeholder="Breve descripción de la actividad" class="w-full" />
     </div>
   </div>
 
@@ -272,13 +256,16 @@
 </p-dialog>
 
 <!-- Modal 3: Importar Calificaciones desde Teams (Excel) -->
-<p-dialog header="Importar Calificaciones desde Teams (Excel)" [(visible)]="showImportDialog" [modal]="true" [style]="{width: '450px'}" [contentStyle]="{'overflow': 'visible'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
+<p-dialog header="Importar Calificaciones desde Teams (Excel)" [(visible)]="showImportDialog" [modal]="true"
+  [style]="{width: '450px'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
   <div class="form-dialog-content">
-    <p class="dialog-desc">Sube la plantilla de Excel descargada de Teams. Las notas se mapearán automáticamente utilizando la matrícula del alumno.</p>
-    
+    <p class="dialog-desc">Sube la plantilla de Excel descargada de Teams. Las notas se mapearán automáticamente
+      utilizando la matrícula del alumno.</p>
+
     <div class="field-group">
       <label for="import-category" class="field-label">Criterio / Categoría de Destino *</label>
-      <p-select id="import-category" [options]="ponderaciones()" optionLabel="nombre" optionValue="nombre" [(ngModel)]="importSelectedCriterio" placeholder="Selecciona la categoría" styleClass="w-full" appendTo="body" />
+      <p-select id="import-category" [options]="ponderaciones()" optionLabel="nombre" optionValue="nombre"
+        [(ngModel)]="importSelectedCriterio" placeholder="Selecciona la categoría" styleClass="w-full" />
     </div>
 
     <div class="field-group file-field">
@@ -295,28 +282,33 @@
 
   <ng-template #footer>
     <p-button label="Cancelar" icon="pi pi-times" [text]="true" (onClick)="showImportDialog.set(false)" />
-    <p-button label="Comenzar Importación" icon="pi pi-upload" [disabled]="!importSelectedFile" (onClick)="ejecutarImportacion()" />
+    <p-button label="Comenzar Importación" icon="pi pi-upload" [disabled]="!importSelectedFile"
+      (onClick)="ejecutarImportacion()" />
   </ng-template>
 </p-dialog>
 
 <!-- Modal 4: Confirmar Eliminación de Actividad -->
-<p-dialog header="Confirmar Eliminación" [(visible)]="showConfirmDeleteDialog" [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" [dismissableMask]="true">
+<p-dialog header="Confirmar Eliminación" [(visible)]="showConfirmDeleteDialog" [modal]="true" [style]="{width: '450px'}"
+  [draggable]="false" [resizable]="false" [dismissableMask]="true">
   <div class="confirm-delete-body">
     <div class="warning-icon-wrapper">
       <i class="pi pi-exclamation-triangle warning-icon"></i>
     </div>
     <div class="warning-text-container">
       <h3>¿Eliminar actividad evaluable?</h3>
-      <p>Estás a punto de borrar permanentemente la actividad: <strong>"{{ actividadAEliminar()?.nombre }}"</strong>.</p>
+      <p>Estás a punto de borrar permanentemente la actividad: <strong>"{{ actividadAEliminar()?.nombre }}"</strong>.
+      </p>
       <div class="danger-card">
         <i class="pi pi-info-circle"></i>
-        <span><strong>¡Esta acción es irreversible!</strong> Se perderán todas las calificaciones capturadas para esta columna de forma permanente y se recalcularán los promedios globales.</span>
+        <span><strong>¡Esta acción es irreversible!</strong> Se perderán todas las calificaciones capturadas para esta
+          columna de forma permanente y se recalcularán los promedios globales.</span>
       </div>
     </div>
   </div>
 
   <ng-template #footer>
     <p-button label="Cancelar" icon="pi pi-times" [text]="true" (onClick)="showConfirmDeleteDialog.set(false)" />
-    <p-button label="Eliminar Actividad" icon="pi pi-trash" severity="danger" (onClick)="confirmarEliminarActividad()" />
+    <p-button label="Eliminar Actividad" icon="pi pi-trash" severity="danger"
+      (onClick)="confirmarEliminarActividad()" />
   </ng-template>
 </p-dialog>
