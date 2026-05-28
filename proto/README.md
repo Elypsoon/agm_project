@@ -11,14 +11,15 @@ Este documento detalla los patrones y contratos de comunicación entre los micro
 | Flujo de Comunicación | Tipo | Canal | Emisor (Productor) | Receptor (Consumidor) | Razón del Patrón |
 |:---|:---|:---|:---|:---|:---|
 | **Validar token JWT** | Síncrono | gRPC | API Gateway / Clientes | `ms-auth` | Requiere respuesta inmediata para autorizar la petición actual. |
-| **Obtener perfil por ID** | Síncrono | gRPC | `ms-asistencias` / Otros | `ms-alumnos` | El docente necesita resolver el id del alumno al instante para mostrar su nombre. |
-| **Verificar inscripción activa** | Síncrono | gRPC | `ms-asistencias` | `ms-alumnos` | El escáner necesita validar inmediatamente si el alumno pertenece a la materia. |
+| **Obtener perfil por ID** | Síncrono | gRPC | `ms-asistencias` / Otros | `ms-alumnos` | Usado como fallback inicial antes de tener réplica local. MS-5 ahora prioriza réplica local. |
+| **Replicar alumno en MS-5** | Asíncrono | Event Bus | `ms-alumnos` | `ms-asistencias` | MS-5 escucha `student.registered` para mantener réplica local de alumnos y materias sin depender de red. |
 | **Registro Alumno → Correo** | Asíncrono | Event Bus | `ms-alumnos` | `ms-notificaciones` | Desacoplamiento. SMTP es lento y propenso a fallas temporales. |
 | **Baja de Materia → Alerta** | Asíncrono | Event Bus | `ms-alumnos` | `ms-notificaciones` | El alumno obtiene respuesta inmediata; el correo al docente es secundario. |
 | **Cierre Materia → Notificar** | Asíncrono | Event Bus | `ms-calificaciones` | `ms-notificaciones` | Puede haber decenas de alumnos. El procesamiento masivo de correos se hace en background. |
 | **Reset Passw → Recuperar** | Asíncrono | Event Bus | `ms-auth` | `ms-notificaciones` | Desacoplado de la API REST de autenticación rápida. |
 | **Generar Reporte → Aviso** | Asíncrono | Event Bus | `ms-reportes` | `ms-notificaciones` | Compilar PDFs/Excel es pesado. Se avisa al usuario en background cuando esté listo. |
-| **Obtener materias del docente** | Síncrono | gRPC | `ms-asistencias` | `ms-periodos` | El docente necesita ver sus materias asignadas para iniciar una sesión de asistencia sin escribir el UUID manualmente. |
+| **Obtener materias del docente** | Síncrono | gRPC | `ms-asistencias` | `ms-periodos` | El docente selecciona su materia desde un dropdown. Resultado cacheado en Redis 1h como fallback. |
+
 
 ---
 

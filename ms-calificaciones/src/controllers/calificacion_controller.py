@@ -109,12 +109,18 @@ class ImportarCalificacionesView(APIView):
                 - 403 Forbidden: Si la materia está en estado cerrado.
                 - 503 Service Unavailable: Falla de comunicación con otros servicios.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         archivo = request.FILES.get('archivo')
         materia_id = request.data.get('materia_id')
+        criterio_evaluacion = request.data.get('criterio_evaluacion')
 
         if not archivo:
+            logger.warning("Falta el archivo en la peticion de importacion")
             return Response({'detail': 'Se requiere el campo "archivo".'}, status=400)
         if not materia_id:
+            logger.warning("Falta materia_id en la peticion de importacion")
             return Response({'detail': 'Se requiere el campo "materia_id".'}, status=400)
 
         try:
@@ -122,14 +128,20 @@ class ImportarCalificacionesView(APIView):
                 materia_id=materia_id,
                 nombre_archivo=archivo.name,
                 archivo_bytes=archivo.read(),
+                criterio_evaluacion=criterio_evaluacion,
             )
+            logger.info("Importacion completada exitosamente para la materia %s", materia_id)
         except ValueError as exc:
+            logger.warning("Error de validacion al importar calificaciones: %s", exc, exc_info=True)
             return Response({'detail': str(exc)}, status=400)
         except MateriaCerradaError as exc:
+            logger.warning("Intento de importacion en materia cerrada %s", materia_id)
             return Response({'detail': str(exc)}, status=403)
         except MateriaNoAccesible as exc:
+            logger.error("Error gRPC: materia no accesible %s: %s", materia_id, exc)
             return Response({'detail': str(exc)}, status=503)
         except ServicioExternoInaccesible as exc:
+            logger.error("Servicio externo inaccesible durante importacion: %s", exc)
             return Response({'detail': str(exc)}, status=503)
 
         return Response(resultado, status=201)
