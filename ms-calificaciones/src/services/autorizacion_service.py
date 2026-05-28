@@ -33,12 +33,27 @@ def verificar_docente_sobre_materia(docente_id, materia_id):
             f'No se pudo verificar la materia en MS-2: {exc}'
         )
 
-    if materia['docente_id'] != str(docente_id):
-        raise DocenteSinAutorizacion(
-            'No tienes autorización para operar sobre esta materia.'
+    # 1. Intentar coincidencia directa (por si el ID proporcionado ya es el local de MS-3)
+    if materia['docente_id'] == str(docente_id):
+        return materia
+
+    # 2. Intentar resolver el Docente.id local de MS-3 a partir de su Auth User ID (docente_id)
+    from src.grpc.alumnos_client import AlumnosClient
+    try:
+        docente_info = AlumnosClient().get_docente_by_id(docente_id)
+        if materia['docente_id'] == docente_info['id']:
+            return materia
+    except Exception as exc:
+        # Registrar como advertencia y continuar para lanzar la excepción final si no coincide
+        import logging
+        logging.getLogger(__name__).warning(
+            "No se pudo mapear el user_id %s al docente en MS-3: %s",
+            docente_id, exc
         )
 
-    return materia
+    raise DocenteSinAutorizacion(
+        'No tienes autorización para operar sobre esta materia.'
+    )
 
 
 def verificar_materia_abierta(materia_id):
