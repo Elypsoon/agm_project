@@ -7,11 +7,8 @@
     <div class="promedio-badge">
       <span class="promedio-val">
         {{ promedioGeneral() }}
-        @if (promedioGeneral() !== '—' && anyPartial()) {
-          <span class="partial-indicator" title="Promedio general parcial (sujeto a cambios)">*</span>
-        }
       </span>
-      <span class="promedio-label">Promedio general</span>
+      <span class="promedio-label">Nota final promedio</span>
     </div>
   </div>
 
@@ -50,7 +47,7 @@
           <th style="width: 3rem"></th>
           <th>Materia</th>
           <th>Docente</th>
-          <th style="text-align:center">Promedio</th>
+          <th style="text-align:center">Nota Final</th>
           <th style="text-align:center">Estado</th>
         </tr>
       </ng-template>
@@ -74,11 +71,8 @@
             <strong [class.grade-ok]="row.promedio !== null && row.promedio >= 6"
                     [class.grade-fail]="row.promedio !== null && row.promedio < 6"
                     [class.grade-pending]="row.promedio === null">
-              {{ row.promedio !== null ? (row.promedio | number:'1.1-1') : '—' }}
+              {{ row.promedio !== null ? row.promedio : '—' }}
             </strong>
-            @if (row.promedio !== null && isPartial(row)) {
-              <span class="partial-indicator" title="Promedio parcial (sujeto a cambios)">*</span>
-            }
           </td>
           <td style="text-align:center">
             <p-tag [value]="estadoLabel(row.estado)" [severity]="estadoSeverity(row.estado)" />

@@ -110,7 +110,7 @@
         }
 
         <th style="text-align:center">Promedio (100)</th>
-        <th style="text-align:center">Nota (10)</th>
+        <th style="text-align:center">Nota Final</th>
         <th style="text-align:center">Estado</th>
         <th style="text-align:center">Editar</th>
       </tr>
@@ -153,9 +153,6 @@
           <strong [class.low-grade]="row.promedio_redondeado !== null && row.promedio_redondeado < 6" style="font-size: 1.1em; color: var(--primary-color)">
             {{ row.promedio_redondeado !== null ? row.promedio_redondeado : '—' }}
           </strong>
-          @if (row.promedio_redondeado !== null && isPartial(row)) {
-            <span class="partial-indicator" pTooltip="Promedio parcial (sujeto a cambios)" tooltipPosition="top">*</span>
-          }
         </td>
         <td style="text-align:center">
           <p-tag [value]="estadoLabel(row)" [severity]="estadoSeverity(row)" />
