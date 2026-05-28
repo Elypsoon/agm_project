@@ -53,6 +53,7 @@ export class CalificacionesComponent implements OnInit {
 
   loading = signal(false);
   editedRows = signal<Set<string>>(new Set());
+  editedCells = signal<Set<string>>(new Set());
 
   // Modelos de menu popup para las opciones de exportacion
   itemsCalificaciones = [
@@ -106,10 +107,10 @@ export class CalificacionesComponent implements OnInit {
 
   // Estadísticas locales basadas en los alumnos cargados
   readonly aprobados = computed(() =>
-    this.concentrado()?.alumnos.filter(c => this.tieneCalificaciones(c) && c.promedio_redondeado >= 6).length || 0
+    this.concentrado()?.alumnos.filter(c => this.tieneCalificaciones(c) && c.promedio_redondeado !== null && c.promedio_redondeado >= 6).length || 0
   );
   readonly reprobados = computed(() =>
-    this.concentrado()?.alumnos.filter(c => this.tieneCalificaciones(c) && c.promedio_redondeado < 6).length || 0
+    this.concentrado()?.alumnos.filter(c => this.tieneCalificaciones(c) && c.promedio_redondeado !== null && c.promedio_redondeado < 6).length || 0
   );
   readonly sinCalificar = computed(() =>
     this.concentrado()?.alumnos.filter(c => !this.tieneCalificaciones(c)).length || 0
@@ -221,6 +222,9 @@ export class CalificacionesComponent implements OnInit {
   cargarConcentrado() {
     if (!this.selectedMateriaId) return;
     this.loading.set(true);
+
+    this.editedRows.set(new Set());
+    this.editedCells.set(new Set());
 
     // Reset previous states to avoid showing stale data from another materia during loading or error
     this.concentrado.set(null);
@@ -512,7 +516,7 @@ export class CalificacionesComponent implements OnInit {
   }
 
   setGrade(row: AlumnoConcentrado, actividadId: string, valor: number | null) {
-    const val = valor === null ? 0 : valor;
+    const val = (valor === null || valor === undefined) ? null : valor;
     let calif = row.calificaciones.find(c => c.actividad_id === actividadId);
     if (calif) {
       calif.valor = val;
@@ -522,6 +526,12 @@ export class CalificacionesComponent implements OnInit {
 
     // Recalcular el promedio real y oficial en base a las reglas de redondeo institucionales
     this.recalcularPromedioLocal(row);
+
+    // Trackear la celda modificada
+    const cellKey = `${row.alumno_id}_${actividadId}`;
+    const sc = new Set(this.editedCells());
+    sc.add(cellKey);
+    this.editedCells.set(sc);
 
     // Trackear que esta fila tiene cambios pendientes
     const s = new Set(this.editedRows());
@@ -533,35 +543,76 @@ export class CalificacionesComponent implements OnInit {
     const conf = this.concentrado();
     if (!conf) return;
 
-    let total = 0;
+    let weightedSum = 0;
+    let totalWeight = 0;
+    let totalGraded = 0;
+
+    let weightedSumAbsolute = 0;
+    let totalConfiguredWeight = 0;
+
     for (const cat of conf.categorias) {
       const actIds = cat.actividades.map(a => a.actividad_id);
       if (actIds.length === 0) continue;
 
       let sumCat = 0;
+      let sumCatAbsolute = 0;
+      let countGraded = 0;
       for (const actId of actIds) {
-        sumCat += this.getGrade(row, actId) || 0;
+        const grade = this.getGrade(row, actId);
+        if (grade !== null && grade !== undefined) {
+          sumCat += grade;
+          sumCatAbsolute += grade;
+          countGraded++;
+          totalGraded++;
+        }
       }
-      const promedioCat = sumCat / actIds.length;
-      total += promedioCat * (cat.porcentaje / 100);
+      if (countGraded > 0) {
+        const promedioCat = sumCat / countGraded;
+        const pct = cat.porcentaje / 100;
+        weightedSum += promedioCat * pct;
+        totalWeight += pct;
+      }
+
+      // Absolute average of category (treating None/null as 0, pro-rating over category total acts)
+      const promedioCatAbsolute = sumCatAbsolute / actIds.length;
+      const pctAbsolute = cat.porcentaje / 100;
+      weightedSumAbsolute += promedioCatAbsolute * pctAbsolute;
+      totalConfiguredWeight += pctAbsolute;
     }
 
-    row.promedio_real = Math.round(total * 100) / 100;
-
-    // Regla oficial de redondeo institucional
-    const enDiez = total / 10;
-    const entero = Math.floor(enDiez);
-    const fraccion = enDiez - entero;
-
-    if (enDiez < 6.0) {
-      row.promedio_redondeado = entero; // Reprobado: truncamiento / función piso
+    if (totalGraded > 0 && totalWeight > 0) {
+      const total = weightedSum / totalWeight;
+      row.promedio_real = Math.round(total * 100) / 100;
     } else {
-      if (fraccion >= 0.5) {
-        row.promedio_redondeado = Math.ceil(enDiez); // Aprobado >= 0.5 redondea hacia arriba
-      } else {
-        row.promedio_redondeado = entero; // Aprobado < 0.5 redondea hacia abajo
-      }
+      row.promedio_real = null;
     }
+
+    if (totalGraded > 0 && totalConfiguredWeight > 0) {
+      const totalAbs = weightedSumAbsolute / totalConfiguredWeight;
+
+      // Regla oficial de redondeo institucional
+      const enDiez = totalAbs / 10;
+      const entero = Math.floor(enDiez);
+      const fraccion = enDiez - entero;
+
+      if (enDiez < 6.0) {
+        row.promedio_redondeado = entero; // Reprobado: truncamiento / función piso
+      } else {
+        if (fraccion >= 0.5) {
+          row.promedio_redondeado = Math.ceil(enDiez); // Aprobado >= 0.5 redondea hacia arriba
+        } else {
+          row.promedio_redondeado = entero; // Aprobado < 0.5 redondea hacia abajo
+        }
+      }
+    } else {
+      row.promedio_redondeado = null;
+    }
+  }
+
+  isPartial(row: AlumnoConcentrado): boolean {
+    const totalActs = this.allActividades().length;
+    const gradedActs = row.calificaciones.filter(c => c.valor !== null && c.valor !== undefined).length;
+    return gradedActs > 0 && gradedActs < totalActs;
   }
 
   onCalChange(row: AlumnoConcentrado, actividadId: string, valor: number | null) {
@@ -584,25 +635,22 @@ export class CalificacionesComponent implements OnInit {
   guardarCambios() {
     const requests: Observable<any>[] = [];
 
-    for (const alumnoId of this.editedRows()) {
+    for (const cellKey of this.editedCells()) {
+      const [alumnoId, actividadId] = cellKey.split('_');
       const student = this.concentrado()?.alumnos.find(a => a.alumno_id === alumnoId);
       if (!student) continue;
 
-      // Iterar sobre las actividades para guardar de forma individual
-      this.allActividades().forEach(act => {
-        const val = this.getGrade(student, act.actividad_id);
-        if (val !== null) {
-          requests.push(this.calificacionesService.actualizarCalificacion({
-            actividad_id: act.actividad_id,
-            alumno_id: student.alumno_id,
-            valor: val
-          }));
-        }
-      });
+      const val = this.getGrade(student, actividadId);
+      requests.push(this.calificacionesService.actualizarCalificacion({
+        actividad_id: actividadId,
+        alumno_id: alumnoId,
+        valor: val
+      }));
     }
 
     if (requests.length === 0) {
       this.editedRows.set(new Set());
+      this.editedCells.set(new Set());
       return;
     }
 
@@ -616,6 +664,7 @@ export class CalificacionesComponent implements OnInit {
           life: 3000
         });
         this.editedRows.set(new Set());
+        this.editedCells.set(new Set());
         this.cargarConcentrado();
       },
       error: (err) => {
@@ -635,12 +684,12 @@ export class CalificacionesComponent implements OnInit {
   }
 
   estadoLabel(row: AlumnoConcentrado): string {
-    if (!this.tieneCalificaciones(row)) return 'Sin calificar';
+    if (!this.tieneCalificaciones(row) || row.promedio_redondeado === null) return 'Sin calificar';
     return row.promedio_redondeado >= 6 ? 'Aprobado' : 'Reprobado';
   }
 
   estadoSeverity(row: AlumnoConcentrado): 'success' | 'danger' | 'secondary' {
-    if (!this.tieneCalificaciones(row)) return 'secondary';
+    if (!this.tieneCalificaciones(row) || row.promedio_redondeado === null) return 'secondary';
     return row.promedio_redondeado >= 6 ? 'success' : 'danger';
   }
 

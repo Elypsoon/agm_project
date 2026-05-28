@@ -416,6 +416,16 @@
   }
 }
 
+.partial-indicator {
+  color: #F59E0B; /* amber-500 */
+  font-weight: bold;
+  margin-left: 2px;
+  cursor: help;
+  display: inline-block;
+  vertical-align: super;
+  font-size: 10px;
+}
+
 /* Eliminar barras de desplazamiento en modales y permitir que los dropdowns se desplieguen fuera sin recortarse */
 ::ng-deep {
   .p-dialog-content {

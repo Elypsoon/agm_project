@@ -40,14 +40,14 @@ class CalificacionesGRPCClient:
                 for a in response.alumnos:
                     calificaciones_map = {}
                     for c in a.calificaciones:
-                        calificaciones_map[c.actividad_id] = c.valor
+                        calificaciones_map[c.actividad_id] = c.valor if c.valor != -1.0 else None
                     
                     alumnos.append({
                         "alumno_id": a.alumno_id,
                         "alumno_nombre": a.alumno_nombre,
                         "matricula": a.alumno_matricula or "N/A",
-                        "promedio_real": a.promedio_real,
-                        "promedio_redondeado": a.promedio_redondeado,
+                        "promedio_real": a.promedio_real if a.promedio_real != -1.0 else None,
+                        "promedio_redondeado": a.promedio_redondeado if a.promedio_redondeado != -1 else None,
                         "calificaciones": calificaciones_map
                     })
 
@@ -72,8 +72,8 @@ class CalificacionesGRPCClient:
             try:
                 response = stub.GetPromedioAlumno(request, timeout=3)
                 return {
-                    "promedio_real": response.promedio_real,
-                    "promedio_redondeado": response.promedio_redondeado
+                    "promedio_real": response.promedio_real if response.promedio_real != -1.0 else None,
+                    "promedio_redondeado": response.promedio_redondeado if response.promedio_redondeado != -1 else None
                 }
             except grpc.RpcError as e:
                 print(f"[-] Error al contactar MS-4 (Promedio Alumno): {e.details()}")
@@ -88,9 +88,9 @@ class CalificacionesGRPCClient:
             try:
                 response = stub.GetEstadisticasMateria(request, timeout=3)
                 return {
-                    "promedio_grupo": response.promedio_grupo,
-                    "calificacion_max": response.calificacion_max,
-                    "calificacion_min": response.calificacion_min,
+                    "promedio_grupo": response.promedio_grupo if response.promedio_grupo != -1.0 else None,
+                    "calificacion_max": response.calificacion_max if response.calificacion_max != -1.0 else None,
+                    "calificacion_min": response.calificacion_min if response.calificacion_min != -1.0 else None,
                     "total_alumnos": response.total_alumnos
                 }
             except grpc.RpcError as e:

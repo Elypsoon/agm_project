@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CardModule } from 'primeng/card';
@@ -9,6 +9,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { AlumnosService, Inscripcion } from '../../../core/services/alumnos.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { PeriodosService, Materia } from '../../admin/periodos/periodos.service';
 
 interface MateriaCard {
   id: string;
@@ -32,6 +33,7 @@ interface MateriaCard {
 export class MateriasComponent implements OnInit {
   private authService = inject(AuthService);
   private alumnosService = inject(AlumnosService);
+  private periodosService = inject(PeriodosService);
   private messageService = inject(MessageService);
 
   loading = signal(true);
@@ -51,50 +53,89 @@ export class MateriasComponent implements OnInit {
             this.alumnosService.getAlumno(realId).subscribe({
               next: (res) => {
                 const inscripciones = res.data.inscripciones?.filter(i => i.activo) ?? [];
-                this.materias.set(this.mapToCards(inscripciones));
-                this.loading.set(false);
+                
+                // Consultar todas las materias en MS-2 para rellenar detalles (docente, horarios)
+                this.periodosService.getMaterias(1, 300).subscribe({
+                  next: (periodosRes) => {
+                    const listMaterias: Materia[] = periodosRes.results || periodosRes || [];
+                    this.materias.set(this.mapToCards(inscripciones, listMaterias));
+                    this.loading.set(false);
+                  },
+                  error: () => {
+                    this.materias.set(this.mapToCards(inscripciones, []));
+                    this.loading.set(false);
+                  }
+                });
               },
               error: () => {
-                this.materias.set(this.mockMaterias());
                 this.loading.set(false);
               }
             });
           } else {
-            this.materias.set(this.mockMaterias());
             this.loading.set(false);
           }
         },
         error: () => {
-          this.materias.set(this.mockMaterias());
           this.loading.set(false);
         }
       });
     } else {
-      this.materias.set(this.mockMaterias());
-      setTimeout(() => this.loading.set(false), 600);
+      this.loading.set(false);
     }
   }
 
-  private mapToCards(inscripciones: Inscripcion[]): MateriaCard[] {
-    return inscripciones.map((insc, i) => ({
-      id: insc.materia_id || insc.id,
-      nombre: insc.materia_nombre,
-      docente: 'Por asignar',
-      horario: 'Consulta con tu docente',
-      aula: '—',
-      estado: 'activa',
-      progreso: 60,
-      color: this.COLORS[i % this.COLORS.length]
-    }));
+  private mapToCards(inscripciones: Inscripcion[], allMaterias: Materia[]): MateriaCard[] {
+    return inscripciones.map((insc, i) => {
+      const match = allMaterias.find(m => m.id === insc.materia_id);
+      return {
+        id: insc.materia_id || insc.id,
+        nombre: insc.materia_nombre,
+        docente: match?.docente_nombre || 'Por asignar',
+        horario: match ? this.formatHorarios(match.horarios) : 'Consulta con tu docente',
+        aula: match?.horarios && match.horarios.length > 0 ? match.horarios[0].salon : '—',
+        estado: match?.estado === 'abierta' ? 'activa' : (match?.estado === 'cerrada' ? 'cerrada' : 'activa'),
+        progreso: 100, // Progreso del curso o avance escolar
+        color: this.COLORS[i % this.COLORS.length]
+      };
+    });
   }
 
-  private mockMaterias(): MateriaCard[] {
-    return [
-      { id: '1', nombre: 'Desarrollo de Sistemas Distribuidos', docente: 'Dra. Alejandra Vega', horario: 'Lun/Mié/Vie 08:00–09:30', aula: 'Lab. 3-A', estado: 'activa', progreso: 65, color: '#F59E0B' },
-      { id: '2', nombre: 'Redes de Computadoras',              docente: 'Dr. Pablo Morales',   horario: 'Mar/Jue 10:00–11:30',     aula: 'Aula 2-B', estado: 'activa', progreso: 70, color: '#06B6D4' },
-      { id: '3', nombre: 'Ingeniería de Software',             docente: 'M.C. Rosa Espinosa',  horario: 'Lun/Jue 12:00–13:30',    aula: 'Aula 1-A', estado: 'activa', progreso: 55, color: '#4338CA' },
-      { id: '4', nombre: 'Base de Datos Avanzadas',            docente: 'Dr. Luis Herrera',    horario: 'Mar/Vie 14:00–15:30',     aula: 'Lab. 1-C', estado: 'activa', progreso: 72, color: '#22C55E' },
-      { id: '5', nombre: 'Cálculo Diferencial e Integral',    docente: 'M.C. Carmen Noriega', horario: 'Mié/Vie 07:00–08:30',     aula: 'Aula 3-C', estado: 'activa', progreso: 48, color: '#8B5CF6' },
-    ];
+  formatHorarios(horarios: any[] | undefined): string {
+    if (!horarios || horarios.length === 0) {
+      return 'POR ASIGNAR';
+    }
+    const rangeMap = new Map<string, string[]>();
+    horarios.forEach(h => {
+      if (!h.hora_inicio || !h.hora_fin) return;
+      const start = this.formatTime(h.hora_inicio);
+      const end = this.formatTime(h.hora_fin);
+      const timeRange = `${start}-${end}${h.es_virtual ? ' (V)' : ''}`;
+      
+      if (!rangeMap.has(timeRange)) {
+        rangeMap.set(timeRange, []);
+      }
+      rangeMap.get(timeRange)!.push(this.formatDay(h.dia));
+    });
+    
+    if (rangeMap.size === 0) {
+      return 'POR ASIGNAR';
+    }
+    const parts: string[] = [];
+    rangeMap.forEach((days, timeRange) => {
+      parts.push(`${days.join(', ')} ${timeRange}`);
+    });
+    return parts.join(' | ');
+  }
+
+  formatTime(raw: string): string {
+    if (!raw || raw.length < 4) return raw;
+    return `${raw.substring(0, 2)}:${raw.substring(2, 4)}`;
+  }
+
+  formatDay(dia: string): string {
+    const days: Record<string, string> = {
+      'L': 'Lun', 'A': 'Mar', 'M': 'Mié', 'J': 'Jue', 'V': 'Vie', 'S': 'Sáb'
+    };
+    return days[dia.toUpperCase()] || dia;
   }
 }

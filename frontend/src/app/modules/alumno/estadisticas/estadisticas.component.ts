@@ -136,7 +136,21 @@ export class EstadisticasComponent implements OnInit {
     this.reportesService.obtenerEstadisticasAlumno(alumnoId, materiaId).subscribe({
       next: (res) => {
         if (res.success && res.data) {
-          this.stats.set(res.data);
+          const statsData = { ...res.data };
+          if (statsData.calificaciones_kpi) {
+            if (statsData.calificaciones_kpi.promedio_real !== null && statsData.calificaciones_kpi.promedio_real > 10) {
+              statsData.calificaciones_kpi.promedio_real = statsData.calificaciones_kpi.promedio_real / 10;
+            }
+            if (statsData.calificaciones_kpi.comparativa_grupo) {
+              if (statsData.calificaciones_kpi.comparativa_grupo.promedio_grupo > 10) {
+                statsData.calificaciones_kpi.comparativa_grupo.promedio_grupo = statsData.calificaciones_kpi.comparativa_grupo.promedio_grupo / 10;
+              }
+              if (Math.abs(statsData.calificaciones_kpi.comparativa_grupo.diferencia) > 10) {
+                statsData.calificaciones_kpi.comparativa_grupo.diferencia = statsData.calificaciones_kpi.comparativa_grupo.diferencia / 10;
+              }
+            }
+          }
+          this.stats.set(statsData);
         } else {
           this.stats.set(null);
         }

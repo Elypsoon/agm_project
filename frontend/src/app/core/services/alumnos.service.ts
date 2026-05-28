@@ -19,6 +19,7 @@ export interface Alumno {
   matricula: string;
   carrera: string;
   semestre: number | null;
+  tipo_formacion?: string;
   activo: boolean;
   fecha_registro: string;
 }

@@ -48,13 +48,13 @@ export interface ActividadInput {
 export interface CalificacionInput {
   actividad_id: string;
   alumno_id: string;
-  valor: number;
+  valor: number | null;
   observacion?: string;
 }
 
 export interface CalificacionNota {
   actividad_id: string;
-  valor: number;
+  valor: number | null;
 }
 
 // Interfaces para el Concentrado de Calificaciones (Acta)
@@ -73,8 +73,8 @@ export interface AlumnoConcentrado {
   alumno_id: string;
   alumno_matricula: string;
   alumno_nombre: string;
-  promedio_real: number;
-  promedio_redondeado: number;
+  promedio_real: number | null;
+  promedio_redondeado: number | null;
   calificaciones: CalificacionNota[];
 }
 

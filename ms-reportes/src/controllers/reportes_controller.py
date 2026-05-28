@@ -585,8 +585,9 @@ def obtener_estadisticas(request, materia_id):
 
     alumnos_base = datos_materia['alumnos']
     total_alumnos = len(alumnos_base)
-    promedio_grupo = sum(a['promedio_real'] for a in alumnos_base) / total_alumnos
-    aprobados = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
+    promedios_validos = [a['promedio_real'] for a in alumnos_base if a['promedio_real'] is not None]
+    promedio_grupo = sum(promedios_validos) / len(promedios_validos) if promedios_validos else 0.0
+    aprobados = sum(1 for a in alumnos_base if a['promedio_real'] is not None and a['promedio_real'] >= 6.0)
     tasa_aprobacion = (aprobados / total_alumnos) * 100 if total_alumnos else 0.0
     tasa_asistencia = asistencia_global.get('porcentaje_global', 0.0) if asistencia_global else 0.0
     periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
@@ -647,8 +648,9 @@ def obtener_estadisticas_docente(request, id):
                 if datos_materia and datos_materia.get('alumnos'):
                     alumnos_base = datos_materia['alumnos']
                     total_al = len(alumnos_base)
-                    prom_g = sum(a['promedio_real'] for a in alumnos_base) / total_al if total_al > 0 else 0.0
-                    aprob = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
+                    promedios_validos = [a['promedio_real'] for a in alumnos_base if a['promedio_real'] is not None]
+                    prom_g = sum(promedios_validos) / len(promedios_validos) if promedios_validos else 0.0
+                    aprob = sum(1 for a in alumnos_base if a['promedio_real'] is not None and a['promedio_real'] >= 6.0)
                     tasa_aprob = (aprob / total_al) * 100 if total_al > 0 else 0.0
                 else:
                     # Fallback robusto a MS-3 si no hay calificaciones configuradas
@@ -777,8 +779,9 @@ def obtener_estadisticas_alumno(request, id):
             if datos_materia and datos_materia.get('alumnos'):
                 alumnos_base = datos_materia['alumnos']
                 total_al = len(alumnos_base)
-                prom_g = sum(a['promedio_real'] for a in alumnos_base) / total_al if total_al > 0 else 0.0
-                aprob = sum(1 for a in alumnos_base if a['promedio_real'] >= 6.0)
+                promedios_validos = [a['promedio_real'] for a in alumnos_base if a['promedio_real'] is not None]
+                prom_g = sum(promedios_validos) / len(promedios_validos) if promedios_validos else 0.0
+                aprob = sum(1 for a in alumnos_base if a['promedio_real'] is not None and a['promedio_real'] >= 6.0)
                 tasa_aprob = (aprob / total_al) * 100 if total_al > 0 else 0.0
             else:
                 alumnos_res = AlumnosGRPCClient.obtener_alumnos_materia(materia_id) or []
@@ -801,15 +804,19 @@ def obtener_estadisticas_alumno(request, id):
             pass
 
     # 2. Computar KPIs Comparativos de Calificaciones
-    prom_real = round(float(promedio.get('promedio_real', 0.0)), 2) if promedio and promedio.get('promedio_real') is not None else 0.0
-    prom_red = promedio.get('promedio_redondeado', 0) if promedio and promedio.get('promedio_redondeado') is not None else 0
-    promedio_grupo_val = float(snapshot.promedio_grupo) if snapshot else 0.0
+    prom_real = round(float(promedio.get('promedio_real')), 2) if promedio and promedio.get('promedio_real') is not None else None
+    prom_red = promedio.get('promedio_redondeado') if promedio and promedio.get('promedio_redondeado') is not None else None
+    promedio_grupo_val = float(snapshot.promedio_grupo) if snapshot and snapshot.promedio_grupo is not None else 0.0
     
-    diff_prom = round(prom_real - promedio_grupo_val, 2)
-    if diff_prom >= 0:
-        msg_prom = f"Tu promedio se encuentra {diff_prom} puntos por encima de la media grupal."
+    if prom_real is not None:
+        diff_prom = round(prom_real - promedio_grupo_val, 2)
+        if diff_prom >= 0:
+            msg_prom = f"Tu promedio se encuentra {diff_prom} puntos por encima de la media grupal."
+        else:
+            msg_prom = f"Tu promedio se encuentra {abs(diff_prom)} puntos por debajo de la media grupal."
     else:
-        msg_prom = f"Tu promedio se encuentra {abs(diff_prom)} puntos por debajo de la media grupal."
+        diff_prom = 0.0
+        msg_prom = "Aún no tienes calificaciones registradas en esta materia."
 
     # 3. Computar KPIs Comparativos de Asistencias y Semáforo de Riesgo (Regla BUAP 80%)
     porcentaje_asist = round(float(asistencia.get('porcentaje', 0.0)), 2) if asistencia and asistencia.get('porcentaje') is not None else 0.0

@@ -533,3 +533,13 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+.partial-indicator {
+  color: #F59E0B; /* amber-500 */
+  font-weight: bold;
+  margin-left: 2px;
+  cursor: help;
+  display: inline-block;
+  vertical-align: super;
+  font-size: 10px;
+}

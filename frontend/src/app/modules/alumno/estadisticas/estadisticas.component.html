@@ -58,7 +58,12 @@
         <div class="dial-container">
           <div class="circular-dial" [style.--dc]="'#F59E0B'" [style.--dp.%]="(stats()?.calificaciones_kpi?.promedio_real || 0) * 10">
             <div class="dial-inner">
-              <span class="dial-val">{{ stats()?.calificaciones_kpi?.promedio_real | number:'1.1-1' }}</span>
+              <span class="dial-val">
+                {{ stats()?.calificaciones_kpi?.promedio_real !== null && stats()?.calificaciones_kpi?.promedio_real !== undefined ? (stats()?.calificaciones_kpi?.promedio_real | number:'1.1-1') : '—' }}
+                @if (stats()?.calificaciones_kpi?.promedio_real !== null && stats()?.progreso_academico && stats()!.progreso_academico.actividades_entregadas < stats()!.progreso_academico.actividades_totales) {
+                  <span class="partial-indicator" title="Promedio parcial (sujeto a cambios)">*</span>
+                }
+              </span>
               <span class="dial-sub">Promedio</span>
             </div>
           </div>

@@ -41,7 +41,7 @@
   <!-- Charts Row -->
   <div class="charts-row">
 
-    <!-- Radar Chart -->
+    <!-- Radar Chart / Bar fallback -->
     <div class="chart-card chart-wide">
       <div class="chart-card-header">
         <h2 class="chart-title"><i class="pi pi-chart-line"></i> Rendimiento por Materia</h2>
@@ -49,8 +49,15 @@
       </div>
       @if (loading()) {
         <p-skeleton height="240px" borderRadius="8px" />
-      } @else {
+      } @else if (subjectCount() === 0) {
+        <div class="no-chart-msg">
+          <i class="pi pi-inbox" style="font-size:2rem;color:#CBD5E1"></i>
+          <p>Sin materias inscritas este semestre.</p>
+        </div>
+      } @else if (chartType() === 'radar') {
         <p-chart type="radar" [data]="radarData" [options]="radarOptions" height="240px" />
+      } @else {
+        <p-chart type="bar" [data]="barData" [options]="barOptions" height="200px" />
       }
     </div>
 
@@ -81,21 +88,34 @@
 
   </div>
 
-  <!-- Próximas actividades -->
+  <!-- Actividades pendientes (sin calificación) -->
   <div class="activity-section">
-    <h2 class="section-title">Próximas Actividades</h2>
-    <div class="activity-list">
-      @for (act of activities; track act.title) {
-        <div class="activity-item">
-          <div class="activity-dot" [style.background]="act.color"></div>
-          <div class="activity-content">
-            <span class="activity-title">{{ act.title }}</span>
-            <span class="activity-meta">{{ act.meta }}</span>
+    <h2 class="section-title">Actividades Pendientes</h2>
+    @if (loading()) {
+      <div class="activity-list">
+        @for (i of [1,2,3]; track i) {
+          <p-skeleton height="58px" borderRadius="12px" />
+        }
+      </div>
+    } @else if (activities.length === 0) {
+      <div class="no-activities-msg">
+        <i class="pi pi-check-circle" style="font-size:2rem;color:#22C55E"></i>
+        <p>¡Todo al día! No tienes actividades pendientes por calificar.</p>
+      </div>
+    } @else {
+      <div class="activity-list">
+        @for (act of activities; track act.title) {
+          <div class="activity-item">
+            <div class="activity-dot" [style.background]="act.color"></div>
+            <div class="activity-content">
+              <span class="activity-title">{{ act.title }}</span>
+              <span class="activity-meta">{{ act.meta }}</span>
+            </div>
+            <p-tag [value]="act.type" [severity]="act.severity" />
           </div>
-          <p-tag [value]="act.type" [severity]="act.severity" />
-        </div>
-      }
-    </div>
+        }
+      </div>
+    }
   </div>
 
 </div>
