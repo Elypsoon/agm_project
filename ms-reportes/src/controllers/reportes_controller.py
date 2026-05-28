@@ -621,7 +621,11 @@ def obtener_estadisticas(request, materia_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def obtener_estadisticas_docente(request, id):
-    materias = PeriodosGRPCClient.obtener_materias_docente(id) or []
+    # Intentar resolver el docente_id real usando AlumnosClient
+    docente_info = AlumnosGRPCClient.obtener_docente_por_id(id)
+    real_docente_id = docente_info['id'] if docente_info and docente_info.get('id') else id
+
+    materias = PeriodosGRPCClient.obtener_materias_docente(real_docente_id) or []
     
     # 1. Crear un diccionario de metadatos de materias para rápido acceso
     materias_dict = {

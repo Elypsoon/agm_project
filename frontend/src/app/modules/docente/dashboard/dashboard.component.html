@@ -11,43 +11,67 @@
     </span>
   </div>
 
-  <!-- Metric Cards -->
-  <div class="metrics-grid">
-    @for (card of metricCards; track card.label) {
-      <div class="metric-card" [style.--accent]="card.color">
-        <div class="metric-icon-wrap">
-          <i class="pi {{ card.icon }}"></i>
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="metrics-grid">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="metric-card" style="--accent: #E2E8F0; min-height: 120px; display: flex; justify-content: center;">
+          <p-skeleton width="100%" height="20px" styleClass="mb-2" />
+          <p-skeleton width="60%" height="32px" styleClass="mb-2" />
+          <p-skeleton width="40%" height="15px" />
         </div>
-        <div class="metric-body">
-          <span class="metric-value">{{ card.value }}</span>
-          <span class="metric-label">{{ card.label }}</span>
-        </div>
-        <div class="metric-trend" [class.up]="card.trend >= 0" [class.down]="card.trend < 0">
-          <i class="pi" [class.pi-arrow-up]="card.trend >= 0" [class.pi-arrow-down]="card.trend < 0"></i>
-          {{ card.trendLabel }}
-        </div>
-      </div>
-    }
-  </div>
-
-  <!-- Charts Row -->
-  <div class="charts-row">
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <h2 class="chart-title"><i class="pi pi-chart-bar"></i> Asistencia Semanal</h2>
-        <p-tag value="Esta semana" severity="info" />
-      </div>
-      <p-chart type="bar" [data]="barData" [options]="barOptions" height="220px" />
+      }
     </div>
 
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <h2 class="chart-title"><i class="pi pi-chart-pie"></i> Distribución de Alumnos</h2>
-        <p-tag value="Por materia" severity="secondary" />
+    <div class="charts-row">
+      <div class="chart-card" style="min-height: 280px;">
+        <p-skeleton width="50%" height="24px" styleClass="mb-4" />
+        <p-skeleton width="100%" height="180px" />
       </div>
-      <p-chart type="doughnut" [data]="doughnutData" [options]="doughnutOptions" height="220px" />
+      <div class="chart-card" style="min-height: 280px;">
+        <p-skeleton width="50%" height="24px" styleClass="mb-4" />
+        <p-skeleton width="100%" height="180px" />
+      </div>
     </div>
-  </div>
+  } @else {
+    <!-- Metric Cards -->
+    <div class="metrics-grid">
+      @for (card of metricCards; track card.label) {
+        <div class="metric-card" [style.--accent]="card.color">
+          <div class="metric-icon-wrap">
+            <i class="pi {{ card.icon }}"></i>
+          </div>
+          <div class="metric-body">
+            <span class="metric-value">{{ card.value }}</span>
+            <span class="metric-label">{{ card.label }}</span>
+          </div>
+          <div class="metric-trend" [class.up]="card.trend >= 0" [class.down]="card.trend < 0">
+            <i class="pi" [class.pi-arrow-up]="card.trend >= 0" [class.pi-arrow-down]="card.trend < 0"></i>
+            {{ card.trendLabel }}
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title"><i class="pi pi-chart-bar"></i> Asistencia por Materia</h2>
+          <p-tag value="Clases activas" severity="info" />
+        </div>
+        <p-chart type="bar" [data]="barData" [options]="barOptions" height="220px" />
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title"><i class="pi pi-chart-pie"></i> Distribución de Alumnos</h2>
+          <p-tag value="Inscripciones" severity="secondary" />
+        </div>
+        <p-chart type="doughnut" [data]="doughnutData" [options]="doughnutOptions" height="220px" />
+      </div>
+    </div>
+  }
 
   <!-- Quick Actions -->
   <div class="quick-actions">
