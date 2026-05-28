@@ -7,7 +7,7 @@ import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AuthService } from '../../../core/services/auth.service';
-import { AlumnosService, AlumnoDetalle } from '../../../core/services/alumnos.service';
+import { AlumnosService } from '../../../core/services/alumnos.service';
 import { ReportesService } from '../../../core/services/reportes.service';
 import { PeriodosService } from '../../admin/periodos/periodos.service';
 import { forkJoin, of } from 'rxjs';
@@ -58,6 +58,12 @@ export class DashboardComponent implements OnInit {
     { title: 'Revisión de calificaciones',        meta: 'Mié 4 Jun, 09:00',           type: 'Admin',   severity: 'secondary' as any, color: '#94A3B8' },
   ];
 
+  /** Número de materias en el radar — controla el tipo de gráfico. */
+  subjectCount = signal(5);
+
+  /** Usa radar para ≥3 materias, bar horizontal para 1 o 2. */
+  readonly chartType = computed(() => this.subjectCount() >= 3 ? 'radar' : 'bar');
+
   radarData = {
     labels: ['Servicios Web', 'Redes', 'Ing. Software', 'Base de Datos', 'Cálculo'],
     datasets: [{
@@ -73,6 +79,18 @@ export class DashboardComponent implements OnInit {
     }]
   };
 
+  barData = {
+    labels: ['Servicios Web', 'Redes'],
+    datasets: [{
+      label: 'Nota Final',
+      data: [9.2, 8.5],
+      backgroundColor: 'rgba(245, 158, 11, 0.7)',
+      borderColor: '#F59E0B',
+      borderWidth: 2,
+      borderRadius: 8,
+    }]
+  };
+
   radarOptions = {
     plugins: {
       legend: { display: false }
@@ -83,6 +101,24 @@ export class DashboardComponent implements OnInit {
         ticks: { stepSize: 2, font: { family: 'Inter', size: 11 }, color: '#94A3B8' },
         grid: { color: '#E2E8F0' },
         pointLabels: { font: { family: 'Inter', size: 12 }, color: '#475569' }
+      }
+    },
+    animation: { duration: 700 }
+  };
+
+  barOptions = {
+    indexAxis: 'y' as const,
+    plugins: {
+      legend: { display: false }
+    },
+    scales: {
+      x: {
+        min: 0, max: 10,
+        ticks: { stepSize: 2, font: { family: 'Inter', size: 11 }, color: '#94A3B8' },
+        grid: { color: '#E2E8F0' }
+      },
+      y: {
+        ticks: { font: { family: 'Inter', size: 12 }, color: '#475569' }
       }
     },
     animation: { duration: 700 }
@@ -177,7 +213,11 @@ export class DashboardComponent implements OnInit {
 
                         inscripciones.forEach((insc, idx) => {
                           const statsRes = statsList[idx];
-                          const label = insc.materia_nombre.substring(0, 15) + (insc.materia_nombre.length > 15 ? '...' : '');
+                          // Use the real subject name; fallback only if truly absent
+                          const rawName = insc.materia_nombre || '';
+                          const label = rawName.length > 20
+                            ? rawName.substring(0, 18) + '…'
+                            : rawName || 'Sin nombre';
                           chartLabels.push(label);
 
                           if (statsRes && statsRes.success && statsRes.data) {
@@ -210,10 +250,15 @@ export class DashboardComponent implements OnInit {
                         const promGeneral = countPromedio > 0 ? (sumPromedio / countPromedio) : null;
                         const promAsistencia = countAsistencia > 0 ? (sumAsistencia / countAsistencia) : null;
 
-                        // Calcular créditos
-                        const creditosPrevios = (calculatedSemester - 1) * 32;
-                        const creditosActuales = aprobadas * 8;
-                        const totalCreditos = creditosPrevios + creditosActuales;
+                        // Calcular créditos — solo los de materias aprobadas del semestre actual
+                        // Los semestres anteriores no se conocen con certeza, así que solo
+                        // estimamos por el semestre calculado menos los créditos del semestre actual.
+                        // Cap estricto en 240.
+                        const CREDITOS_POR_SEMESTRE = 32;
+                        const CREDITOS_POR_MATERIA  = 8;
+                        const creditosPrevios = Math.min((calculatedSemester - 1) * CREDITOS_POR_SEMESTRE, 240);
+                        const creditosActuales = aprobadas * CREDITOS_POR_MATERIA;
+                        const totalCreditos = Math.min(creditosPrevios + creditosActuales, 240);
 
                         // Actualizar metricCards
                         this.metricCards = [
@@ -251,12 +296,35 @@ export class DashboardComponent implements OnInit {
                           }
                         ];
 
-                        // Actualizar gráfico de radar
+                        // Actualizar señal de conteo para elegir tipo de gráfico
+                        this.subjectCount.set(chartLabels.length);
+
+                        // Dataset compartido
+                        const sharedDataset = {
+                          label: 'Nota Final',
+                          data: chartData,
+                          fill: true,
+                          backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                          borderColor: '#F59E0B',
+                          pointBackgroundColor: '#F59E0B',
+                          pointHoverBackgroundColor: '#fff',
+                          pointHoverBorderColor: '#F59E0B',
+                          borderWidth: 2,
+                          borderRadius: 8,
+                        };
+
+                        // Actualizar gráfico de radar (≥3 materias)
                         this.radarData = {
                           labels: chartLabels,
+                          datasets: [sharedDataset]
+                        };
+
+                        // Actualizar gráfico de barras (1-2 materias)
+                        this.barData = {
+                          labels: chartLabels,
                           datasets: [{
-                            ...this.radarData.datasets[0],
-                            data: chartData
+                            ...sharedDataset,
+                            backgroundColor: 'rgba(245, 158, 11, 0.7)',
                           }]
                         };
 

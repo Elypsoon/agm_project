@@ -41,7 +41,7 @@
   <!-- Charts Row -->
   <div class="charts-row">
 
-    <!-- Radar Chart -->
+    <!-- Radar Chart / Bar fallback -->
     <div class="chart-card chart-wide">
       <div class="chart-card-header">
         <h2 class="chart-title"><i class="pi pi-chart-line"></i> Rendimiento por Materia</h2>
@@ -49,8 +49,15 @@
       </div>
       @if (loading()) {
         <p-skeleton height="240px" borderRadius="8px" />
-      } @else {
+      } @else if (subjectCount() === 0) {
+        <div class="no-chart-msg">
+          <i class="pi pi-inbox" style="font-size:2rem;color:#CBD5E1"></i>
+          <p>Sin materias inscritas este semestre.</p>
+        </div>
+      } @else if (chartType() === 'radar') {
         <p-chart type="radar" [data]="radarData" [options]="radarOptions" height="240px" />
+      } @else {
+        <p-chart type="bar" [data]="barData" [options]="barOptions" height="200px" />
       }
     </div>
 
