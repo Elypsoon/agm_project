@@ -3,7 +3,10 @@
 import grpc
 import warnings
 
-import periodos_pb2 as periodos__pb2
+try:
+    import periodos_pb2 as periodos__pb2
+except ImportError:
+    from src.grpc import periodos_pb2 as periodos__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
