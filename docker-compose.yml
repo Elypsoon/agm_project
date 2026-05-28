@@ -13,8 +13,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: Rojas2004
       POSTGRES_DB: agm_auth_db
-    healthcheck: 
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_auth_db"]
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d agm_auth_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,13 +25,13 @@ services:
 
   # Microservicio de Autenticación (MS-1) - Django + gRPC
   ms-auth:
-    build: 
+    build:
       context: ./ms-auth
       dockerfile: Dockerfile
     container_name: ms-auth
     restart: on-failure
     ports:
-      - "3001:3001"   # API REST
+      - "3001:3001" # API REST
       - "50051:50051" # gRPC
     volumes:
       - ./ms-auth:/app
@@ -63,12 +63,12 @@ services:
       POSTGRES_PASSWORD: alumnos_dev_2026
       POSTGRES_DB: agm_alumnos_db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_alumnos_db"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d agm_alumnos_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
-      - "5433:5432"   # Puerto 5433 en host para no colisionar con db-auth
+      - "5433:5432" # Puerto 5433 en host para no colisionar con db-auth
     volumes:
       - db_alumnos_data:/var/lib/postgresql/data
 
@@ -80,10 +80,10 @@ services:
     container_name: ms-alumnos
     restart: on-failure
     ports:
-      - "3003:3003"   # API REST
+      - "3003:3003" # API REST
       - "50053:50053" # gRPC
     volumes:
-      - ./ms-alumnos:/app    # Hot-reload en desarrollo
+      - ./ms-alumnos:/app # Hot-reload en desarrollo
     env_file:
       - ./ms-alumnos/.env
     depends_on:
@@ -109,7 +109,7 @@ services:
     volumes:
       - db_calificaciones_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -148,7 +148,7 @@ services:
       POSTGRES_PASSWORD: asistencias_dev_2026
       POSTGRES_DB: agm_asistencias_db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_asistencias_db"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d agm_asistencias_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -165,7 +165,7 @@ services:
     ports:
       - "6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -178,7 +178,7 @@ services:
     container_name: ms-asistencias
     restart: on-failure
     ports:
-      - "3005:3005"   # API REST
+      - "3005:3005" # API REST
       - "50055:50055" # gRPC
     env_file:
       - ./ms-asistencias/.env
@@ -202,15 +202,15 @@ services:
       POSTGRES_PASSWORD: notificaciones_dev_2026
       POSTGRES_DB: agm_notificaciones_db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_notificaciones_db"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d agm_notificaciones_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
-      - "5436:5432"   # Puerto 5436 en host para no colisionar con otras DBs
+      - "5436:5432" # Puerto 5436 en host para no colisionar con otras DBs
     volumes:
       - db_notificaciones_data:/var/lib/postgresql/data
-  
+
   # Microservicio de Notificaciones (MS-6)
   ms-notificaciones:
     build:
@@ -219,10 +219,10 @@ services:
     container_name: ms-notificaciones
     restart: on-failure
     ports:
-      - "3006:3006"   # API REST
+      - "3006:3006" # API REST
       - "50056:50056" # gRPC
     volumes:
-      - ./ms-notificaciones:/app    # Hot-reload en desarrollo
+      - ./ms-notificaciones:/app # Hot-reload en desarrollo
     env_file:
       - ./ms-notificaciones/.env
     depends_on:
@@ -250,7 +250,7 @@ services:
       POSTGRES_PASSWORD: periodos_dev_2026
       POSTGRES_DB: agm_periodos_db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_periodos_db"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d agm_periodos_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -267,10 +267,10 @@ services:
     container_name: ms-periodos
     restart: on-failure
     ports:
-      - "3002:3002"   # API REST
+      - "3002:3002" # API REST
       - "50052:50052" # gRPC
     volumes:
-      - ./ms-periodos:/app    # Hot-reload
+      - ./ms-periodos:/app # Hot-reload
     env_file:
       - ./ms-periodos/.env
     depends_on:
@@ -297,15 +297,15 @@ services:
       POSTGRES_PASSWORD: reportes_dev_2026
       POSTGRES_DB: agm_reportes_db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agm_reportes_db"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d agm_reportes_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
-      - "5437:5432"   # Puerto 5437 en host para no colisionar con otras DBs
+      - "5437:5432" # Puerto 5437 en host para no colisionar con otras DBs
     volumes:
       - db_reportes_data:/var/lib/postgresql/data
-      
+
   # Microservicio de Reportes (MS-7)
   ms-reportes:
     build:
@@ -314,10 +314,10 @@ services:
     container_name: ms-reportes
     restart: on-failure
     ports:
-      - "3007:3007"   # API REST
+      - "3007:3007" # API REST
       - "50057:50057" # gRPC
     volumes:
-      - ./ms-reportes:/app    # Hot-reload en desarrollo
+      - ./ms-reportes:/app # Hot-reload en desarrollo
     env_file:
       - ./ms-reportes/.env
     depends_on:
@@ -332,13 +332,13 @@ services:
     container_name: agm-rabbitmq
     restart: always
     ports:
-      - "5672:5672"   # AMQP protocol
+      - "5672:5672" # AMQP protocol
       - "15672:15672" # Admin UI
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
       interval: 10s
       timeout: 5s
       retries: 5

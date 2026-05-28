@@ -143,7 +143,7 @@ class PeriodosServicer(periodos_pb2_grpc.PeriodosServiceServicer):
                         hora_inicio=horario.hora_inicio or "",
                         hora_fin=horario.hora_fin or "",
                         salon=horario.salon or "",
-                        es_virtual=horario.es_virtual
+                        es_virtual=horario.es_virtual,
                     )
                     horarios.append(horario_info)
                 
