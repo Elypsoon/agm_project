@@ -10,6 +10,9 @@ import { MessageService } from 'primeng/api';
 import { AlumnosService, Inscripcion } from '../../../core/services/alumnos.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PeriodosService, Materia } from '../../admin/periodos/periodos.service';
+import { ReportesService } from '../../../core/services/reportes.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 interface MateriaCard {
   id: string;
@@ -34,6 +37,7 @@ export class MateriasComponent implements OnInit {
   private authService = inject(AuthService);
   private alumnosService = inject(AlumnosService);
   private periodosService = inject(PeriodosService);
+  private reportesService = inject(ReportesService);
   private messageService = inject(MessageService);
 
   loading = signal(true);
@@ -58,12 +62,44 @@ export class MateriasComponent implements OnInit {
                 this.periodosService.getMaterias(1, 300).subscribe({
                   next: (periodosRes) => {
                     const listMaterias: Materia[] = periodosRes.results || periodosRes || [];
-                    this.materias.set(this.mapToCards(inscripciones, listMaterias));
-                    this.loading.set(false);
+                    const cards = this.mapToCards(inscripciones, listMaterias);
+                    this.materias.set(cards);
+
+                    // Consultar progreso real de cada materia en paralelo
+                    const progressReqs = inscripciones.map(insc =>
+                      this.reportesService.obtenerEstadisticasAlumno(realId, insc.materia_id).pipe(
+                        catchError(() => of(null))
+                      )
+                    );
+                    forkJoin(progressReqs).subscribe(statsList => {
+                      this.materias.update(current =>
+                        current.map((card, idx) => {
+                          const stats = (statsList[idx] as any);
+                          const pct = stats?.data?.progreso_academico?.porcentaje_completado;
+                          return { ...card, progreso: typeof pct === 'number' ? Math.round(pct) : 0 };
+                        })
+                      );
+                      this.loading.set(false);
+                    });
                   },
                   error: () => {
-                    this.materias.set(this.mapToCards(inscripciones, []));
-                    this.loading.set(false);
+                    const cards = this.mapToCards(inscripciones, []);
+                    this.materias.set(cards);
+                    const progressReqs = inscripciones.map(insc =>
+                      this.reportesService.obtenerEstadisticasAlumno(realId, insc.materia_id).pipe(
+                        catchError(() => of(null))
+                      )
+                    );
+                    forkJoin(progressReqs).subscribe(statsList => {
+                      this.materias.update(current =>
+                        current.map((card, idx) => {
+                          const stats = (statsList[idx] as any);
+                          const pct = stats?.data?.progreso_academico?.porcentaje_completado;
+                          return { ...card, progreso: typeof pct === 'number' ? Math.round(pct) : 0 };
+                        })
+                      );
+                      this.loading.set(false);
+                    });
                   }
                 });
               },
@@ -94,7 +130,7 @@ export class MateriasComponent implements OnInit {
         horario: match ? this.formatHorarios(match.horarios) : 'Consulta con tu docente',
         aula: match?.horarios && match.horarios.length > 0 ? match.horarios[0].salon : '—',
         estado: match?.estado === 'abierta' ? 'activa' : (match?.estado === 'cerrada' ? 'cerrada' : 'activa'),
-        progreso: 100, // Progreso del curso o avance escolar
+        progreso: 0, // Se actualiza con el valor real del API tras cargar las estadísticas
         color: this.COLORS[i % this.COLORS.length]
       };
     });
