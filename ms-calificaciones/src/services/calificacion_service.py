@@ -78,7 +78,7 @@ def upsert_calificacion(actividad_id, alumno_id, valor):
     return calificacion, created
 
 
-def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
+def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes, criterio_evaluacion=None):
     """Importa calificaciones masivamente desde un archivo de MS Teams (CSV o XLSX).
 
     Verifica que la materia esté abierta, procesa el archivo, mapea los estudiantes
@@ -93,6 +93,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
         materia_id: Identificador único de la materia.
         nombre_archivo: Nombre del archivo para identificar su formato.
         archivo_bytes: Contenido binario del archivo subido.
+        criterio_evaluacion: Criterio/categoría seleccionado por el docente en la interfaz.
 
     Returns:
         dict: Un diccionario con el reporte de la operación:
@@ -104,6 +105,28 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
     verificar_materia_abierta(materia_id)
 
     registros, errores_parseo = parsear_archivo(nombre_archivo, archivo_bytes)
+
+    # Validar coherencia entre la categoría seleccionada en la interfaz y la especificada en el archivo Excel
+    if criterio_evaluacion and registros:
+        criterio_norm = criterio_evaluacion.strip().lower()
+        
+        def simplificar(texto):
+            import unicodedata
+            t = unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('ASCII')
+            return "".join(t.split()).lower()
+            
+        criterio_simplificado = simplificar(criterio_norm)
+        
+        for reg in registros:
+            nombre_pond = reg.get('nombre_ponderacion', '').strip()
+            if nombre_pond:
+                pond_simplificado = simplificar(nombre_pond)
+                if pond_simplificado != criterio_simplificado:
+                    raise ValueError(
+                        f"Conflicto de categorías: El archivo contiene calificaciones para '{nombre_pond}', "
+                        f"pero seleccionó '{criterio_evaluacion}' en la interfaz. Por favor, asegúrese de "
+                        f"que la categoría seleccionada coincida con la del archivo."
+                    )
 
     # Obtener actividades de la materia indexadas por nombre
     if not Ponderacion.objects.filter(materia_id=materia_id).exists():
@@ -151,17 +174,39 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
         valor = reg['valor']
         comentario = reg['comentario']
 
+        # Normalizar y hacer consciente de zona horaria (timezone-aware) la fecha de vencimiento
+        import datetime
+        from django.utils import timezone
+        fecha_venc = reg.get('fecha_vencimiento')
+        if isinstance(fecha_venc, str) and fecha_venc.strip():
+            import dateutil.parser
+            try:
+                fecha_venc = dateutil.parser.parse(fecha_venc)
+            except Exception:
+                fecha_venc = None
+
+        if isinstance(fecha_venc, (datetime.datetime, datetime.date)):
+            if not isinstance(fecha_venc, datetime.datetime):
+                fecha_venc = datetime.datetime.combine(fecha_venc, datetime.time.min)
+            if timezone.is_naive(fecha_venc):
+                fecha_venc = timezone.make_aware(fecha_venc)
+        else:
+            fecha_venc = None
+
         # Buscar la actividad; si no existe, intentar crearla
         actividad = actividades_por_nombre.get(nombre_act)
         if actividad is None:
-            # Necesitamos la categoría de ponderación para poder crear la actividad
-            if not nombre_pond:
+            # Necesitamos la categoría de ponderación para poder crear la actividad.
+            # Intentamos usar la del registro y, si está vacía, la seleccionada por el docente
+            pond_name = nombre_pond if nombre_pond else (criterio_evaluacion.strip().lower() if criterio_evaluacion else '')
+
+            if not pond_name:
                 errores.append({
                     'correo': reg['correo'],
                     'actividad': reg['nombre_actividad'],
                     'motivo': (
                         'Actividad no encontrada y el archivo no incluye la columna '
-                        '"Nombre del criterio de evaluación" para crearla automáticamente.'
+                        '"Nombre del criterio de evaluación" ni se seleccionó una categoría en la interfaz.'
                     ),
                 })
                 continue
@@ -170,14 +215,14 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
             ponderacion = Ponderacion.objects.filter(
                 materia_id=materia_id,
                 activa=True,
-            ).filter(nombre_categoria__iexact=reg['nombre_ponderacion'].strip()).first()
+            ).filter(nombre_categoria__iexact=pond_name).first()
 
             if ponderacion is None:
                 errores.append({
                     'correo': reg['correo'],
                     'actividad': reg['nombre_actividad'],
                     'motivo': (
-                        f'Categoría de ponderación "{reg["nombre_ponderacion"]}" '
+                        f'Categoría de ponderación "{nombre_pond or criterio_evaluacion}" '
                         f'no encontrada o inactiva en la materia.'
                     ),
                 })
@@ -187,7 +232,7 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
             actividad = Actividad.objects.create(
                 ponderacion=ponderacion,
                 nombre=reg['nombre_actividad'].strip(),
-                fecha_vencimiento=reg.get('fecha_vencimiento'),
+                fecha_vencimiento=fecha_venc,
                 estado=reg.get('estado', 'pendiente') or 'pendiente',
             )
             # Agregar al índice local para no duplicar en filas siguientes del mismo archivo
@@ -195,7 +240,6 @@ def importar_calificaciones(materia_id, nombre_archivo, archivo_bytes):
             actividades_creadas += 1
 
         # Actualizar fecha de vencimiento si viene en la importación y es distinta
-        fecha_venc = reg.get('fecha_vencimiento')
         if fecha_venc and actividad.fecha_vencimiento != fecha_venc:
             actividad.fecha_vencimiento = fecha_venc
             actividad.save(update_fields=['fecha_vencimiento'])

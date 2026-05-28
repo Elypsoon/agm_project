@@ -40,13 +40,29 @@ export class MateriasComponent implements OnInit {
   private readonly COLORS = ['#F59E0B', '#06B6D4', '#4338CA', '#22C55E', '#8B5CF6'];
 
   ngOnInit() {
-    const userId = this.authService.currentUser()?.id;
-    if (userId) {
-      this.alumnosService.getAlumno(userId).subscribe({
-        next: (res) => {
-          const inscripciones = res.data.inscripciones?.filter(i => i.activo) ?? [];
-          this.materias.set(this.mapToCards(inscripciones));
-          this.loading.set(false);
+    const user = this.authService.currentUser();
+    const email = user?.email;
+    
+    if (email) {
+      this.alumnosService.getAlumnos({ search: email, limit: 1 }).subscribe({
+        next: (searchRes) => {
+          if (searchRes.success && searchRes.data.alumnos.length > 0) {
+            const realId = searchRes.data.alumnos[0].id;
+            this.alumnosService.getAlumno(realId).subscribe({
+              next: (res) => {
+                const inscripciones = res.data.inscripciones?.filter(i => i.activo) ?? [];
+                this.materias.set(this.mapToCards(inscripciones));
+                this.loading.set(false);
+              },
+              error: () => {
+                this.materias.set(this.mockMaterias());
+                this.loading.set(false);
+              }
+            });
+          } else {
+            this.materias.set(this.mockMaterias());
+            this.loading.set(false);
+          }
         },
         error: () => {
           this.materias.set(this.mockMaterias());

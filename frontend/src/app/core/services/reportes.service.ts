@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 
 export interface EstadisticasDocenteMateria {
   periodo_id: string;
+  periodo_nombre?: string;
+  periodo_activo?: boolean;
   materia_id: string;
   materia_nombre: string;
   nrc: string;

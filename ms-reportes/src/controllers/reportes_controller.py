@@ -149,7 +149,8 @@ def generar_y_enviar_reporte_async(materia_id, dest_email, formato, ext, tipo_re
                         datos=alumnos_calif,
                         materia_nombre=materia_nombre,
                         periodo_nombre=periodo_nombre,
-                        docente_nombre=docente_nombre
+                        docente_nombre=docente_nombre,
+                        ponderaciones=datos_materia.get('ponderaciones', [])
                     )
                 archivo_nombre = friendly_filename
             else:  # asistencias
@@ -341,7 +342,8 @@ def descargar_calificaciones(request, materia_id):
             datos=alumnos_calif,
             materia_nombre=materia_nombre,
             periodo_nombre=periodo_nombre,
-            docente_nombre=docente_nombre
+            docente_nombre=docente_nombre,
+            ponderaciones=datos_materia.get('ponderaciones', [])
         )
 
     fd, filepath = tempfile.mkstemp(suffix=f".{ext}", prefix=f"agm_calif_{materia_id}_")
@@ -672,11 +674,55 @@ def obtener_estadisticas_docente(request, id):
     materia_ids = [m['materia_id'] for m in materias]
     snapshots = EstadisticasSnapshot.objects.filter(materia_id__in=materia_ids).order_by('materia_id', 'snapshot_date')
     
+
+
+    # Fetch active period using gRPC
+    periodo_activo = None
+    try:
+        periodo_activo = PeriodosGRPCClient.obtener_periodo_activo()
+    except Exception as e:
+        print(f"[-] Error al consultar periodo activo de MS-2 vía gRPC: {e}")
+
     historial = []
     for s in snapshots:
         m_info = materias_dict.get(s.materia_id, {})
+        
+        # Resolve period name and active status strictly via gRPC mapping
+        p_id = str(s.periodo_id)
+        p_name = p_id
+        is_active = False
+        
+        if periodo_activo and p_id == str(periodo_activo.get("id")):
+            p_name = periodo_activo.get("nombre", "Primavera 2026")
+            is_active = True
+        else:
+            # Fallback mappings for historical or hardcoded test period IDs
+            map_names = {
+                '13': 'Primavera 2026',
+                '1': 'Otoño 2025',
+                'PR2026': 'Primavera 2026',
+                'OT2025': 'Otoño 2025',
+                '29d7ec6f-d533-43f6-9df7-9583424a00dc': 'Primavera 2026',
+                'Primavera-2026': 'Primavera 2026'
+            }
+            if p_id in map_names:
+                p_name = map_names[p_id]
+                if p_id in ('13', 'PR2026', '29d7ec6f-d533-43f6-9df7-9583424a00dc', 'Primavera-2026'):
+                    is_active = True
+            elif p_id.upper().startswith('PR'):
+                p_name = f"Primavera {p_id[2:]}"
+                if '2026' in p_id:
+                    is_active = True
+            elif p_id.upper().startswith('OT'):
+                p_name = f"Otoño {p_id[2:]}"
+            elif '2026' in p_id or 'PRIMAVERA' in p_id.upper():
+                p_name = "Primavera 2026"
+                is_active = True
+
         historial.append({
             "periodo_id": s.periodo_id,
+            "periodo_nombre": p_name,
+            "periodo_activo": is_active,
             "materia_id": s.materia_id,
             "materia_nombre": m_info.get("nombre", "DESARROLLO DE APLICACIONES WEB"),
             "nrc": m_info.get("nrc", ""),
@@ -704,8 +750,12 @@ def obtener_estadisticas_alumno(request, id):
             status=400
         )
 
-    promedio = CalificacionesGRPCClient.obtener_promedio_alumno(alumno_id=id, materia_id=materia_id)
-    asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(alumno_id=id, materia_id=materia_id)
+    # Resolve the internal Alumno ID (database PK) from the user's Auth ID using gRPC
+    alumno_info = AlumnosGRPCClient.obtener_alumno_por_id(id)
+    real_alumno_id = alumno_info["id"] if alumno_info else id
+
+    promedio = CalificacionesGRPCClient.obtener_promedio_alumno(alumno_id=real_alumno_id, materia_id=materia_id)
+    asistencia = AsistenciasGRPCClient.obtener_asistencia_alumno(alumno_id=real_alumno_id, materia_id=materia_id)
     periodo_activo = PeriodosGRPCClient.obtener_periodo_activo() or {}
 
     if promedio is None:
@@ -789,7 +839,7 @@ def obtener_estadisticas_alumno(request, id):
                 actividades_totales += len(p.get("actividades", []))
 
             for al in datos_concentrado.get("alumnos", []):
-                if str(al.get("alumno_id")) == str(id):
+                if str(al.get("alumno_id")) == str(real_alumno_id):
                     alumno_calificaciones = al.get("calificaciones", {})
                     for act_id, valor in alumno_calificaciones.items():
                         if valor is not None:

@@ -19,9 +19,11 @@ from rest_framework.response import Response
 
 from .crypto import encrypt_qr_payload
 
-from .grpc_clients import get_materias_by_docente, get_alumno_nombre, get_docente_id_by_email_or_user_id
+from .grpc_clients import get_materias_by_docente, get_docente_id_by_email_or_user_id
 
-from .models import Sesion, Asistencia
+from django.db import models as django_models
+from .models import Sesion, Asistencia, AlumnoReplica
+
 from .serializers import (
     SesionSerializer,
     AsistenciaSerializer,
@@ -148,9 +150,15 @@ class RegistrarAsistenciaView(APIView):
             qr_token_hash=token_hash,
         )
 
-        # Obtener nombre del alumno via gRPC a MS-3 (con fallback a matrícula)
-        nombre_alumno = get_alumno_nombre(str(alumno_id)) or matricula
-        print(f"[DEBUG] nombre_alumno: {nombre_alumno}, alumno_id: {alumno_id}")
+        # Buscar nombre en réplica local (sin llamadas de red)
+        try:
+            alumno_local = AlumnoReplica.objects.filter(
+                django_models.Q(id=alumno_id) | django_models.Q(user_id=alumno_id)
+            ).first()
+            nombre_alumno = alumno_local.nombre_completo if alumno_local else matricula
+        except Exception as e:
+            print(f"[WARNING] Error al consultar réplica local: {str(e)}")
+            nombre_alumno = matricula  # Fallback absoluto offline
 
 
         data = AsistenciaSerializer(asistencia).data

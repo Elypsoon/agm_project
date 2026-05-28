@@ -37,3 +37,22 @@ class AlumnosGRPCClient:
             except grpc.RpcError as e:
                 print(f"[-] Fallo gRPC al obtener docente por ID {docente_id} en MS-3: {e.details()}")
                 return None
+
+    @staticmethod
+    def obtener_alumno_por_id(alumno_id):
+        target = f"{settings.ALUMNOS_GRPC_HOST}:{settings.ALUMNOS_GRPC_PORT}"
+        with grpc.insecure_channel(target) as channel:
+            stub = alumnos_pb2_grpc.AlumnosServiceStub(channel)
+            request = alumnos_pb2.GetAlumnoByIdRequest(alumno_id=alumno_id)
+            try:
+                response = stub.GetAlumnoById(request, timeout=3)
+                return {
+                    "id": response.id,
+                    "matricula": response.matricula,
+                    "nombre_completo": response.nombre_completo,
+                    "correo": response.correo,
+                    "tipo_formacion": response.tipo_formacion
+                }
+            except grpc.RpcError as e:
+                print(f"[-] Fallo gRPC al obtener alumno por ID {alumno_id} en MS-3: {e.details()}")
+                return None

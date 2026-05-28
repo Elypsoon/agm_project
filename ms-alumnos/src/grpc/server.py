@@ -133,22 +133,22 @@ class AlumnosServiceServicer:
         from src.grpc import alumnos_pb2
 
         try:
-            identifier = request.docente_id
+            identifier = request.docente_id.strip()
             docente = None
 
-            # 1. Intentar buscar por UUID de docente (PK) o user_id
-            try:
-                docente_id = UUID(identifier)
-                docente = Docente.objects.filter(id=docente_id).first()
-                if not docente:
-                    docente = Docente.objects.filter(user_id=docente_id).first()
-            except ValueError:
-                # No es un UUID válido, buscar por correo
-                pass
-
-            # 2. Intentar buscar por correo institucional
-            if not docente:
-                docente = Docente.objects.filter(correo_institucional=identifier).first()
+            if '@' in identifier:
+                # Buscar por correo institucional
+                docente = Docente.objects.filter(correo_institucional__iexact=identifier).first()
+            else:
+                # Intentar buscar por UUID (id principal o user_id)
+                try:
+                    uuid_val = UUID(identifier)
+                    docente = Docente.objects.filter(id=uuid_val).first()
+                    if not docente:
+                        docente = Docente.objects.filter(user_id=uuid_val).first()
+                except ValueError:
+                    # Si no es un UUID válido, intentar por correo institucional
+                    docente = Docente.objects.filter(correo_institucional__iexact=identifier).first()
 
             if not docente:
                 context.set_code(grpc.StatusCode.NOT_FOUND)

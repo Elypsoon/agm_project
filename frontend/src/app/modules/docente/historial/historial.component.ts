@@ -120,19 +120,20 @@ export class HistorialComponent implements OnInit {
   }
 
   private procesarPeriodos(data: EstadisticasDocenteMateria[]) {
-    // Obtener IDs de periodos únicos de la data
-    const pIds = Array.from(new Set(data.map(m => String(m.periodo_id))));
-    
-    // Mapear a objetos de navegación de periodos
-    const mapped: PeriodoNav[] = pIds.map(pid => {
-      // Determinamos si es el periodo activo (asumimos el id '13' o 'PR2026' como Primavera 2026)
-      const esActivo = pid === '13' || pid === 'PR2026' || pid.toUpperCase().includes('2026');
-      return {
-        id: pid,
-        nombre: this.formatPeriodoId(pid),
-        activo: esActivo
-      };
+    const uniquePeriodsMap = new Map<string, PeriodoNav>();
+
+    data.forEach(m => {
+      const pid = String(m.periodo_id);
+      if (!uniquePeriodsMap.has(pid)) {
+        uniquePeriodsMap.set(pid, {
+          id: pid,
+          nombre: m.periodo_nombre || this.formatPeriodoId(pid),
+          activo: m.periodo_activo !== undefined ? m.periodo_activo : (pid === '13' || pid === 'PR2026')
+        });
+      }
     });
+
+    const mapped = Array.from(uniquePeriodsMap.values());
 
     // Ordenar de forma descendente, dejando el periodo activo primero
     mapped.sort((a, b) => {

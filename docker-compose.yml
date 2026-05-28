@@ -124,6 +124,8 @@ services:
     ports:
       - "3004:3004"
       - "50054:50054"
+    volumes:
+      - ./ms-calificaciones:/app # Hot-reload en desarrollo
     environment:
       - DB_HOST=db-calificaciones
       - DB_PORT=5432
@@ -280,8 +282,27 @@ services:
         condition: service_healthy
     command: >
       sh -c "python manage.py migrate --noinput &&
-             python manage.py run_consumer &
              python manage.py run_with_grpc"
+
+  # Worker dedicado para procesar eventos en MS-2 
+  ms-periodos-worker:
+    build:
+      context: ./ms-periodos
+      dockerfile: Dockerfile
+    container_name: ms-periodos-worker
+    restart: on-failure
+    volumes:
+      - ./ms-periodos:/app
+    env_file:
+      - ./ms-periodos/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python manage.py run_consumer
+    depends_on:
+      db-periodos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   # ---------------------------------------------------------------------------
   # MS-7: Reportes (Django + PostgreSQL)

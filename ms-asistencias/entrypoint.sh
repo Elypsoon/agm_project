@@ -1,14 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "Generando migraciones..."
-python manage.py makemigrations asistencias
-
 echo "Aplicando migraciones..."
 python manage.py migrate --noinput
 
 echo "Iniciando servidor gRPC en background (puerto 50055)..."
 python src/grpc/server.py &
+
+echo "Iniciando consumidor de RabbitMQ en background..."
+python manage.py run_consumer &
 
 echo "Iniciando servidor REST (puerto 3005)..."
 gunicorn src.config.wsgi:application \

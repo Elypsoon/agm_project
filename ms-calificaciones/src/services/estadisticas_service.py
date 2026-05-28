@@ -85,6 +85,14 @@ def get_estadisticas_alumno(alumno_id, materia_id):
                 * promedio_categoria (float): Promedio obtenido en esa categoría.
                 * calificaciones (list[dict]): Lista de actividades y su nota.
     """
+    # Intentar resolver el alumno_id por si se pasa el user_id de Auth
+    from src.grpc.alumnos_client import AlumnosClient
+    try:
+        alumno_info = AlumnosClient().get_alumno_by_id(alumno_id)
+        local_alumno_id = alumno_info['id']
+    except Exception:
+        local_alumno_id = alumno_id
+
     ponderaciones = (
         Ponderacion.objects.filter(materia_id=materia_id, activa=True)
         .prefetch_related('actividades')
@@ -103,7 +111,7 @@ def get_estadisticas_alumno(alumno_id, materia_id):
             suma = Decimal('0.00')
             for actividad in actividades:
                 cal = Calificacion.objects.filter(
-                    actividad=actividad, alumno_id=alumno_id
+                    actividad=actividad, alumno_id=local_alumno_id
                 ).first()
                 valor = cal.valor if cal else Decimal('0.00')
                 suma += valor
@@ -124,7 +132,7 @@ def get_estadisticas_alumno(alumno_id, materia_id):
         })
 
     return {
-        'alumno_id': str(alumno_id),
+        'alumno_id': str(local_alumno_id),
         'materia_id': str(materia_id),
         'promedio_real': float(total.quantize(Decimal('0.01'))),
         'promedio_redondeado': redondeo(total),
