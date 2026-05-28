@@ -6,76 +6,65 @@
     <p class="page-subtitle">Escanea el código QR del alumno para registrar su asistencia</p>
   </div>
 
-  <!-- Iniciar sesión -->
-  <div class="card mb-4" *ngIf="!sesionActiva()">
-
-    <!-- Cargando materias -->
-    <div *ngIf="cargandoMaterias()" class="flex items-center gap-2 text-gray-400">
-      <i class="pi pi-spin pi-spinner"></i>
-      <span>Cargando materias...</span>
-    </div>
-
-    <!-- Dropdown de materias -->
-    <div *ngIf="!cargandoMaterias() && !modoManual()" class="flex gap-2">
-      <p-select
-        [options]="materias()"
-        [(ngModel)]="materiaSeleccionada"
-        (ngModelChange)="materiaSeleccionada.set($event)"
-        optionLabel="nombre"
-        placeholder="Selecciona una materia"
-        class="flex-1"
-        [style]="{'width': '100%'}"
-      >
-        <ng-template pTemplate="item" let-materia>
-          <div class="flex flex-col">
-            <span class="font-medium">{{ materia.nombre }}</span>
-            <span class="text-xs text-gray-400">NRC: {{ materia.nrc }} | Sección: {{ materia.seccion }}</span>
-          </div>
-        </ng-template>
-      </p-select>
-      <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
-      <p-button
-        icon="pi pi-pencil"
-        severity="secondary"
-        pTooltip="Ingresar UUID manualmente"
-        (onClick)="modoManual.set(true)"
-      />
-    </div>
-
-    <!-- Fallback: input manual -->
-    <div *ngIf="!cargandoMaterias() && modoManual()" class="flex gap-2">
-      <input
-        pInputText
-        type="text"
-        placeholder="ID de la materia (UUID)"
-        [ngModel]="materiaIdManual()"
-        (ngModelChange)="materiaIdManual.set($event)"
-        class="flex-1"
-      />
-      <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
-      <p-button
-        *ngIf="materias().length > 0"
-        icon="pi pi-list"
-        severity="secondary"
-        pTooltip="Volver al selector"
-        (onClick)="modoManual.set(false)"
-      />
-    </div>
-
-  </div>
-
-  <!-- Panel activo -->
-  <div *ngIf="sesionActiva()" class="scanner-layout">
+  <!-- Layout siempre visible -->
+  <div class="scanner-layout">
 
     <!-- Columna izquierda: Cámara -->
     <div class="camera-panel">
+
+      <!-- Selector de materia -->
+      <div class="card mb-3" *ngIf="!sesionActiva()">
+        <div *ngIf="cargandoMaterias()" class="flex items-center gap-2 text-gray-400">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Cargando materias...</span>
+        </div>
+        <div *ngIf="!cargandoMaterias() && !modoManual()" class="selector-row">
+          <p-select
+            [options]="materias()"
+            [(ngModel)]="materiaSeleccionada"
+            (ngModelChange)="materiaSeleccionada.set($event)"
+            optionLabel="nombre"
+            placeholder="Selecciona una materia"
+            styleClass="materia-select"
+          >
+            <ng-template pTemplate="item" let-materia>
+              <div class="flex flex-col">
+                <span class="font-medium">{{ materia.nombre }}</span>
+                <span class="text-xs text-gray-400">NRC: {{ materia.nrc }} | Sección: {{ materia.seccion }}</span>
+              </div>
+            </ng-template>
+          </p-select>
+          <p-button icon="pi pi-pencil" severity="secondary" pTooltip="UUID manual" (onClick)="modoManual.set(true)" />
+          <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
+        </div>
+        <div *ngIf="!cargandoMaterias() && modoManual()" class="selector-row">
+          <input
+            pInputText
+            type="text"
+            placeholder="ID de la materia (UUID)"
+            [ngModel]="materiaIdManual()"
+            (ngModelChange)="materiaIdManual.set($event)"
+            class="flex-1"
+          />
+          <p-button label="Iniciar sesión" icon="pi pi-play" (onClick)="iniciarSesion()" />
+          <p-button *ngIf="materias().length > 0" icon="pi pi-list" severity="secondary" (onClick)="modoManual.set(false)" />
+        </div>
+      </div>
+
+      <!-- Cámara frame — siempre visible -->
       <div class="camera-frame"
         [class.scanning]="status() === 'scanning'"
         [class.success-frame]="status() === 'success'"
         [class.error-frame]="status() === 'error'">
 
-        <!-- Placeholder -->
-        <div class="camera-placeholder" *ngIf="status() === 'idle'">
+        <!-- Placeholder sin sesión -->
+        <div class="camera-placeholder" *ngIf="!sesionActiva()">
+          <i class="pi pi-lock placeholder-icon" style="color: #334155;"></i>
+          <p>Inicia una sesión para comenzar a escanear</p>
+        </div>
+
+        <!-- Placeholder con sesión pero sin escanear -->
+        <div class="camera-placeholder" *ngIf="sesionActiva() && status() === 'idle'">
           <i class="pi pi-qrcode placeholder-icon"></i>
           <p>Haz clic en "Iniciar escaneo" para activar la cámara</p>
         </div>
@@ -108,8 +97,8 @@
         </div>
       </div>
 
-      <!-- Botón escanear -->
-      <div class="camera-controls">
+      <!-- Botón escanear — solo con sesión activa -->
+      <div class="camera-controls" *ngIf="sesionActiva()">
         <p-button
           *ngIf="status() !== 'scanning'"
           label="Iniciar escaneo"
@@ -126,11 +115,11 @@
       </div>
     </div>
 
-    <!-- Columna derecha: Info + Historial -->
+    <!-- Columna derecha: Info + Historial — siempre visible -->
     <div class="history-panel">
 
-      <!-- Info sesión -->
-      <div style="padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
+      <!-- Info sesión activa -->
+      <div *ngIf="sesionActiva()" style="padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
         <div class="flex justify-between items-center mb-3">
           <div>
             <div class="font-semibold text-sm">Sesión activa</div>
@@ -143,7 +132,6 @@
             <div class="text-xs text-gray-400">restantes</div>
           </div>
         </div>
-
         <div class="grid grid-cols-2 gap-2 mb-3">
           <div class="bg-green-50 rounded-lg p-2 text-center">
             <div class="text-xl font-bold text-green-600">{{ sesionActiva()?.total_presentes }}</div>
@@ -154,7 +142,6 @@
             <div class="text-xs text-yellow-700">Retardos</div>
           </div>
         </div>
-
         <p-button
           label="Cerrar sesión"
           icon="pi pi-times"
@@ -162,6 +149,21 @@
           [style]="{'width': '100%'}"
           (onClick)="cerrarSesion()"
         />
+      </div>
+
+      <!-- Info sin sesión -->
+      <div *ngIf="!sesionActiva()" style="padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
+        <div class="font-semibold text-sm mb-2">Sin sesión activa</div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div class="bg-gray-50 rounded-lg p-2 text-center">
+            <div class="text-xl font-bold text-gray-300">—</div>
+            <div class="text-xs text-gray-400">Presentes</div>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-2 text-center">
+            <div class="text-xl font-bold text-gray-300">—</div>
+            <div class="text-xs text-gray-400">Retardos</div>
+          </div>
+        </div>
       </div>
 
       <!-- Historial -->
@@ -175,7 +177,7 @@
         <span>Sin registros todavía</span>
       </div>
 
-      <div class="history-list">
+      <div class="history-list" *ngIf="sesionActiva()">
         <div
           *ngFor="let item of scanHistory()"
           class="history-item"

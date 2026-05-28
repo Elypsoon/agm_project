@@ -32,6 +32,34 @@
   gap: 16px;
 }
 
+/* ── Fila selector: dropdown + botones en una sola línea ── */
+.selector-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+/* Fuerza al host de p-select a respetar el flex */
+.selector-row p-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* El elemento interno generado por PrimeNG */
+.selector-row .p-select {
+  width: 100%;
+}
+
+/* Input en modo manual también ocupa el espacio */
+.selector-row input.p-inputtext {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* ── fin selector-row ── */
+
 .camera-frame {
   position: relative;
   aspect-ratio: 4/3;
@@ -41,9 +69,9 @@
   border: 3px solid #334155;
   transition: border-color 400ms;
 
-  &.scanning    { border-color: #06B6D4; }
+  &.scanning      { border-color: #06B6D4; }
   &.success-frame { border-color: #22C55E; }
-  &.error-frame { border-color: #EF4444; }
+  &.error-frame   { border-color: #EF4444; }
 }
 
 .camera-placeholder {
